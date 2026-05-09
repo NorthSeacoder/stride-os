@@ -19,6 +19,10 @@ export default async function DashboardLayout({
         <div className="flex items-center gap-6">
           <Link href="/dashboard" className="font-semibold text-[var(--text-primary)]">Stride OS</Link>
           <Link href="/dashboard" className="text-sm text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]">Dashboard</Link>
+          <Link href="/tasks" className="text-sm text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]">Tasks</Link>
+          <Link href="/quadrants" className="text-sm text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]">Quadrants</Link>
+          <Link href="/okr" className="text-sm text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]">OKR</Link>
+          <Link href="/review" className="text-sm text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]">Review</Link>
           <Link href="/settings" className="text-sm text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]">Settings</Link>
         </div>
         <div className="flex items-center gap-4">

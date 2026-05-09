@@ -74,4 +74,110 @@ describe('sqlite smoke', () => {
 
     expect(removed.id).toBe(created.id);
   });
+
+  it('supports the OKR alpha domain model and enforces key task/link constraints', async () => {
+    const [period] = await sqliteDb.insert(sqliteSchema.periods).values({
+      name: '2026 Q2',
+      type: 'quarter',
+      startDate: '2026-04-01',
+      endDate: '2026-06-30',
+      status: 'active',
+    }).returning();
+
+    const [objective] = await sqliteDb.insert(sqliteSchema.objectives).values({
+      periodId: period.id,
+      title: 'Ship OKR alpha',
+      status: 'active',
+      sortOrder: 1,
+    }).returning();
+
+    const [keyResult] = await sqliteDb.insert(sqliteSchema.keyResults).values({
+      objectiveId: objective.id,
+      title: 'Weekly review loop working',
+      type: 'hybrid',
+      targetValue: 1,
+      currentValue: 0.5,
+      status: 'active',
+      confidence: 'medium',
+    }).returning();
+
+    const [checkIn] = await sqliteDb.insert(sqliteSchema.krCheckIns).values({
+      keyResultId: keyResult.id,
+      progressValue: 0.5,
+      confidence: 'high',
+      summary: 'Halfway there',
+      blockers: 'None',
+      nextActions: 'Ship review screen',
+    }).returning();
+
+    const [task] = await sqliteDb.insert(sqliteSchema.tasks).values({
+      title: 'Write weekly review flow',
+      status: 'today',
+      todayType: 'must',
+      important: true,
+      urgent: false,
+      priority: 'P1',
+      energy: 'high',
+    }).returning();
+
+    await sqliteDb.insert(sqliteSchema.taskKrLinks).values({
+      taskId: task.id,
+      keyResultId: keyResult.id,
+    });
+
+    const [review] = await sqliteDb.insert(sqliteSchema.reviews).values({
+      type: 'weekly',
+      periodStart: '2026-05-04',
+      periodEnd: '2026-05-10',
+      status: 'draft',
+      title: 'Week 19 review',
+      body: 'Draft review',
+      structuredSummary: { wins: ['linked task to KR'] },
+    }).returning();
+
+    await sqliteDb.insert(sqliteSchema.reviewKrSnapshots).values({
+      reviewId: review.id,
+      keyResultId: keyResult.id,
+      snapshot: { confidence: 'medium', currentValue: 0.5 },
+    });
+
+    const hydratedPeriod = await sqliteDb.query.periods.findFirst({
+      where: eq(sqliteSchema.periods.id, period.id),
+      with: {
+        objectives: {
+          with: {
+            keyResults: {
+              with: {
+                checkIns: true,
+                taskLinks: true,
+                reviewSnapshots: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    expect(hydratedPeriod?.objectives).toHaveLength(1);
+    expect(hydratedPeriod?.objectives[0]?.keyResults[0]?.checkIns[0]?.id).toBe(checkIn.id);
+    expect(hydratedPeriod?.objectives[0]?.keyResults[0]?.taskLinks[0]?.taskId).toBe(task.id);
+    expect(hydratedPeriod?.objectives[0]?.keyResults[0]?.reviewSnapshots[0]?.reviewId).toBe(review.id);
+    expect(review.createdAt).toBeTruthy();
+
+    await expect(
+      sqliteDb.insert(sqliteSchema.taskKrLinks).values({
+        taskId: task.id,
+        keyResultId: keyResult.id,
+      }),
+    ).rejects.toThrow();
+
+    await expect(
+      sqliteDb.insert(sqliteSchema.tasks).values({
+        title: 'Broken today task',
+        status: 'today',
+        important: false,
+        urgent: false,
+      }),
+    ).rejects.toThrow();
+  });
 });

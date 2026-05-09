@@ -1,0 +1,386 @@
+import { and, desc, eq, inArray } from 'drizzle-orm';
+import { db, schema } from '@stride-os/db';
+import {
+  getCurrentPeriodSummary,
+  listCheckInsInRange,
+  listKeyResultsByIds,
+  listRiskKeyResults,
+} from './okr-service';
+import {
+  listCompletedTasksBetween,
+  listOpenMustTasks,
+  listTodayTaskCounts,
+} from './task-service';
+
+type TransactionLike = {
+  query: typeof db.query;
+  insert: typeof db.insert;
+  update: typeof db.update;
+  delete: typeof db.delete;
+};
+
+export const REVIEW_TYPES = ['weekly', 'monthly', 'period'] as const;
+export const REVIEW_STATUSES = ['draft', 'final'] as const;
+
+export type ReviewType = typeof REVIEW_TYPES[number];
+export type ReviewStatus = typeof REVIEW_STATUSES[number];
+
+export type ReviewDraftPayload = {
+  type: ReviewType;
+  periodStart: string;
+  periodEnd: string;
+  title: string;
+  body: string;
+  structuredSummary: Record<string, unknown>;
+  keyResultIds: string[];
+};
+
+function ensureReviewType(type: ReviewType) {
+  if (!REVIEW_TYPES.includes(type)) {
+    throw new Error(`Unsupported review type: ${type}`);
+  }
+
+  return type;
+}
+
+function ensureReviewStatus(status: ReviewStatus) {
+  if (!REVIEW_STATUSES.includes(status)) {
+    throw new Error(`Unsupported review status: ${status}`);
+  }
+
+  return status;
+}
+
+function buildReviewBody(input: {
+  completedTaskTitles: string[];
+  openMustTitles: string[];
+  keyResultSummaries: string[];
+}) {
+  const wins = input.completedTaskTitles.length > 0
+    ? input.completedTaskTitles.map((title) => `- ${title}`).join('\n')
+    : '- No completed tasks captured this period';
+  const followUps = input.openMustTitles.length > 0
+    ? input.openMustTitles.map((title) => `- ${title}`).join('\n')
+    : '- No unfinished Must tasks';
+  const keyResults = input.keyResultSummaries.length > 0
+    ? input.keyResultSummaries.map((line) => `- ${line}`).join('\n')
+    : '- No KR check-ins recorded';
+
+  return [
+    '## Wins',
+    wins,
+    '',
+    '## Open Must Tasks',
+    followUps,
+    '',
+    '## KR Progress',
+    keyResults,
+  ].join('\n');
+}
+
+export async function listReviews() {
+  return db.query.reviews.findMany({
+    orderBy: [desc(schema.reviews.periodStart), desc(schema.reviews.createdAt)],
+    with: {
+      krSnapshots: true,
+    },
+  });
+}
+
+export async function getReview(reviewId: string) {
+  return db.query.reviews.findFirst({
+    where: eq(schema.reviews.id, reviewId),
+    with: {
+      krSnapshots: true,
+    },
+  });
+}
+
+export async function buildWeeklyReviewDraft(periodStart: string, periodEnd: string) {
+  const [completedTasks, openMustTasks, checkIns] = await Promise.all([
+    listCompletedTasksBetween(periodStart, periodEnd),
+    listOpenMustTasks(),
+    listCheckInsInRange(periodStart, periodEnd),
+  ]);
+
+  const latestCheckInsByKr = new Map<string, (typeof checkIns)[number]>();
+  for (const checkIn of checkIns) {
+    if (!latestCheckInsByKr.has(checkIn.keyResultId)) {
+      latestCheckInsByKr.set(checkIn.keyResultId, checkIn);
+    }
+  }
+
+  const keyResultIds = Array.from(latestCheckInsByKr.keys());
+  const keyResults = await listKeyResultsByIds(keyResultIds);
+  const keyedResults = new Map<string, { id: string; title: string }>(
+    keyResults.map((item: { id: string; title: string }) => [item.id, item]),
+  );
+
+  const keyResultSummaries = Array.from(latestCheckInsByKr.values()).map((checkIn) => {
+    const keyResult = keyedResults.get(checkIn.keyResultId);
+    const title = keyResult?.title ?? checkIn.keyResultId;
+    return `${title}: ${checkIn.summary || 'No summary'} (${checkIn.confidence})`;
+  });
+
+  const structuredSummary = {
+    completedTaskCount: completedTasks.length,
+    openMustCount: openMustTasks.length,
+    completedTaskIds: completedTasks.map((task: { id: string }) => task.id),
+    openMustTaskIds: openMustTasks.map((task: { id: string }) => task.id),
+    keyResultIds,
+    keyResultCheckIns: Array.from(latestCheckInsByKr.values()).map((item) => ({
+      keyResultId: item.keyResultId,
+      confidence: item.confidence,
+      progressValue: item.progressValue,
+      summary: item.summary,
+      blockers: item.blockers,
+      nextActions: item.nextActions,
+      createdAt: item.createdAt.toISOString(),
+    })),
+  } satisfies Record<string, unknown>;
+
+  const body = buildReviewBody({
+    completedTaskTitles: completedTasks.map((task: { title: string }) => task.title),
+    openMustTitles: openMustTasks.map((task: { title: string }) => task.title),
+    keyResultSummaries,
+  });
+
+  return {
+    type: 'weekly' as const,
+    periodStart,
+    periodEnd,
+    title: `Weekly review ${periodStart} - ${periodEnd}`,
+    body,
+    structuredSummary,
+    keyResultIds,
+  };
+}
+
+export async function saveReviewDraft(input: ReviewDraftPayload) {
+  const normalizedType = ensureReviewType(input.type);
+
+  return db.transaction(async (tx: TransactionLike) => {
+    const existingDraft = await tx.query.reviews.findFirst({
+      where: and(
+        eq(schema.reviews.type, normalizedType),
+        eq(schema.reviews.periodStart, input.periodStart),
+        eq(schema.reviews.periodEnd, input.periodEnd),
+        eq(schema.reviews.status, 'draft'),
+      ),
+    });
+
+    const review = existingDraft
+      ? (await tx
+          .update(schema.reviews)
+          .set({
+            title: input.title,
+            body: input.body,
+            structuredSummary: input.structuredSummary,
+            updatedAt: new Date(),
+          })
+          .where(eq(schema.reviews.id, existingDraft.id))
+          .returning())[0]
+      : (await tx
+          .insert(schema.reviews)
+          .values({
+            type: normalizedType,
+            periodStart: input.periodStart,
+            periodEnd: input.periodEnd,
+            status: 'draft',
+            title: input.title,
+            body: input.body,
+            structuredSummary: input.structuredSummary,
+          })
+          .returning())[0];
+
+    await tx.delete(schema.reviewKrSnapshots).where(eq(schema.reviewKrSnapshots.reviewId, review.id));
+
+    if (input.keyResultIds.length > 0) {
+      const keyResults = await tx.query.keyResults.findMany({
+        where: inArray(schema.keyResults.id, input.keyResultIds),
+        with: {
+          checkIns: {
+            orderBy: [desc(schema.krCheckIns.createdAt)],
+          },
+        },
+      });
+
+      await tx.insert(schema.reviewKrSnapshots).values(
+        keyResults.map((keyResult: { id: string; title: string; status: string; currentValue: number | null; checkIns: Array<{ confidence: string; createdAt: Date }> }) => ({
+          reviewId: review.id,
+          keyResultId: keyResult.id,
+          snapshot: {
+            title: keyResult.title,
+            status: keyResult.status,
+            currentValue: keyResult.currentValue,
+            confidence: keyResult.checkIns[0]?.confidence ?? null,
+            latestCheckInAt: keyResult.checkIns[0]?.createdAt.toISOString() ?? null,
+          },
+        })),
+      );
+    }
+
+    return tx.query.reviews.findFirst({
+      where: eq(schema.reviews.id, review.id),
+      with: {
+        krSnapshots: true,
+      },
+    });
+  });
+}
+
+export async function finalizeReview(reviewId: string) {
+  const review = await db.query.reviews.findFirst({
+    where: eq(schema.reviews.id, reviewId),
+  });
+
+  if (!review) {
+    return null;
+  }
+
+  const normalizedType = ensureReviewType(review.type);
+  const existingFinal = await db.query.reviews.findFirst({
+    where: and(
+      eq(schema.reviews.type, normalizedType),
+      eq(schema.reviews.periodStart, review.periodStart),
+      eq(schema.reviews.periodEnd, review.periodEnd),
+      eq(schema.reviews.status, 'final'),
+    ),
+    orderBy: [desc(schema.reviews.updatedAt)],
+  });
+
+  if (existingFinal && existingFinal.id !== reviewId) {
+    throw new Error('A final review already exists for this period.');
+  }
+
+  const [finalized] = await db
+    .update(schema.reviews)
+    .set({
+      status: ensureReviewStatus('final'),
+      updatedAt: new Date(),
+    })
+    .where(eq(schema.reviews.id, reviewId))
+    .returning();
+
+  return finalized ?? null;
+}
+
+export async function updateReviewDraftById(
+  reviewId: string,
+  input: {
+    title?: string;
+    body?: string;
+    structuredSummary?: Record<string, unknown>;
+  },
+) {
+  const [review] = await db
+    .update(schema.reviews)
+    .set({
+      ...(input.title !== undefined ? { title: input.title } : {}),
+      ...(input.body !== undefined ? { body: input.body } : {}),
+      ...(input.structuredSummary !== undefined ? { structuredSummary: input.structuredSummary } : {}),
+      updatedAt: new Date(),
+    })
+    .where(eq(schema.reviews.id, reviewId))
+    .returning();
+
+  return review ?? null;
+}
+
+export async function getLatestReview() {
+  return db.query.reviews.findFirst({
+    orderBy: [desc(schema.reviews.periodStart), desc(schema.reviews.createdAt)],
+    with: {
+      krSnapshots: true,
+    },
+  });
+}
+
+export async function getDashboardSummary() {
+  const [currentPeriodSummary, todayTaskCounts, riskKeyResults, latestReview] = await Promise.all([
+    getCurrentPeriodSummary(),
+    listTodayTaskCounts(),
+    listRiskKeyResults(),
+    getLatestReview(),
+  ]);
+
+  return {
+    currentPeriodSummary,
+    todayTaskCounts,
+    riskKeyResults,
+    latestReview,
+  };
+}
+
+export async function listDraftReviews() {
+  return db.query.reviews.findMany({
+    where: eq(schema.reviews.status, 'draft'),
+    orderBy: [desc(schema.reviews.periodStart), desc(schema.reviews.updatedAt)],
+  });
+}
+
+export async function listFinalReviews() {
+  return db.query.reviews.findMany({
+    where: eq(schema.reviews.status, 'final'),
+    orderBy: [desc(schema.reviews.periodStart), desc(schema.reviews.updatedAt)],
+  });
+}
+
+export async function listReviewHistoryByType(type: ReviewType) {
+  const normalizedType = ensureReviewType(type);
+  return db.query.reviews.findMany({
+    where: eq(schema.reviews.type, normalizedType),
+    orderBy: [desc(schema.reviews.periodStart), desc(schema.reviews.updatedAt)],
+    with: {
+      krSnapshots: true,
+    },
+  });
+}
+
+export async function getReviewDraftOrGenerate(periodStart: string, periodEnd: string) {
+  const existingDraft = await db.query.reviews.findFirst({
+    where: and(
+      eq(schema.reviews.type, 'weekly'),
+      eq(schema.reviews.periodStart, periodStart),
+      eq(schema.reviews.periodEnd, periodEnd),
+      eq(schema.reviews.status, 'draft'),
+    ),
+    with: {
+      krSnapshots: true,
+    },
+  });
+
+  if (existingDraft) {
+    return existingDraft;
+  }
+
+  return buildWeeklyReviewDraft(periodStart, periodEnd);
+}
+
+export async function summarizeWeeklyInputs(periodStart: string, periodEnd: string) {
+  const [completedTasks, openMustTasks, checkIns] = await Promise.all([
+    listCompletedTasksBetween(periodStart, periodEnd),
+    listOpenMustTasks(),
+    listCheckInsInRange(periodStart, periodEnd),
+  ]);
+
+  return {
+    completedTasks,
+    openMustTasks,
+    checkIns,
+  };
+}
+
+export async function getReviewIndexSummary() {
+  const [draftReviews, finalReviews, currentPeriodSummary] = await Promise.all([
+    listDraftReviews(),
+    listFinalReviews(),
+    getCurrentPeriodSummary(),
+  ]);
+
+  return {
+    draftCount: draftReviews.length,
+    finalCount: finalReviews.length,
+    currentPeriodSummary,
+  };
+}

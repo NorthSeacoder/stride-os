@@ -4,9 +4,9 @@
   "version": "7",
   "dialect": "postgresql",
   "tables": {
-    "nextjs_tpl.api_tokens": {
+    "public.api_tokens": {
       "name": "api_tokens",
-      "schema": "nextjs_tpl",
+      "schema": "public",
       "columns": {
         "id": {
           "name": "id",
@@ -72,7 +72,7 @@
           "name": "api_tokens_user_id_users_id_fk",
           "tableFrom": "api_tokens",
           "tableTo": "users",
-          "schemaTo": "nextjs_tpl",
+          "schemaTo": "public",
           "columnsFrom": [
             "user_id"
           ],
@@ -97,9 +97,9 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "nextjs_tpl.audit_logs": {
+    "public.audit_logs": {
       "name": "audit_logs",
-      "schema": "nextjs_tpl",
+      "schema": "public",
       "columns": {
         "id": {
           "name": "id",
@@ -160,9 +160,9 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "nextjs_tpl.example_items": {
+    "public.example_items": {
       "name": "example_items",
-      "schema": "nextjs_tpl",
+      "schema": "public",
       "columns": {
         "id": {
           "name": "id",
@@ -213,9 +213,9 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "nextjs_tpl.sessions": {
+    "public.sessions": {
       "name": "sessions",
-      "schema": "nextjs_tpl",
+      "schema": "public",
       "columns": {
         "id": {
           "name": "id",
@@ -256,7 +256,7 @@
           "name": "sessions_user_id_users_id_fk",
           "tableFrom": "sessions",
           "tableTo": "users",
-          "schemaTo": "nextjs_tpl",
+          "schemaTo": "public",
           "columnsFrom": [
             "user_id"
           ],
@@ -281,9 +281,9 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "nextjs_tpl.users": {
+    "public.users": {
       "name": "users",
-      "schema": "nextjs_tpl",
+      "schema": "public",
       "columns": {
         "id": {
           "name": "id",

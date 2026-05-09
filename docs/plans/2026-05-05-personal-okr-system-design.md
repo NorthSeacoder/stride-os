@@ -14,7 +14,7 @@
 
 ## Problem
 
-当前 `note/` 仓库里已经有一套可机读但不够易用的目标管理结构：
+当前 `~/learning/biji/note` 仓库里已经有一套可机读但不够易用的目标管理结构：
 
 - `07-个人目标/*个人OKR.md`：承载 Objective / KR 的 frontmatter 和人读正文
 - `07-个人目标/*任务清单.md`：承载拆解后的 checklist
