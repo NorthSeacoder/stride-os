@@ -1,0 +1,8 @@
+{
+  "extends": "@stride-os/config/tsconfig/base.json",
+  "compilerOptions": {
+    "noEmit": true
+  },
+  "include": [],
+  "exclude": ["node_modules", "**/node_modules", "**/.next", "**/dist"]
+}

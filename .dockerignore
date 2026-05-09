@@ -1,0 +1,17 @@
+.git
+.github
+.next
+**/.next
+.turbo
+**/.turbo
+node_modules
+**/node_modules
+coverage
+dist
+**/dist
+.env
+.env.local
+.env.*.local
+pnpm-debug.log*
+apps/web/.turbo
+packages/db/.turbo

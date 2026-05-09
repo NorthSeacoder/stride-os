@@ -1,0 +1,26 @@
+{
+  "private": true,
+  "name": "stride-os",
+  "version": "0.1.0",
+  "scripts": {
+    "dev": "turbo run dev",
+    "check:ci": "pnpm lint && pnpm typecheck && pnpm test && pnpm build",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "vitest run",
+    "release": "bumpp --tag --commit --push",
+    "db:generate": "turbo run db:generate",
+    "db:migrate": "turbo run db:migrate",
+    "db:seed": "turbo run db:seed",
+    "db:setup": "turbo run db:setup",
+    "db:studio": "turbo run db:studio"
+  },
+  "devDependencies": {
+    "bumpp": "^10.2.3",
+    "eslint": "^10.3.0",
+    "turbo": "^2",
+    "vitest": "^4.1.5"
+  },
+  "packageManager": "pnpm@9.15.0"
+}

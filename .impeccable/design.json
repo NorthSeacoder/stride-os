@@ -1,0 +1,165 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-05-07T13:09:05.979Z",
+  "title": "Design System: Next.js Template",
+  "extensions": {
+    "overview": {
+      "creativeNorthStar": "The Quiet Control Console",
+      "philosophy": "A monochrome management interface for continuous use: quiet, legible, and fast to operate at depth.",
+      "antiReferences": "saturated accent-driven branding, decorative gradients, glossy surfaces, and excessive marketing-style visuals."
+    },
+    "colorMeta": {
+      "primary": {
+        "role": "primary",
+        "displayName": "Primary Gray",
+        "canonical": "#e5e7eb",
+        "tonalRamp": [
+          "#020617",
+          "#111827",
+          "#374151",
+          "#e5e7eb",
+          "#f9fafb"
+        ]
+      },
+      "neutralSurface": {
+        "role": "neutral",
+        "displayName": "Canvas",
+        "canonical": "#0b0f15",
+        "tonalRamp": [
+          "#020617",
+          "#0b0f15",
+          "#111827",
+          "#1f2937",
+          "#374151"
+        ]
+      },
+      "neutralText": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "canonical": "#e5e7eb",
+        "tonalRamp": [
+          "#9ca3af",
+          "#9ca3af",
+          "#e5e7eb",
+          "#f9fafb"
+        ]
+      },
+      "success": {
+        "role": "success",
+        "displayName": "Success Green",
+        "canonical": "#86efac",
+        "tonalRamp": [
+          "#052e16",
+          "#166534",
+          "#22c55e",
+          "#86efac"
+        ]
+      },
+      "warning": {
+        "role": "warning",
+        "displayName": "Warning Gold",
+        "canonical": "#fcd34d",
+        "tonalRamp": [
+          "#422006",
+          "#d97706",
+          "#f59e0b",
+          "#fcd34d"
+        ]
+      },
+      "error": {
+        "role": "error",
+        "displayName": "Error Red",
+        "canonical": "#fca5a5",
+        "tonalRamp": [
+          "#450a0a",
+          "#991b1b",
+          "#ef4444",
+          "#fca5a5"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Top-level route headings and landing headers."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Primary page titles."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Section headers and panel labels."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Forms, metadata, and operation copy."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Inputs and compact UI controls."
+      }
+    },
+    "components": {
+      "button": {
+        "html": "button",
+        "variants": [
+          "button-primary",
+          "button-primary-hover",
+          "button-primary-disabled",
+          "button-secondary",
+          "button-ghost"
+        ]
+      },
+      "input": {
+        "html": "input",
+        "variants": [
+          "input",
+          "select",
+          "textarea"
+        ]
+      },
+      "nav": {
+        "html": "nav, a",
+        "variants": [
+          "nav-link",
+          "nav-brand",
+          "nav-logout"
+        ]
+      },
+      "card": {
+        "html": "section, div",
+        "variants": [
+          "card",
+          "card-elevated",
+          "list-item"
+        ]
+      },
+      "feedback": {
+        "html": "div",
+        "variants": [
+          "error-alert",
+          "empty-state",
+          "success-strip"
+        ]
+      }
+    },
+    "elevation": {
+      "philosophy": "Flat by default. Depth is conveyed through border contrast and background layering.",
+      "shadowTokens": {},
+      "motion": {
+        "defaults": "0.2s",
+        "timing": "ease-out"
+      }
+    },
+    "componentsHtml": {
+      "buttonPrimary": "<button class=\"rounded-md bg-[#111827] px-4 py-2 text-sm font-medium text-[#e5e7eb] hover:bg-[#0b0f15]\">",
+      "buttonSecondary": "<button class=\"rounded-md text-gray-200\">",
+      "input": "<input class=\"w-full rounded-md border border-[#374151] bg-[#111827] px-3 py-2 text-sm text-[#e5e7eb] focus:outline-none focus:ring-2 focus:ring-[#e5e7eb]\">",
+      "select": "<select class=\"w-full rounded-md border border-[#374151] bg-[#111827] px-3 py-2 text-sm text-[#e5e7eb] focus:outline-none focus:ring-2 focus:ring-[#e5e7eb]\">",
+      "textarea": "<textarea class=\"w-full rounded-md border border-[#374151] bg-[#111827] px-3 py-2 text-sm text-[#e5e7eb] focus:outline-none focus:ring-2 focus:ring-[#e5e7eb]\"></textarea>",
+      "feedback": "<div class=\"rounded-md bg-[#450a0a] p-3 text-sm text-[#fca5a5]\">Example message</div>",
+      "card": "<div class=\"rounded-lg border border-[#374151] bg-[#111827] p-4\">...</div>"
+    }
+  }
+}

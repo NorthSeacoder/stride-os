@@ -1,0 +1,38 @@
+services:
+  # Optional local container path for Postgres validation.
+  # SQLite-first local development should use `.env.example` + `pnpm db:setup` + `pnpm dev`.
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/apps/web/node_modules
+      - /app/packages/db/node_modules
+
+  db:
+    image: postgres:17-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: shared_db
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d shared_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - dev-db-data:/var/lib/postgresql/data
+
+volumes:
+  dev-db-data:

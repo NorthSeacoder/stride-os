@@ -1,0 +1,13 @@
+{
+  "$schema": "https://www.typescriptlang.org/tsconfig",
+  "extends": "./base.json",
+  "compilerOptions": {
+    "lib": ["esnext"],
+    "module": "esnext",
+    "target": "esnext",
+    "declaration": true,
+    "outDir": "./dist"
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules", "dist"]
+}

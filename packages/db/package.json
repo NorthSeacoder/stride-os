@@ -1,0 +1,40 @@
+{
+  "name": "@stride-os/db",
+  "version": "0.0.0",
+  "private": true,
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./env": "./src/env.ts",
+    "./utils/password": "./src/utils/password.ts"
+  },
+  "scripts": {
+    "build": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "db:generate": "node --import tsx scripts/drizzle.ts generate",
+    "db:migrate": "node --import tsx scripts/migrate.ts",
+    "db:seed": "node --import tsx src/seed.ts",
+    "db:setup": "node --import tsx scripts/prepare-sqlite.ts && pnpm db:migrate && pnpm db:seed",
+    "db:studio": "node --import tsx scripts/drizzle.ts studio",
+    "lint": "eslint ."
+  },
+  "dependencies": {
+    "bcrypt": "^6",
+    "better-sqlite3": "^11.10.0",
+    "drizzle-orm": "^0.45",
+    "pg": "^8"
+  },
+  "devDependencies": {
+    "@stride-os/config": "workspace:*",
+    "@types/bcrypt": "^5",
+    "@types/better-sqlite3": "^7.6.12",
+    "@types/pg": "^8",
+    "dotenv": "^16",
+    "drizzle-kit": "^0.31",
+    "eslint": "^9.39.4",
+    "tsx": "^4",
+    "typescript": "^5",
+    "typescript-eslint": "^8.59.2"
+  }
+}

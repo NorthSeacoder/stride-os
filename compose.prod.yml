@@ -1,0 +1,20 @@
+services:
+  web:
+    image: ${DOCKER_REGISTRY:-ghcr.io/your-org}/${DOCKER_IMAGE_NAME:-stride-os}:${IMAGE_TAG:-v0.1.0}
+    restart: unless-stopped
+    expose:
+      - "3000"
+    env_file:
+      - .env
+    networks:
+      - proxy
+      - default
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.stride-os.rule=Host(`${HOST:-stride-os.local}`)"
+      - "traefik.http.routers.stride-os.entrypoints=web"
+      - "traefik.http.services.stride-os.loadbalancer.server.port=3000"
+
+networks:
+  proxy:
+    external: true
