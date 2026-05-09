@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useState } from 'react';
 import { ErrorAlert } from '@/components/ui';
+import { getReviewStatusLabel } from '@/lib/presentation/labels';
 import {
   finalizeReviewAction,
   generateWeeklyDraftAction,
@@ -64,10 +65,10 @@ export function ReviewClient({
   return (
     <div className="space-y-6">
       <div>
-        <p className="text-xs uppercase tracking-[0.24em] text-[var(--text-muted)]">Reflection loop</p>
-        <h1 className="mt-2 text-3xl font-semibold text-[var(--text-primary)]">Review</h1>
+        <p className="text-xs uppercase tracking-[0.24em] text-[var(--text-muted)]">复盘闭环</p>
+        <h1 className="mt-2 text-3xl font-semibold text-[var(--text-primary)]">复盘</h1>
         <p className="mt-2 max-w-2xl text-sm text-[var(--text-secondary)]">
-          Generate a weekly draft from completed tasks, open Must work, and KR check-ins. Save draft first, then finalize when the review is ready to archive.
+          基于已完成任务、未关闭的必做事项和 KR check-in 自动生成周复盘。先保存草稿，确认无误后再归档定稿。
         </p>
       </div>
 
@@ -76,17 +77,17 @@ export function ReviewClient({
           <form action={generateAction} className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-panel)] p-5">
             <div className="grid gap-4 md:grid-cols-2">
               <label className="block">
-                <span className="mb-1 block text-sm text-[var(--text-secondary)]">Period Start</span>
+                <span className="mb-1 block text-sm text-[var(--text-secondary)]">开始日期</span>
                 <input type="date" name="periodStart" defaultValue={draft.periodStart} className="w-full rounded-md border border-[var(--border-subtle)] bg-[var(--bg-canvas)] px-3 py-2 text-sm text-[var(--text-primary)]" />
               </label>
               <label className="block">
-                <span className="mb-1 block text-sm text-[var(--text-secondary)]">Period End</span>
+                <span className="mb-1 block text-sm text-[var(--text-secondary)]">结束日期</span>
                 <input type="date" name="periodEnd" defaultValue={draft.periodEnd} className="w-full rounded-md border border-[var(--border-subtle)] bg-[var(--bg-canvas)] px-3 py-2 text-sm text-[var(--text-primary)]" />
               </label>
             </div>
             {generateState.error && <div className="mt-4"><ErrorAlert message={generateState.error} /></div>}
             <button type="submit" className="mt-4 rounded-md border border-[var(--border-strong)] bg-[var(--bg-panel-strong)] px-4 py-2 text-sm font-medium text-[var(--text-primary)]">
-              Generate Draft
+              生成草稿
             </button>
           </form>
 
@@ -98,7 +99,7 @@ export function ReviewClient({
             <input type="hidden" name="structuredSummary" value={JSON.stringify(draft.structuredSummary)} />
             {saveState.error && <ErrorAlert message={saveState.error} />}
             <label className="block">
-              <span className="mb-1 block text-sm text-[var(--text-secondary)]">Title</span>
+              <span className="mb-1 block text-sm text-[var(--text-secondary)]">标题</span>
               <input
                 name="title"
                 value={draft.title}
@@ -107,7 +108,7 @@ export function ReviewClient({
               />
             </label>
             <label className="block">
-              <span className="mb-1 block text-sm text-[var(--text-secondary)]">Body</span>
+              <span className="mb-1 block text-sm text-[var(--text-secondary)]">正文</span>
               <textarea
                 name="body"
                 rows={16}
@@ -119,12 +120,12 @@ export function ReviewClient({
             </form>
             <div className="flex flex-wrap gap-3">
               <button form="review-save-form" type="submit" className="rounded-md border border-[var(--border-strong)] bg-[var(--bg-panel-strong)] px-4 py-2 text-sm font-medium text-[var(--text-primary)]">
-                Save Draft
+                保存草稿
               </button>
               {savedReviewId && (
                 <form action={async () => finalizeReviewAction(savedReviewId)}>
                   <button type="submit" className="rounded-md border border-[var(--success-border)] px-4 py-2 text-sm font-medium text-[var(--success-text)]">
-                    Finalize
+                    归档定稿
                   </button>
                 </form>
               )}
@@ -134,18 +135,18 @@ export function ReviewClient({
 
         <aside className="space-y-4 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-panel)] p-5">
           <div>
-            <h2 className="text-lg font-semibold text-[var(--text-primary)]">History</h2>
-            <p className="mt-1 text-sm text-[var(--text-secondary)]">Recent weekly drafts and finalized reviews.</p>
+            <h2 className="text-lg font-semibold text-[var(--text-primary)]">历史记录</h2>
+            <p className="mt-1 text-sm text-[var(--text-secondary)]">最近的周复盘草稿与已定稿记录。</p>
           </div>
           <div className="space-y-3">
             {reviews.length === 0 ? (
-              <p className="text-sm text-[var(--text-secondary)]">No reviews saved yet.</p>
+              <p className="text-sm text-[var(--text-secondary)]">还没有保存任何复盘。</p>
             ) : (
               reviews.map((review) => (
                 <div key={review.id} className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-4">
                   <p className="font-medium text-[var(--text-primary)]">{review.title}</p>
-                  <p className="mt-1 text-sm text-[var(--text-secondary)]">{review.periodStart} to {review.periodEnd}</p>
-                  <p className="mt-2 text-xs text-[var(--text-muted)]">{review.status} / updated {String(review.updatedAt).slice(0, 10)}</p>
+                  <p className="mt-1 text-sm text-[var(--text-secondary)]">{review.periodStart} 至 {review.periodEnd}</p>
+                  <p className="mt-2 text-xs text-[var(--text-muted)]">{getReviewStatusLabel(review.status)} / 更新于 {String(review.updatedAt).slice(0, 10)}</p>
                 </div>
               ))
             )}

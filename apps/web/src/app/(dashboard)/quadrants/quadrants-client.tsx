@@ -1,6 +1,7 @@
 'use client';
 
 import { Empty } from '@/components/ui';
+import { getTaskStatusLabel } from '@/lib/presentation/labels';
 import { updateTaskQuadrantAction } from './actions';
 
 type TaskItem = {
@@ -30,26 +31,26 @@ function getQuadrant(task: TaskItem): QuadrantKey {
 
 const quadrantMeta: Record<QuadrantKey, { title: string; subtitle: string; important: boolean; urgent: boolean }> = {
   do: {
-    title: 'Important + Urgent',
-    subtitle: 'Do now',
+    title: '重要且紧急',
+    subtitle: '立刻处理',
     important: true,
     urgent: true,
   },
   decide: {
-    title: 'Important + Not Urgent',
-    subtitle: 'Schedule and protect',
+    title: '重要但不紧急',
+    subtitle: '安排并保护时间',
     important: true,
     urgent: false,
   },
   delegate: {
-    title: 'Urgent + Not Important',
-    subtitle: 'Reduce drag',
+    title: '紧急但不重要',
+    subtitle: '减少干扰',
     important: false,
     urgent: true,
   },
   delete: {
-    title: 'Not Important + Not Urgent',
-    subtitle: 'Question whether it should exist',
+    title: '不重要也不紧急',
+    subtitle: '质疑它是否值得存在',
     important: false,
     urgent: false,
   },
@@ -66,10 +67,10 @@ export function QuadrantsClient({ tasks }: { tasks: TaskItem[] }) {
   return (
     <div className="space-y-6">
       <div>
-        <p className="text-xs uppercase tracking-[0.24em] text-[var(--text-muted)]">Priority view</p>
-        <h1 className="mt-2 text-3xl font-semibold text-[var(--text-primary)]">Quadrants</h1>
+        <p className="text-xs uppercase tracking-[0.24em] text-[var(--text-muted)]">优先级视图</p>
+        <h1 className="mt-2 text-3xl font-semibold text-[var(--text-primary)]">四象限</h1>
         <p className="mt-2 max-w-2xl text-sm text-[var(--text-secondary)]">
-          This is a projection over tasks. Changing quadrant only updates `important` and `urgent`, never the task workflow state.
+          这是任务的四象限投影。切换象限只会更新 `important` 和 `urgent`，不会改变任务流程状态。
         </p>
       </div>
 
@@ -81,7 +82,7 @@ export function QuadrantsClient({ tasks }: { tasks: TaskItem[] }) {
               <h2 className="mt-2 text-xl font-semibold text-[var(--text-primary)]">{quadrantMeta[key].title}</h2>
             </div>
             {grouped[key].length === 0 ? (
-              <Empty text="No tasks in this quadrant." />
+              <Empty text="这个象限里还没有任务。" />
             ) : (
               <div className="space-y-3">
                 {grouped[key].map((task) => (
@@ -90,8 +91,8 @@ export function QuadrantsClient({ tasks }: { tasks: TaskItem[] }) {
                       <div>
                         <div className="flex flex-wrap items-center gap-2">
                           <p className="font-medium text-[var(--text-primary)]">{task.title}</p>
-                          <span className="text-xs text-[var(--text-muted)]">{task.status}</span>
-                          {task.dueDate && <span className="text-xs text-[var(--text-muted)]">Due {task.dueDate}</span>}
+                          <span className="text-xs text-[var(--text-muted)]">{getTaskStatusLabel(task.status)}</span>
+                          {task.dueDate && <span className="text-xs text-[var(--text-muted)]">截止 {task.dueDate}</span>}
                         </div>
                         {task.notes && <p className="mt-2 text-sm text-[var(--text-secondary)]">{task.notes}</p>}
                         {task.keyResultLinks && task.keyResultLinks.length > 0 && (
@@ -113,7 +114,7 @@ export function QuadrantsClient({ tasks }: { tasks: TaskItem[] }) {
                               disabled={nextKey === key}
                               className="rounded-md border border-[var(--border-subtle)] px-3 py-2 text-xs text-[var(--text-secondary)] disabled:opacity-50"
                             >
-                              {nextKey === key ? 'Current' : meta.subtitle}
+                              {nextKey === key ? '当前所在' : meta.subtitle}
                             </button>
                           </form>
                         ))}

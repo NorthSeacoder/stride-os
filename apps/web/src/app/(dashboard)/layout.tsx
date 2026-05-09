@@ -18,12 +18,12 @@ export default async function DashboardLayout({
       <nav className="flex items-center justify-between border-b border-[var(--border-subtle)] bg-[var(--bg-canvas)] px-6 py-3">
         <div className="flex items-center gap-6">
           <Link href="/dashboard" className="font-semibold text-[var(--text-primary)]">Stride OS</Link>
-          <Link href="/dashboard" className="text-sm text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]">Dashboard</Link>
-          <Link href="/tasks" className="text-sm text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]">Tasks</Link>
-          <Link href="/quadrants" className="text-sm text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]">Quadrants</Link>
+          <Link href="/dashboard" className="text-sm text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]">工作台</Link>
+          <Link href="/tasks" className="text-sm text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]">任务</Link>
+          <Link href="/quadrants" className="text-sm text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]">四象限</Link>
           <Link href="/okr" className="text-sm text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]">OKR</Link>
-          <Link href="/review" className="text-sm text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]">Review</Link>
-          <Link href="/settings" className="text-sm text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]">Settings</Link>
+          <Link href="/review" className="text-sm text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]">复盘</Link>
+          <Link href="/settings" className="text-sm text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]">设置</Link>
         </div>
         <div className="flex items-center gap-4">
           <p className="hidden text-sm text-[var(--text-secondary)] sm:block">
@@ -34,7 +34,7 @@ export default async function DashboardLayout({
               type="submit"
               className="text-sm text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)]"
             >
-              Logout
+              退出登录
             </button>
           </form>
         </div>

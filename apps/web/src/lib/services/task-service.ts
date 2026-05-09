@@ -55,7 +55,7 @@ function isTaskEnergy(value: string): value is TaskEnergy {
 function requireNonEmptyTitle(title: string) {
   const normalized = title.trim();
   if (!normalized) {
-    throw new Error('Task title is required.');
+    throw new Error('任务标题不能为空。');
   }
 
   return normalized;
@@ -64,22 +64,22 @@ function requireNonEmptyTitle(title: string) {
 function normalizeTaskState(input: TaskWriteInput) {
   const status = input.status ?? 'inbox';
   if (!isTaskStatus(status)) {
-    throw new Error(`Unsupported task status: ${status}`);
+    throw new Error(`任务状态不支持值：${status}`);
   }
 
   const todayType = input.todayType ?? null;
   if (todayType !== null && !isTodayType(todayType)) {
-    throw new Error(`Unsupported today type: ${todayType}`);
+    throw new Error(`今日类型不支持值：${todayType}`);
   }
 
   const priority = input.priority ?? null;
   if (priority !== null && !isTaskPriority(priority)) {
-    throw new Error(`Unsupported task priority: ${priority}`);
+    throw new Error(`任务优先级不支持值：${priority}`);
   }
 
   const energy = input.energy ?? null;
   if (energy !== null && !isTaskEnergy(energy)) {
-    throw new Error(`Unsupported task energy: ${energy}`);
+    throw new Error(`任务精力消耗不支持值：${energy}`);
   }
 
   const normalized = {
@@ -97,7 +97,7 @@ function normalizeTaskState(input: TaskWriteInput) {
   };
 
   if (normalized.status === 'today' && normalized.todayType === null) {
-    throw new Error('Today tasks must declare Must or Focus.');
+    throw new Error('今日任务必须指定为“必做”或“专注”。');
   }
 
   if (normalized.status !== 'today') {
@@ -105,7 +105,7 @@ function normalizeTaskState(input: TaskWriteInput) {
   }
 
   if (normalized.status === 'scheduled' && !normalized.scheduledDate) {
-    throw new Error('Scheduled tasks require a scheduled date.');
+    throw new Error('排期任务必须填写排期日期。');
   }
 
   if (normalized.status === 'done' && normalized.completedAt === null) {
@@ -122,27 +122,27 @@ function normalizeTaskState(input: TaskWriteInput) {
 export function buildTaskUpdatePatch(input: Partial<TaskWriteInput>) {
   const normalizedTitle = input.title?.trim();
   if (input.title !== undefined && !normalizedTitle) {
-    throw new Error('Task title is required.');
+    throw new Error('任务标题不能为空。');
   }
 
   const rawStatus = input.status;
   if (rawStatus !== undefined && !isTaskStatus(rawStatus)) {
-    throw new Error(`Unsupported task status: ${rawStatus}`);
+    throw new Error(`任务状态不支持值：${rawStatus}`);
   }
 
   const rawTodayType = input.todayType === undefined ? undefined : (input.todayType ?? null);
   if (rawTodayType !== undefined && rawTodayType !== null && !isTodayType(rawTodayType)) {
-    throw new Error(`Unsupported today type: ${rawTodayType}`);
+    throw new Error(`今日类型不支持值：${rawTodayType}`);
   }
 
   const rawPriority = input.priority === undefined ? undefined : (input.priority ?? null);
   if (rawPriority !== undefined && rawPriority !== null && !isTaskPriority(rawPriority)) {
-    throw new Error(`Unsupported task priority: ${rawPriority}`);
+    throw new Error(`任务优先级不支持值：${rawPriority}`);
   }
 
   const rawEnergy = input.energy === undefined ? undefined : (input.energy ?? null);
   if (rawEnergy !== undefined && rawEnergy !== null && !isTaskEnergy(rawEnergy)) {
-    throw new Error(`Unsupported task energy: ${rawEnergy}`);
+    throw new Error(`任务精力消耗不支持值：${rawEnergy}`);
   }
 
   const patch: {
@@ -178,17 +178,17 @@ export function buildTaskUpdatePatch(input: Partial<TaskWriteInput>) {
   const nextTodayType = patch.todayType;
 
   if (nextStatus === 'today' && nextTodayType === undefined) {
-    throw new Error('Moving a task into Today requires Must or Focus.');
+    throw new Error('把任务移入“今日”时，必须指定为“必做”或“专注”。');
   }
 
   if (nextTodayType !== undefined && nextStatus !== 'today') {
     if (nextTodayType !== null) {
-      throw new Error('Today type can only be set while status is Today.');
+      throw new Error('只有状态为“今日”时，才能设置今日类型。');
     }
   }
 
   if (nextStatus === 'scheduled' && patch.scheduledDate === undefined) {
-    throw new Error('Moving a task into Scheduled requires a scheduled date.');
+    throw new Error('把任务移入“已排期”时，必须填写排期日期。');
   }
 
   if (nextStatus === 'done' && patch.completedAt === undefined) {

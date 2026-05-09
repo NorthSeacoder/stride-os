@@ -17,7 +17,7 @@ function SubmitButton() {
       disabled={pending}
       className="w-full rounded-md border border-[var(--border-strong)] bg-[var(--bg-panel-strong)] px-4 py-2 text-sm font-medium text-[var(--text-primary)] transition-colors hover:bg-[var(--bg-panel-contrast)] focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] disabled:cursor-not-allowed disabled:opacity-50"
     >
-      {pending ? 'Signing in...' : 'Sign in'}
+      {pending ? '登录中...' : '登录'}
     </button>
   );
 }
@@ -35,7 +35,7 @@ export function LoginForm() {
 
       <div>
         <label htmlFor="email" className="mb-1 block text-sm font-medium text-[var(--text-primary)]">
-          Email
+          邮箱
         </label>
         <input
           id="email"
@@ -49,7 +49,7 @@ export function LoginForm() {
 
       <div>
         <label htmlFor="password" className="mb-1 block text-sm font-medium text-[var(--text-primary)]">
-          Password
+          密码
         </label>
         <input
           id="password"

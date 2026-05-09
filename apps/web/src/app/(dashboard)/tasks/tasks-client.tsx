@@ -3,6 +3,12 @@
 import { useActionState, useEffect, useState } from 'react';
 import { Empty, ErrorAlert } from '@/components/ui';
 import {
+  getTaskEnergyLabel,
+  getTaskPriorityLabel,
+  getTaskStatusLabel,
+  getTodayTypeLabel,
+} from '@/lib/presentation/labels';
+import {
   cancelTaskAction,
   completeTaskAction,
   createTaskAction,
@@ -87,10 +93,10 @@ export function TasksClient({
     <div className="space-y-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
-          <p className="text-xs uppercase tracking-[0.24em] text-[var(--text-muted)]">Daily execution</p>
-          <h1 className="mt-2 text-3xl font-semibold text-[var(--text-primary)]">Tasks</h1>
+          <p className="text-xs uppercase tracking-[0.24em] text-[var(--text-muted)]">每日执行</p>
+          <h1 className="mt-2 text-3xl font-semibold text-[var(--text-primary)]">任务</h1>
           <p className="mt-2 max-w-2xl text-sm text-[var(--text-secondary)]">
-            Today is the default view. Pull work from Inbox or Scheduled, mark Must vs Focus, and keep KR links attached to execution.
+            默认进入今日视图。你可以从收件箱或排期任务中拉取任务，标记为必做或专注，并把 KR 关联到执行动作上。
           </p>
         </div>
         <button
@@ -101,7 +107,7 @@ export function TasksClient({
           }}
           className="rounded-md border border-[var(--border-strong)] bg-[var(--bg-panel-strong)] px-4 py-2 text-sm font-medium text-[var(--text-primary)] transition-colors hover:bg-[var(--bg-panel-contrast)]"
         >
-          New Task
+          新建任务
         </button>
       </div>
 
@@ -117,7 +123,7 @@ export function TasksClient({
                 : 'border-[var(--border-subtle)] bg-[var(--bg-panel)] hover:bg-[var(--bg-elevated)]'
             }`}
           >
-            <p className="text-xs uppercase tracking-[0.18em] text-[var(--text-muted)]">{view}</p>
+            <p className="text-xs uppercase tracking-[0.18em] text-[var(--text-muted)]">{getTaskStatusLabel(view)}</p>
             <p className="mt-2 text-2xl font-semibold text-[var(--text-primary)]">{viewCounts[view]}</p>
           </button>
         ))}
@@ -127,7 +133,7 @@ export function TasksClient({
         <TaskForm
           action={createAction}
           error={createState.error}
-          submitLabel="Create Task"
+          submitLabel="创建任务"
           keyResults={keyResults}
           onCancel={() => setShowCreateForm(false)}
         />
@@ -137,7 +143,7 @@ export function TasksClient({
         <TaskForm
           action={updateAction}
           error={updateState.error}
-          submitLabel="Update Task"
+          submitLabel="更新任务"
           task={editingTask}
           keyResults={keyResults}
           onCancel={() => setEditingTask(null)}
@@ -147,17 +153,17 @@ export function TasksClient({
       {activeView === 'today' && (
         <div className="grid gap-4 lg:grid-cols-2">
           <TaskLane
-            title="Must"
-            subtitle="Things that should move today."
+            title="必做"
+            subtitle="今天必须推进的事项。"
             items={today.must}
-            emptyText='No Must tasks yet. Pull one from Inbox or Scheduled.'
+            emptyText='还没有必做任务。可以从收件箱或排期中拉一个进来。'
             onEdit={setEditingTask}
           />
           <TaskLane
-            title="Focus"
-            subtitle="Deep work worth protecting."
+            title="专注"
+            subtitle="值得专门保护的深度工作。"
             items={today.focus}
-            emptyText='No Focus tasks yet. Add a Today task with Focus selected.'
+            emptyText='还没有专注任务。新增今日任务时可选择专注。'
             onEdit={setEditingTask}
           />
         </div>
@@ -165,10 +171,10 @@ export function TasksClient({
 
       {activeView === 'inbox' && (
         <TaskList
-          title="Inbox"
-          subtitle="New work lands here by default."
+          title="收件箱"
+          subtitle="新任务默认先进入这里。"
           items={inbox}
-          emptyText='Inbox is clear.'
+          emptyText='收件箱已清空。'
           onEdit={setEditingTask}
           showTodayActions
           showScheduleAction
@@ -177,10 +183,10 @@ export function TasksClient({
 
       {activeView === 'scheduled' && (
         <TaskList
-          title="Scheduled"
-          subtitle="Date-bound work waiting for the right day."
+          title="已排期"
+          subtitle="有明确日期、等待合适时机执行的任务。"
           items={scheduled}
-          emptyText='No scheduled tasks.'
+          emptyText='暂无排期任务。'
           onEdit={setEditingTask}
           showTodayActions
         />
@@ -188,10 +194,10 @@ export function TasksClient({
 
       {activeView === 'done' && (
         <TaskList
-          title="Done"
-          subtitle="Completed tasks keep their KR context for review."
+          title="已完成"
+          subtitle="已完成任务会保留 KR 上下文，便于后续复盘。"
           items={done}
-          emptyText='Nothing completed yet.'
+          emptyText='还没有完成的任务。'
           onEdit={setEditingTask}
         />
       )}
@@ -276,19 +282,20 @@ function TaskCards({
                 <h3 className="text-base font-medium text-[var(--text-primary)]">{task.title}</h3>
                 {task.todayType && (
                   <span className="rounded-full bg-[var(--bg-panel-strong)] px-2 py-1 text-[11px] uppercase tracking-[0.14em] text-[var(--text-secondary)]">
-                    {task.todayType}
+                    {getTodayTypeLabel(task.todayType)}
                   </span>
                 )}
-                {task.important && <span className="text-xs text-[var(--warning-text)]">Important</span>}
-                {task.urgent && <span className="text-xs text-[var(--danger-text)]">Urgent</span>}
+                {task.important && <span className="text-xs text-[var(--warning-text)]">重要</span>}
+                {task.urgent && <span className="text-xs text-[var(--danger-text)]">紧急</span>}
               </div>
               {task.notes && <p className="mt-2 text-sm text-[var(--text-secondary)]">{task.notes}</p>}
               <div className="mt-3 flex flex-wrap gap-2 text-xs text-[var(--text-muted)]">
-                {task.scheduledDate && <span>Scheduled {task.scheduledDate}</span>}
-                {task.dueDate && <span>Due {task.dueDate}</span>}
-                {task.completedAt && <span>Completed {String(task.completedAt).slice(0, 10)}</span>}
-                {task.priority && <span>{task.priority}</span>}
-                {task.energy && <span>{task.energy} energy</span>}
+                <span>{getTaskStatusLabel(task.status)}</span>
+                {task.scheduledDate && <span>排期 {task.scheduledDate}</span>}
+                {task.dueDate && <span>截止 {task.dueDate}</span>}
+                {task.completedAt && <span>完成于 {String(task.completedAt).slice(0, 10)}</span>}
+                {task.priority && <span>优先级 {getTaskPriorityLabel(task.priority)}</span>}
+                {task.energy && <span>精力 {getTaskEnergyLabel(task.energy)}</span>}
               </div>
               {task.keyResultLinks && task.keyResultLinks.length > 0 && (
                 <div className="mt-3 flex flex-wrap gap-2">
@@ -310,12 +317,12 @@ function TaskCards({
                 onClick={() => onEdit(task)}
                 className="rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-panel)] hover:text-[var(--text-primary)]"
               >
-                Edit
+                编辑
               </button>
               {task.status !== 'done' && (
                 <form action={async () => completeTaskAction(task.id)}>
                   <button type="submit" className="rounded-md border border-[var(--success-border)] px-3 py-2 text-sm text-[var(--success-text)]">
-                    Complete
+                    完成
                   </button>
                 </form>
               )}
@@ -323,12 +330,12 @@ function TaskCards({
                 <>
                   <form action={async () => moveTaskToTodayAction(task.id, 'must')}>
                     <button type="submit" className="rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm text-[var(--text-secondary)]">
-                      Today Must
+                      今日必做
                     </button>
                   </form>
                   <form action={async () => moveTaskToTodayAction(task.id, 'focus')}>
                     <button type="submit" className="rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm text-[var(--text-secondary)]">
-                      Today Focus
+                      今日专注
                     </button>
                   </form>
                 </>
@@ -337,14 +344,14 @@ function TaskCards({
                 <form action={async (formData: FormData) => scheduleTaskAction(task.id, String(formData.get('scheduledDate') ?? '').trim())} className="flex gap-2">
                   <input type="date" name="scheduledDate" className="rounded-md border border-[var(--border-subtle)] bg-[var(--bg-panel)] px-2 py-2 text-sm text-[var(--text-primary)]" />
                   <button type="submit" className="rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm text-[var(--text-secondary)]">
-                    Schedule
+                    排期
                   </button>
                 </form>
               )}
               {task.status !== 'canceled' && task.status !== 'done' && (
                 <form action={async () => cancelTaskAction(task.id)}>
                   <button type="submit" className="rounded-md border border-[var(--danger-border)] px-3 py-2 text-sm text-[var(--danger-text)]">
-                    Cancel
+                    取消
                   </button>
                 </form>
               )}
@@ -379,7 +386,7 @@ function TaskForm({
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold text-[var(--text-primary)]">{submitLabel}</h2>
         <button type="button" onClick={onCancel} className="text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)]">
-          Cancel
+          取消
         </button>
       </div>
 
@@ -387,73 +394,73 @@ function TaskForm({
 
       <div className="grid gap-4 md:grid-cols-2">
         <label className="block">
-          <span className="mb-1 block text-sm text-[var(--text-secondary)]">Title</span>
+          <span className="mb-1 block text-sm text-[var(--text-secondary)]">标题</span>
           <input name="title" required defaultValue={task?.title ?? ''} className="w-full rounded-md border border-[var(--border-subtle)] bg-[var(--bg-canvas)] px-3 py-2 text-sm text-[var(--text-primary)]" />
         </label>
         <label className="block">
-          <span className="mb-1 block text-sm text-[var(--text-secondary)]">Status</span>
+          <span className="mb-1 block text-sm text-[var(--text-secondary)]">状态</span>
           <select name="status" defaultValue={task?.status ?? 'inbox'} className="w-full rounded-md border border-[var(--border-subtle)] bg-[var(--bg-canvas)] px-3 py-2 text-sm text-[var(--text-primary)]">
-            <option value="inbox">Inbox</option>
-            <option value="today">Today</option>
-            <option value="scheduled">Scheduled</option>
-            <option value="done">Done</option>
-            <option value="canceled">Canceled</option>
+            <option value="inbox">收件箱</option>
+            <option value="today">今日</option>
+            <option value="scheduled">已排期</option>
+            <option value="done">已完成</option>
+            <option value="canceled">已取消</option>
           </select>
         </label>
         <label className="block">
-          <span className="mb-1 block text-sm text-[var(--text-secondary)]">Today Type</span>
+          <span className="mb-1 block text-sm text-[var(--text-secondary)]">今日类型</span>
           <select name="todayType" defaultValue={task?.todayType ?? ''} className="w-full rounded-md border border-[var(--border-subtle)] bg-[var(--bg-canvas)] px-3 py-2 text-sm text-[var(--text-primary)]">
-            <option value="">None</option>
-            <option value="must">Must</option>
-            <option value="focus">Focus</option>
+            <option value="">无</option>
+            <option value="must">必做</option>
+            <option value="focus">专注</option>
           </select>
         </label>
         <label className="block">
-          <span className="mb-1 block text-sm text-[var(--text-secondary)]">Scheduled Date</span>
+          <span className="mb-1 block text-sm text-[var(--text-secondary)]">排期日期</span>
           <input type="date" name="scheduledDate" defaultValue={task?.scheduledDate ?? ''} className="w-full rounded-md border border-[var(--border-subtle)] bg-[var(--bg-canvas)] px-3 py-2 text-sm text-[var(--text-primary)]" />
         </label>
         <label className="block">
-          <span className="mb-1 block text-sm text-[var(--text-secondary)]">Due Date</span>
+          <span className="mb-1 block text-sm text-[var(--text-secondary)]">截止日期</span>
           <input type="date" name="dueDate" defaultValue={task?.dueDate ?? ''} className="w-full rounded-md border border-[var(--border-subtle)] bg-[var(--bg-canvas)] px-3 py-2 text-sm text-[var(--text-primary)]" />
         </label>
         <label className="block">
-          <span className="mb-1 block text-sm text-[var(--text-secondary)]">Priority</span>
+          <span className="mb-1 block text-sm text-[var(--text-secondary)]">优先级</span>
           <select name="priority" defaultValue={task?.priority ?? ''} className="w-full rounded-md border border-[var(--border-subtle)] bg-[var(--bg-canvas)] px-3 py-2 text-sm text-[var(--text-primary)]">
-            <option value="">None</option>
+            <option value="">无</option>
             <option value="P1">P1</option>
             <option value="P2">P2</option>
             <option value="P3">P3</option>
           </select>
         </label>
         <label className="block">
-          <span className="mb-1 block text-sm text-[var(--text-secondary)]">Energy</span>
+          <span className="mb-1 block text-sm text-[var(--text-secondary)]">精力消耗</span>
           <select name="energy" defaultValue={task?.energy ?? ''} className="w-full rounded-md border border-[var(--border-subtle)] bg-[var(--bg-canvas)] px-3 py-2 text-sm text-[var(--text-primary)]">
-            <option value="">None</option>
-            <option value="low">Low</option>
-            <option value="medium">Medium</option>
-            <option value="high">High</option>
+            <option value="">无</option>
+            <option value="low">低</option>
+            <option value="medium">中</option>
+            <option value="high">高</option>
           </select>
         </label>
       </div>
 
       <label className="block">
-        <span className="mb-1 block text-sm text-[var(--text-secondary)]">Notes</span>
+        <span className="mb-1 block text-sm text-[var(--text-secondary)]">备注</span>
         <textarea name="notes" rows={3} defaultValue={task?.notes ?? ''} className="w-full rounded-md border border-[var(--border-subtle)] bg-[var(--bg-canvas)] px-3 py-2 text-sm text-[var(--text-primary)]" />
       </label>
 
       <div className="grid gap-3 md:grid-cols-2">
         <label className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
           <input type="checkbox" name="important" defaultChecked={task?.important ?? false} />
-          Important
+          重要
         </label>
         <label className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
           <input type="checkbox" name="urgent" defaultChecked={task?.urgent ?? false} />
-          Urgent
+          紧急
         </label>
       </div>
 
       <label className="block">
-        <span className="mb-1 block text-sm text-[var(--text-secondary)]">Linked Key Results</span>
+        <span className="mb-1 block text-sm text-[var(--text-secondary)]">关联关键结果</span>
         <select
           name="keyResultIds"
           multiple

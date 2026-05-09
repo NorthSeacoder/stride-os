@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useState } from 'react';
 import { Empty } from '@/components/ui';
+import { getExampleStatusLabel } from '@/lib/presentation/labels';
 import {
   createExampleAction,
   deleteExampleAction,
@@ -61,13 +62,13 @@ export function ExamplesClient({ items }: { items: ExampleItem[] }) {
   return (
     <div>
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-2xl font-bold text-[var(--text-primary)]">Examples</h1>
+        <h1 className="text-2xl font-bold text-[var(--text-primary)]">示例</h1>
         <button
           type="button"
           onClick={startCreate}
           className="min-h-11 rounded-md border border-[var(--border-strong)] bg-[var(--bg-panel-strong)] px-4 py-2 text-sm font-medium text-[var(--text-primary)] transition-colors hover:bg-[var(--bg-panel-contrast)] focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] sm:min-h-0"
         >
-          Add Item
+          新增条目
         </button>
       </div>
 
@@ -75,7 +76,7 @@ export function ExamplesClient({ items }: { items: ExampleItem[] }) {
         <ExampleForm
           action={createAction}
           error={createState.error}
-          submitLabel="Create"
+          submitLabel="创建"
           onCancel={cancelCreate}
         />
       )}
@@ -84,14 +85,14 @@ export function ExamplesClient({ items }: { items: ExampleItem[] }) {
         <ExampleForm
           action={updateAction}
           error={updateState.error}
-          submitLabel="Update"
+          submitLabel="更新"
           item={editingItem}
           onCancel={cancelEdit}
         />
       )}
 
       {items.length === 0 ? (
-        <Empty text='No items yet. Click "Add Item" to create one.' />
+        <Empty text='还没有条目。点击“新增条目”创建。' />
       ) : (
         <div className="space-y-2">
           {items.map((item) => (
@@ -104,7 +105,7 @@ export function ExamplesClient({ items }: { items: ExampleItem[] }) {
                     item.status === 'archived' ? 'bg-[var(--bg-elevated)] text-[var(--text-secondary)]' :
                     'bg-[var(--warning-bg)] text-[var(--warning-text)]'
                   }`}>
-                    {item.status}
+                    {getExampleStatusLabel(item.status)}
                   </span>
                   {item.notes && <span className="ml-2 break-words">{item.notes}</span>}
                 </p>
@@ -115,7 +116,7 @@ export function ExamplesClient({ items }: { items: ExampleItem[] }) {
                   onClick={() => startEdit(item)}
                   className="min-h-11 rounded px-1 text-sm text-[var(--text-primary)] transition-colors hover:text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] sm:min-h-0"
                 >
-                  Edit
+                  编辑
                 </button>
                 <form
                   action={async () => {
@@ -126,7 +127,7 @@ export function ExamplesClient({ items }: { items: ExampleItem[] }) {
                     type="submit"
                     className="min-h-11 rounded px-1 text-sm text-[var(--danger-text)] transition-colors hover:text-[var(--danger-text-strong)] focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] sm:min-h-0"
                   >
-                    Delete
+                    删除
                   </button>
                 </form>
               </div>
@@ -160,7 +161,7 @@ function ExampleForm({
         </div>
       )}
       <div>
-        <label htmlFor={`${submitLabel}-title`} className="mb-1 block text-sm font-medium text-[var(--text-primary)]">Title</label>
+        <label htmlFor={`${submitLabel}-title`} className="mb-1 block text-sm font-medium text-[var(--text-primary)]">标题</label>
         <input
           id={`${submitLabel}-title`}
           name="title"
@@ -171,20 +172,20 @@ function ExampleForm({
         />
       </div>
       <div>
-        <label htmlFor={`${submitLabel}-status`} className="mb-1 block text-sm font-medium text-[var(--text-primary)]">Status</label>
+        <label htmlFor={`${submitLabel}-status`} className="mb-1 block text-sm font-medium text-[var(--text-primary)]">状态</label>
         <select
           id={`${submitLabel}-status`}
           name="status"
           defaultValue={item?.status ?? 'active'}
           className="w-full rounded-md border border-[var(--border-subtle)] bg-[var(--bg-canvas)] px-3 py-2 text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)]"
         >
-          <option value="active">Active</option>
-          <option value="archived">Archived</option>
-          <option value="draft">Draft</option>
+          <option value="active">启用</option>
+          <option value="archived">已归档</option>
+          <option value="draft">草稿</option>
         </select>
       </div>
       <div>
-        <label htmlFor={`${submitLabel}-notes`} className="mb-1 block text-sm font-medium text-[var(--text-primary)]">Notes</label>
+        <label htmlFor={`${submitLabel}-notes`} className="mb-1 block text-sm font-medium text-[var(--text-primary)]">备注</label>
         <textarea
           id={`${submitLabel}-notes`}
           name="notes"
@@ -205,7 +206,7 @@ function ExampleForm({
           onClick={onCancel}
           className="min-h-11 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-panel)] px-4 py-2 text-sm text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] sm:min-h-0"
         >
-          Cancel
+          取消
         </button>
       </div>
     </form>

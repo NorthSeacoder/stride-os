@@ -1,5 +1,6 @@
 import { and, asc, desc, eq, inArray, isNull, lte, gte } from 'drizzle-orm';
 import { db, schema } from '@stride-os/db';
+import { getConfidenceLabel } from '@/lib/presentation/labels';
 import { listTasksForKeyResult } from './task-service';
 
 type TransactionLike = {
@@ -60,7 +61,7 @@ export type CheckInWriteInput = {
 function ensureTrimmed(value: string, field: string) {
   const normalized = value.trim();
   if (!normalized) {
-    throw new Error(`${field} is required.`);
+    throw new Error(`${field} 不能为空。`);
   }
 
   return normalized;
@@ -68,7 +69,7 @@ function ensureTrimmed(value: string, field: string) {
 
 function validateInSet<T extends string>(value: T, allowed: readonly T[], field: string) {
   if (!allowed.includes(value)) {
-    throw new Error(`Unsupported ${field}: ${value}`);
+    throw new Error(`${field} 不支持值：${value}`);
   }
 
   return value;
@@ -76,14 +77,14 @@ function validateInSet<T extends string>(value: T, allowed: readonly T[], field:
 
 function validateDateRange(startDate: string, endDate: string) {
   if (endDate < startDate) {
-    throw new Error('End date must be on or after start date.');
+    throw new Error('结束日期不能早于开始日期。');
   }
 }
 
 function normalizePeriodInput(input: PeriodWriteInput) {
-  const name = ensureTrimmed(input.name, 'Period name');
-  const type = validateInSet(input.type, PERIOD_TYPES, 'period type');
-  const status = validateInSet(input.status ?? 'active', PERIOD_STATUSES, 'period status');
+  const name = ensureTrimmed(input.name, '周期名称');
+  const type = validateInSet(input.type, PERIOD_TYPES, '周期类型');
+  const status = validateInSet(input.status ?? 'active', PERIOD_STATUSES, '周期状态');
   validateDateRange(input.startDate, input.endDate);
 
   return {
@@ -98,9 +99,9 @@ function normalizePeriodInput(input: PeriodWriteInput) {
 function normalizeObjectiveInput(input: ObjectiveWriteInput) {
   return {
     periodId: input.periodId,
-    title: ensureTrimmed(input.title, 'Objective title'),
+    title: ensureTrimmed(input.title, '目标标题'),
     description: input.description?.trim() || null,
-    status: validateInSet(input.status ?? 'active', OBJECTIVE_STATUSES, 'objective status'),
+    status: validateInSet(input.status ?? 'active', OBJECTIVE_STATUSES, '目标状态'),
     sortOrder: input.sortOrder ?? 0,
   };
 }
@@ -108,15 +109,15 @@ function normalizeObjectiveInput(input: ObjectiveWriteInput) {
 function normalizeKeyResultInput(input: KeyResultWriteInput) {
   return {
     objectiveId: input.objectiveId,
-    title: ensureTrimmed(input.title, 'Key result title'),
-    type: validateInSet(input.type, KEY_RESULT_TYPES, 'key result type'),
+    title: ensureTrimmed(input.title, '关键结果标题'),
+    type: validateInSet(input.type, KEY_RESULT_TYPES, '关键结果类型'),
     targetValue: input.targetValue ?? null,
     currentValue: input.currentValue ?? null,
     unit: input.unit?.trim() || null,
-    status: validateInSet(input.status ?? 'active', KEY_RESULT_STATUSES, 'key result status'),
+    status: validateInSet(input.status ?? 'active', KEY_RESULT_STATUSES, '关键结果状态'),
     confidence: input.confidence === undefined || input.confidence === null
       ? null
-      : validateInSet(input.confidence, CHECK_IN_CONFIDENCE, 'check-in confidence'),
+      : validateInSet(input.confidence, CHECK_IN_CONFIDENCE, 'check-in 信心'),
   };
 }
 
@@ -124,7 +125,7 @@ function normalizeCheckInInput(input: CheckInWriteInput) {
   return {
     keyResultId: input.keyResultId,
     progressValue: input.progressValue ?? null,
-    confidence: validateInSet(input.confidence, CHECK_IN_CONFIDENCE, 'check-in confidence'),
+    confidence: validateInSet(input.confidence, CHECK_IN_CONFIDENCE, 'check-in 信心'),
     summary: input.summary?.trim() || null,
     blockers: input.blockers?.trim() || null,
     nextActions: input.nextActions?.trim() || null,
@@ -220,11 +221,11 @@ export async function updatePeriod(
     updatedAt: Date;
   };
 
-  if (input.name !== undefined) patch.name = ensureTrimmed(input.name, 'Period name');
-  if (input.type !== undefined) patch.type = validateInSet(input.type, PERIOD_TYPES, 'period type');
+  if (input.name !== undefined) patch.name = ensureTrimmed(input.name, '周期名称');
+  if (input.type !== undefined) patch.type = validateInSet(input.type, PERIOD_TYPES, '周期类型');
   if (input.startDate !== undefined) patch.startDate = input.startDate;
   if (input.endDate !== undefined) patch.endDate = input.endDate;
-  if (input.status !== undefined) patch.status = validateInSet(input.status, PERIOD_STATUSES, 'period status');
+  if (input.status !== undefined) patch.status = validateInSet(input.status, PERIOD_STATUSES, '周期状态');
   if (patch.startDate && patch.endDate) validateDateRange(patch.startDate, patch.endDate);
 
   const [period] = await db

@@ -105,7 +105,7 @@ export async function signInWithPassword(email: string, password: string) {
   if (!normalizedEmail || !normalizedPassword) {
     return {
       ok: false as const,
-      error: 'Email and password are required',
+      error: '邮箱和密码不能为空',
       status: 400,
     };
   }
@@ -115,7 +115,7 @@ export async function signInWithPassword(email: string, password: string) {
   if (!user) {
     return {
       ok: false as const,
-      error: 'Invalid credentials',
+      error: '邮箱或密码错误',
       status: 401,
     };
   }

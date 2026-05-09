@@ -22,12 +22,12 @@ export async function createTokenAction(
 ): Promise<TokenActionState> {
   const user = await getSessionUser();
   if (!user) {
-    return { error: 'Unauthorized' };
+    return { error: '未授权' };
   }
 
   const name = String(formData.get('name') ?? '').trim();
   if (!name) {
-    return { error: 'Name is required' };
+    return { error: '名称不能为空' };
   }
 
   const result = await createApiToken(user.id, name);

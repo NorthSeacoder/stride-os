@@ -30,7 +30,7 @@ export function TokensClient({
       {createdToken && (
         <div className="mb-4 rounded-md border border-[var(--success-border)] bg-[var(--success-bg)] p-4">
           <p className="text-sm font-medium text-[var(--success-text)]">
-            Token created. Copy it now. It won&apos;t be shown again:
+            令牌已创建，请立即复制。关闭后不会再次显示：
           </p>
           <code className="mt-2 block rounded border border-[var(--border-subtle)] bg-[var(--bg-canvas)] p-2 text-xs break-all text-[var(--text-primary)]">
             {createdToken}
@@ -39,12 +39,12 @@ export function TokensClient({
       )}
 
       <form action={createAction} className="mb-4 flex flex-col gap-2 sm:flex-row">
-        <label htmlFor="token-name" className="sr-only">Token name</label>
+        <label htmlFor="token-name" className="sr-only">令牌名称</label>
         <input
           id="token-name"
           name="name"
           type="text"
-          placeholder="Token name"
+          placeholder="令牌名称"
           required
           className="flex-1 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-canvas)] px-3 py-2 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)]"
         />
@@ -52,7 +52,7 @@ export function TokensClient({
           type="submit"
           className="min-h-11 rounded-md border border-[var(--border-strong)] bg-[var(--bg-panel-strong)] px-4 py-2 text-sm font-medium text-[var(--text-primary)] transition-colors hover:bg-[var(--bg-panel-contrast)] focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] sm:min-h-0"
         >
-          Create
+          创建
         </button>
       </form>
 
@@ -63,7 +63,7 @@ export function TokensClient({
       )}
 
       {tokens.length === 0 ? (
-        <p className="text-sm text-[var(--text-secondary)]">No active tokens.</p>
+        <p className="text-sm text-[var(--text-secondary)]">暂无可用令牌。</p>
       ) : (
         <div className="space-y-2">
           {tokens.map((token) => (
@@ -71,8 +71,8 @@ export function TokensClient({
               <div className="min-w-0">
                 <p className="break-words text-sm font-medium text-[var(--text-primary)]">{token.name}</p>
                 <p className="text-xs text-[var(--text-secondary)]">
-                  Created: {new Date(token.createdAt).toLocaleDateString()}
-                  {token.lastUsedAt && ` · Last used: ${new Date(token.lastUsedAt).toLocaleDateString()}`}
+                  创建于：{new Date(token.createdAt).toLocaleDateString()}
+                  {token.lastUsedAt && ` · 最近使用：${new Date(token.lastUsedAt).toLocaleDateString()}`}
                 </p>
               </div>
               <form
@@ -84,7 +84,7 @@ export function TokensClient({
                   type="submit"
                   className="min-h-11 shrink-0 rounded px-1 text-left text-sm text-[var(--danger-text)] transition-colors hover:text-[var(--danger-text-strong)] focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] sm:min-h-0"
                 >
-                  Revoke
+                  吊销
                 </button>
               </form>
             </div>

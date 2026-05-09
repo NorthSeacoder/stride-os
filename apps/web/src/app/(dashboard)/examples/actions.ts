@@ -36,13 +36,13 @@ export async function createExampleAction(
 ): Promise<ExampleActionState> {
   const user = await requireExamplesUser();
   if (!user) {
-    return { error: 'Unauthorized' };
+    return { error: '未授权' };
   }
 
   const { title, status, notes } = normalizeExampleInput(formData);
 
   if (!title) {
-    return { error: 'Title is required' };
+    return { error: '标题不能为空' };
   }
 
   const item = await createExample({
@@ -69,14 +69,14 @@ export async function updateExampleAction(
 ): Promise<ExampleActionState> {
   const user = await requireExamplesUser();
   if (!user) {
-    return { error: 'Unauthorized' };
+    return { error: '未授权' };
   }
 
   const id = String(formData.get('id') ?? '').trim();
   const { title, status, notes } = normalizeExampleInput(formData);
 
   if (!id || !title) {
-    return { error: 'Title is required' };
+    return { error: '标题不能为空' };
   }
 
   const item = await updateExample(id, {
@@ -86,7 +86,7 @@ export async function updateExampleAction(
   });
 
   if (!item) {
-    return { error: 'Item not found' };
+    return { error: '未找到条目' };
   }
 
   await db.insert(schema.auditLogs).values({

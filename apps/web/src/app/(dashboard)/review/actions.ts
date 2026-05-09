@@ -49,7 +49,7 @@ export async function generateWeeklyDraftAction(
 ): Promise<ReviewActionState> {
   const user = await requireReviewUser();
   if (!user) {
-    return { error: 'Unauthorized', draft: null };
+    return { error: '未授权', draft: null };
   }
 
   try {
@@ -60,7 +60,7 @@ export async function generateWeeklyDraftAction(
     return { error: '', draft };
   } catch (error) {
     return {
-      error: error instanceof Error ? error.message : 'Failed to generate review draft',
+      error: error instanceof Error ? error.message : '生成复盘草稿失败',
       draft: null,
     };
   }
@@ -72,7 +72,7 @@ export async function saveReviewDraftAction(
 ): Promise<ReviewActionState> {
   const user = await requireReviewUser();
   if (!user) {
-    return { error: 'Unauthorized', draft: null };
+    return { error: '未授权', draft: null };
   }
 
   try {
@@ -93,7 +93,7 @@ export async function saveReviewDraftAction(
     });
 
     if (!review) {
-      return { error: 'Failed to save review draft', draft: null };
+      return { error: '保存复盘草稿失败', draft: null };
     }
 
     await writeReviewAudit(user.id, 'review.draft.save', review.id);
@@ -115,7 +115,7 @@ export async function saveReviewDraftAction(
     };
   } catch (error) {
     return {
-      error: error instanceof Error ? error.message : 'Failed to save review draft',
+      error: error instanceof Error ? error.message : '保存复盘草稿失败',
       draft: null,
     };
   }

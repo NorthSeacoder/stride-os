@@ -1,5 +1,6 @@
 import { and, desc, eq, inArray } from 'drizzle-orm';
 import { db, schema } from '@stride-os/db';
+import { getConfidenceLabel } from '@/lib/presentation/labels';
 import {
   getCurrentPeriodSummary,
   listCheckInsInRange,
@@ -37,7 +38,7 @@ export type ReviewDraftPayload = {
 
 function ensureReviewType(type: ReviewType) {
   if (!REVIEW_TYPES.includes(type)) {
-    throw new Error(`Unsupported review type: ${type}`);
+    throw new Error(`复盘类型不支持值：${type}`);
   }
 
   return type;
@@ -45,7 +46,7 @@ function ensureReviewType(type: ReviewType) {
 
 function ensureReviewStatus(status: ReviewStatus) {
   if (!REVIEW_STATUSES.includes(status)) {
-    throw new Error(`Unsupported review status: ${status}`);
+    throw new Error(`复盘状态不支持值：${status}`);
   }
 
   return status;
@@ -58,22 +59,22 @@ function buildReviewBody(input: {
 }) {
   const wins = input.completedTaskTitles.length > 0
     ? input.completedTaskTitles.map((title) => `- ${title}`).join('\n')
-    : '- No completed tasks captured this period';
+    : '- 本周期没有记录到已完成任务';
   const followUps = input.openMustTitles.length > 0
     ? input.openMustTitles.map((title) => `- ${title}`).join('\n')
-    : '- No unfinished Must tasks';
+    : '- 没有未完成的必做任务';
   const keyResults = input.keyResultSummaries.length > 0
     ? input.keyResultSummaries.map((line) => `- ${line}`).join('\n')
-    : '- No KR check-ins recorded';
+    : '- 没有记录到 KR check-in';
 
   return [
-    '## Wins',
+    '## 本期成果',
     wins,
     '',
-    '## Open Must Tasks',
+    '## 未完成的必做任务',
     followUps,
     '',
-    '## KR Progress',
+    '## KR 进展',
     keyResults,
   ].join('\n');
 }
@@ -119,7 +120,7 @@ export async function buildWeeklyReviewDraft(periodStart: string, periodEnd: str
   const keyResultSummaries = Array.from(latestCheckInsByKr.values()).map((checkIn) => {
     const keyResult = keyedResults.get(checkIn.keyResultId);
     const title = keyResult?.title ?? checkIn.keyResultId;
-    return `${title}: ${checkIn.summary || 'No summary'} (${checkIn.confidence})`;
+    return `${title}: ${checkIn.summary || '无总结'}（信心：${getConfidenceLabel(checkIn.confidence)}）`;
   });
 
   const structuredSummary = {
@@ -149,7 +150,7 @@ export async function buildWeeklyReviewDraft(periodStart: string, periodEnd: str
     type: 'weekly' as const,
     periodStart,
     periodEnd,
-    title: `Weekly review ${periodStart} - ${periodEnd}`,
+    title: `周复盘 ${periodStart} - ${periodEnd}`,
     body,
     structuredSummary,
     keyResultIds,

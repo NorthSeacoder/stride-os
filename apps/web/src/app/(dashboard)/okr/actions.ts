@@ -66,7 +66,7 @@ export async function createPeriodAction(
 ): Promise<OkrActionState> {
   const user = await requireOkrUser();
   if (!user) {
-    return { error: 'Unauthorized' };
+    return { error: '未授权' };
   }
 
   try {
@@ -82,7 +82,7 @@ export async function createPeriodAction(
     revalidateOkr();
     return { error: '' };
   } catch (error) {
-    return { error: error instanceof Error ? error.message : 'Failed to create period' };
+    return { error: error instanceof Error ? error.message : '创建周期失败' };
   }
 }
 
@@ -92,7 +92,7 @@ export async function createObjectiveAction(
 ): Promise<OkrActionState> {
   const user = await requireOkrUser();
   if (!user) {
-    return { error: 'Unauthorized' };
+    return { error: '未授权' };
   }
 
   try {
@@ -108,7 +108,7 @@ export async function createObjectiveAction(
     revalidateOkr();
     return { error: '' };
   } catch (error) {
-    return { error: error instanceof Error ? error.message : 'Failed to create objective' };
+    return { error: error instanceof Error ? error.message : '创建目标失败' };
   }
 }
 
@@ -118,7 +118,7 @@ export async function createKeyResultAction(
 ): Promise<OkrActionState> {
   const user = await requireOkrUser();
   if (!user) {
-    return { error: 'Unauthorized' };
+    return { error: '未授权' };
   }
 
   try {
@@ -137,7 +137,7 @@ export async function createKeyResultAction(
     revalidateOkr();
     return { error: '' };
   } catch (error) {
-    return { error: error instanceof Error ? error.message : 'Failed to create key result' };
+    return { error: error instanceof Error ? error.message : '创建关键结果失败' };
   }
 }
 
@@ -147,7 +147,7 @@ export async function createKrCheckInAction(
 ): Promise<OkrActionState> {
   const user = await requireOkrUser();
   if (!user) {
-    return { error: 'Unauthorized' };
+    return { error: '未授权' };
   }
 
   try {
@@ -166,6 +166,6 @@ export async function createKrCheckInAction(
     revalidatePath('/review');
     return { error: '' };
   } catch (error) {
-    return { error: error instanceof Error ? error.message : 'Failed to create check-in' };
+    return { error: error instanceof Error ? error.message : '创建 check-in 失败' };
   }
 }

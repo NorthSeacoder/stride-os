@@ -86,12 +86,12 @@ export async function createTaskAction(
   void prevState;
   const user = await requireTaskUser();
   if (!user) {
-    return { error: 'Unauthorized' };
+    return { error: '未授权' };
   }
 
   const title = getTrimmed(formData, 'title');
   if (!title) {
-    return { error: 'Title is required' };
+    return { error: '标题不能为空' };
   }
 
   const status = normalizeStatus(getTrimmed(formData, 'status'));
@@ -122,7 +122,7 @@ export async function createTaskAction(
     return { error: '' };
   } catch (error) {
     return {
-      error: error instanceof Error ? error.message : 'Failed to create task',
+      error: error instanceof Error ? error.message : '创建任务失败',
     };
   }
 }
@@ -134,13 +134,13 @@ export async function updateTaskAction(
   void prevState;
   const user = await requireTaskUser();
   if (!user) {
-    return { error: 'Unauthorized' };
+    return { error: '未授权' };
   }
 
   const taskId = getTrimmed(formData, 'id');
   const title = getTrimmed(formData, 'title');
   if (!taskId || !title) {
-    return { error: 'Task id and title are required' };
+    return { error: '任务 ID 和标题不能为空' };
   }
 
   try {
@@ -158,7 +158,7 @@ export async function updateTaskAction(
     });
 
     if (!task) {
-      return { error: 'Task not found' };
+      return { error: '未找到任务' };
     }
 
     await replaceTaskKeyResultLinks(taskId, getKeyResultIds(formData));
@@ -167,7 +167,7 @@ export async function updateTaskAction(
     return { error: '' };
   } catch (error) {
     return {
-      error: error instanceof Error ? error.message : 'Failed to update task',
+      error: error instanceof Error ? error.message : '更新任务失败',
     };
   }
 }

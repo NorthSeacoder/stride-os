@@ -1,6 +1,13 @@
 import Link from 'next/link';
 import { Empty } from '@/components/ui';
 import { getKeyResultDetail } from '@/lib/services/okr-service';
+import {
+  getConfidenceLabel,
+  getKeyResultStatusLabel,
+  getKeyResultTypeLabel,
+  getTaskStatusLabel,
+  getTodayTypeLabel,
+} from '@/lib/presentation/labels';
 import { CheckInForm } from './check-in-form';
 
 export default async function KeyResultDetailPage({
@@ -15,9 +22,9 @@ export default async function KeyResultDetailPage({
     return (
       <div className="space-y-4">
         <Link href="/okr" className="text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)]">
-          Back to OKR
+          返回 OKR
         </Link>
-        <Empty text="Key result not found." />
+        <Empty text="未找到这个关键结果。" />
       </div>
     );
   }
@@ -25,7 +32,7 @@ export default async function KeyResultDetailPage({
   return (
     <div className="space-y-6">
       <Link href="/okr" className="text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)]">
-        Back to OKR
+        返回 OKR
       </Link>
 
       <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-panel)] p-5">
@@ -34,26 +41,26 @@ export default async function KeyResultDetailPage({
         </p>
         <h1 className="mt-2 text-3xl font-semibold text-[var(--text-primary)]">{keyResult.title}</h1>
         <div className="mt-3 flex flex-wrap gap-3 text-sm text-[var(--text-secondary)]">
-          <span>Type: {keyResult.type}</span>
-          <span>Status: {keyResult.status}</span>
-          <span>Confidence: {keyResult.progress?.confidence ?? 'unupdated'}</span>
-          <span>Progress: {keyResult.progress?.progressValue ?? 'n/a'}</span>
+          <span>类型：{getKeyResultTypeLabel(keyResult.type)}</span>
+          <span>状态：{getKeyResultStatusLabel(keyResult.status)}</span>
+          <span>信心：{getConfidenceLabel(keyResult.progress?.confidence)}</span>
+          <span>进度：{keyResult.progress?.progressValue ?? '暂无'}</span>
         </div>
       </div>
 
       <section className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-panel)] p-5">
-        <h2 className="text-lg font-semibold text-[var(--text-primary)]">Linked Tasks</h2>
-        <p className="mt-1 text-sm text-[var(--text-secondary)]">Tasks attached from the task workflow appear here as execution material.</p>
+        <h2 className="text-lg font-semibold text-[var(--text-primary)]">关联任务</h2>
+        <p className="mt-1 text-sm text-[var(--text-secondary)]">任务流程中关联到这个 KR 的事项会显示在这里，作为执行材料。</p>
         <div className="mt-4 space-y-3">
           {keyResult.tasks.length === 0 ? (
-            <Empty text="No tasks linked to this KR yet." />
+            <Empty text="这个 KR 还没有关联任务。" />
           ) : (
             keyResult.tasks.map((task: { id: string; title: string; status: string; todayType: string | null; notes: string | null }) => (
               <div key={task.id} className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-4">
                 <div className="flex flex-wrap items-center gap-2">
                   <p className="font-medium text-[var(--text-primary)]">{task.title}</p>
-                  <span className="text-xs text-[var(--text-muted)]">{task.status}</span>
-                  {task.todayType && <span className="text-xs text-[var(--text-muted)]">{task.todayType}</span>}
+                  <span className="text-xs text-[var(--text-muted)]">{getTaskStatusLabel(task.status)}</span>
+                  {task.todayType && <span className="text-xs text-[var(--text-muted)]">{getTodayTypeLabel(task.todayType)}</span>}
                 </div>
                 {task.notes && <p className="mt-2 text-sm text-[var(--text-secondary)]">{task.notes}</p>}
               </div>
@@ -65,21 +72,21 @@ export default async function KeyResultDetailPage({
       <CheckInForm keyResultId={keyResult.id} />
 
       <section className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-panel)] p-5">
-        <h2 className="text-lg font-semibold text-[var(--text-primary)]">Check-in History</h2>
+        <h2 className="text-lg font-semibold text-[var(--text-primary)]">Check-in 历史</h2>
         <div className="mt-4 space-y-3">
           {keyResult.checkIns.length === 0 ? (
-            <Empty text="No check-ins yet." />
+            <Empty text="还没有 check-in 记录。" />
           ) : (
             keyResult.checkIns.map((checkIn: { id: string; confidence: string; progressValue: number | null; summary: string | null; blockers: string | null; nextActions: string | null; createdAt: Date }) => (
               <div key={checkIn.id} className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-4">
                 <div className="flex flex-wrap gap-3 text-sm text-[var(--text-secondary)]">
                   <span>{String(checkIn.createdAt).slice(0, 10)}</span>
-                  <span>Confidence {checkIn.confidence}</span>
-                  <span>Progress {checkIn.progressValue ?? 'n/a'}</span>
+                  <span>信心 {getConfidenceLabel(checkIn.confidence)}</span>
+                  <span>进度 {checkIn.progressValue ?? '暂无'}</span>
                 </div>
                 {checkIn.summary && <p className="mt-2 text-sm text-[var(--text-primary)]">{checkIn.summary}</p>}
-                {checkIn.blockers && <p className="mt-1 text-sm text-[var(--text-secondary)]">Blockers: {checkIn.blockers}</p>}
-                {checkIn.nextActions && <p className="mt-1 text-sm text-[var(--text-secondary)]">Next: {checkIn.nextActions}</p>}
+                {checkIn.blockers && <p className="mt-1 text-sm text-[var(--text-secondary)]">阻塞项：{checkIn.blockers}</p>}
+                {checkIn.nextActions && <p className="mt-1 text-sm text-[var(--text-secondary)]">下一步：{checkIn.nextActions}</p>}
               </div>
             ))
           )}
