@@ -1,12 +1,19 @@
 import fs from 'fs';
 import path from 'path';
-import BetterSqlite3 from 'better-sqlite3';
+import type BetterSqlite3Module from 'better-sqlite3';
 import { drizzle as drizzleSqlite, type BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import { drizzle as drizzlePg, type NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 import { env, resolveSqliteDatabasePath } from './env';
 import * as schema from './schema';
 import { postgresSchema, sqliteSchema } from './schema';
+
+function loadBetterSqlite3(): typeof BetterSqlite3Module {
+  // Force Node runtime resolution. Letting Next statically analyze this import
+  // causes better-sqlite3/bindings to run inside the webpack dev wrapper.
+  const nodeRequire = eval('require') as NodeJS.Require;
+  return nodeRequire('better-sqlite3') as typeof BetterSqlite3Module;
+}
 
 type PostgresDbInstance = NodePgDatabase<typeof postgresSchema>;
 type SqliteDbInstance = BetterSQLite3Database<typeof sqliteSchema>;
@@ -23,6 +30,7 @@ function getDb(): DbInstance {
     if (env.databaseDriver === 'sqlite') {
       const absolutePath = resolveSqliteDatabasePath(env.databaseUrl);
       fs.mkdirSync(path.dirname(absolutePath), { recursive: true });
+      const BetterSqlite3 = loadBetterSqlite3();
       const client = new BetterSqlite3(absolutePath);
       client.pragma('journal_mode = WAL');
 
