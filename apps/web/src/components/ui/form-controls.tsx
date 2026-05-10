@@ -35,7 +35,7 @@ export function TextField({ label, error, description, className = '', ...props 
     <FieldShell label={label} error={error} description={description}>
       <Field.Control
         {...props}
-        className={`w-full rounded-md border border-[var(--border-subtle)] bg-[var(--bg-canvas)] px-3 py-2 text-sm text-[var(--text-primary)] outline-none transition-colors focus:border-[var(--border-strong)] focus:ring-2 focus:ring-[var(--focus-ring)]/30 ${className}`}
+        className={`w-full rounded-[14px] border border-[var(--border-hairline)] bg-[color:rgba(255,255,255,0.03)] px-3 py-2 text-sm text-[var(--text-primary)] outline-none transition-colors focus:border-[var(--border-glow)] focus:ring-2 focus:ring-[var(--focus-ring)]/30 ${className}`}
       />
     </FieldShell>
   );
@@ -64,7 +64,7 @@ export function TextareaField({ label, error, description, className = '', ...pr
         id={controlId}
         aria-describedby={describedBy}
         aria-invalid={error ? true : undefined}
-        className={`w-full rounded-md border border-[var(--border-subtle)] bg-[var(--bg-canvas)] px-3 py-2 text-sm text-[var(--text-primary)] outline-none transition-colors focus:border-[var(--border-strong)] focus:ring-2 focus:ring-[var(--focus-ring)]/30 ${className}`}
+        className={`w-full rounded-[14px] border border-[var(--border-hairline)] bg-[color:rgba(255,255,255,0.03)] px-3 py-2 text-sm text-[var(--text-primary)] outline-none transition-colors focus:border-[var(--border-glow)] focus:ring-2 focus:ring-[var(--focus-ring)]/30 ${className}`}
       />
       {description && <p id={descriptionId} className="mt-1 text-xs text-[var(--text-muted)]">{description}</p>}
       {error && <p id={errorId} className="mt-1 text-xs text-[var(--danger-text)]">{error}</p>}
@@ -126,7 +126,7 @@ export function SelectField({
           <input key={selectedValue} type="hidden" name={name} value={selectedValue} />
         ))}
         <div
-          className="grid gap-2 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-canvas)] p-3"
+          className="grid gap-2 rounded-[14px] border border-[var(--border-hairline)] bg-[color:rgba(255,255,255,0.03)] p-3"
           style={size ? { minHeight: `${size * 2.5}rem` } : undefined}
         >
           {options.map((option) => (
@@ -142,7 +142,7 @@ export function SelectField({
                   if (!isControlled) setInternalValue(nextValue);
                   onValueChange?.(nextValue);
                 }}
-                className="flex size-4 items-center justify-center rounded border border-[var(--border-subtle)] bg-[var(--bg-canvas)] text-[var(--text-primary)] outline-none focus:ring-2 focus:ring-[var(--focus-ring)]/30 data-[checked]:bg-[var(--bg-panel-contrast)]"
+                className="flex size-4 items-center justify-center rounded border border-[var(--border-hairline)] bg-[color:rgba(255,255,255,0.03)] text-[var(--text-primary)] outline-none focus:ring-2 focus:ring-[var(--focus-ring)]/30 data-[checked]:bg-[var(--bg-panel-contrast)]"
               >
                 <Checkbox.Indicator className="text-xs leading-none">✓</Checkbox.Indicator>
               </Checkbox.Root>
@@ -168,18 +168,18 @@ export function SelectField({
           onValueChange?.(resolvedValue);
         }}
       >
-        <Select.Trigger className="flex w-full items-center justify-between rounded-md border border-[var(--border-subtle)] bg-[var(--bg-canvas)] px-3 py-2 text-left text-sm text-[var(--text-primary)] outline-none transition-colors focus:border-[var(--border-strong)] focus:ring-2 focus:ring-[var(--focus-ring)]/30 disabled:cursor-not-allowed disabled:opacity-50">
+        <Select.Trigger className="flex w-full items-center justify-between rounded-[14px] border border-[var(--border-hairline)] bg-[color:rgba(255,255,255,0.03)] px-3 py-2 text-left text-sm text-[var(--text-primary)] outline-none transition-colors focus:border-[var(--border-glow)] focus:ring-2 focus:ring-[var(--focus-ring)]/30 disabled:cursor-not-allowed disabled:opacity-50">
           <Select.Value>{selected?.label ?? placeholder}</Select.Value>
           <Select.Icon className="text-[var(--text-muted)]">⌄</Select.Icon>
         </Select.Trigger>
         <Select.Portal>
           <Select.Positioner className="z-50">
-            <Select.Popup className="min-w-[var(--anchor-width)] rounded-md border border-[var(--border-subtle)] bg-[var(--bg-panel)] p-1 shadow-xl">
+            <Select.Popup className="metal-frame min-w-[var(--anchor-width)] rounded-[14px] border border-[var(--border-hairline)] bg-[var(--bg-surface-2)] p-1 shadow-xl">
               {options.map((option) => (
                 <Select.Item
                   key={option.value}
                   value={option.value}
-                  className="cursor-pointer rounded px-3 py-2 text-sm text-[var(--text-secondary)] outline-none hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)] data-[highlighted]:bg-[var(--bg-elevated)] data-[highlighted]:text-[var(--text-primary)]"
+                  className="cursor-pointer rounded-[10px] px-3 py-2 text-sm text-[var(--text-secondary)] outline-none hover:bg-[color:rgba(255,255,255,0.05)] hover:text-[var(--text-primary)] data-[highlighted]:bg-[color:rgba(255,255,255,0.05)] data-[highlighted]:text-[var(--text-primary)]"
                 >
                   <Select.ItemText>{option.label}</Select.ItemText>
                 </Select.Item>
@@ -210,7 +210,7 @@ export function CheckboxField({ name, label, checked, defaultChecked = false, va
         value={value}
         checked={checked}
         defaultChecked={defaultChecked}
-        className="flex size-4 items-center justify-center rounded border border-[var(--border-subtle)] bg-[var(--bg-canvas)] text-[var(--text-primary)] outline-none focus:ring-2 focus:ring-[var(--focus-ring)]/30 data-[checked]:bg-[var(--bg-panel-contrast)]"
+        className="flex size-4 items-center justify-center rounded border border-[var(--border-hairline)] bg-[color:rgba(255,255,255,0.03)] text-[var(--text-primary)] outline-none focus:ring-2 focus:ring-[var(--focus-ring)]/30 data-[checked]:bg-[var(--bg-panel-contrast)]"
       >
         <Checkbox.Indicator className="text-xs leading-none">✓</Checkbox.Indicator>
       </Checkbox.Root>

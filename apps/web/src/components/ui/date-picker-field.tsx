@@ -77,7 +77,7 @@ export function DatePickerField({
         </div>
         <Popover.Portal>
           <Popover.Positioner className="z-50">
-            <Popover.Popup className="rounded-md border border-[var(--border-subtle)] bg-[var(--bg-panel)] p-3 shadow-xl">
+            <Popover.Popup className="metal-frame rounded-[16px] border border-[var(--border-hairline)] bg-[var(--bg-surface-2)] p-3 shadow-xl">
               <DayPicker
                 mode="single"
                 selected={selected}
@@ -89,14 +89,14 @@ export function DatePickerField({
                   weekdays: 'grid grid-cols-7 text-xs text-[var(--text-muted)]',
                   week: 'grid grid-cols-7',
                   day: 'size-8 text-sm text-[var(--text-secondary)]',
-                  day_button: 'size-8 rounded-md hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)]',
-                  selected: 'rounded-md bg-[var(--bg-panel-contrast)] text-[var(--text-primary)]',
+                  day_button: 'size-8 rounded-[10px] hover:bg-[color:rgba(255,255,255,0.05)] hover:text-[var(--text-primary)]',
+                  selected: 'rounded-[10px] bg-[var(--bg-panel-contrast)] text-[var(--text-primary)]',
                   today: 'text-[var(--warning-text)]',
                   nav: 'mb-2 flex justify-end gap-1',
                   button_previous:
-                    'rounded-md border border-[var(--border-subtle)] bg-[var(--bg-panel)] px-2 text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)]',
+                    'rounded-[10px] border border-[var(--border-hairline)] bg-[color:rgba(255,255,255,0.03)] px-2 text-sm text-[var(--text-secondary)] hover:bg-[color:rgba(255,255,255,0.05)] hover:text-[var(--text-primary)]',
                   button_next:
-                    'rounded-md border border-[var(--border-subtle)] bg-[var(--bg-panel)] px-2 text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)]',
+                    'rounded-[10px] border border-[var(--border-hairline)] bg-[color:rgba(255,255,255,0.03)] px-2 text-sm text-[var(--text-secondary)] hover:bg-[color:rgba(255,255,255,0.05)] hover:text-[var(--text-primary)]',
                 }}
               />
             </Popover.Popup>

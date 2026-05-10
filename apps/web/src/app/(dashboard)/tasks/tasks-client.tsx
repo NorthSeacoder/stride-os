@@ -9,7 +9,10 @@ import {
   Empty,
   ErrorAlert,
   Modal,
+  PageIntro,
   SelectField,
+  SectionHeader,
+  SurfacePanel,
   TextareaField,
   TextField,
 } from '@/components/ui';
@@ -110,44 +113,43 @@ export function TasksClient({
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-        <div>
-          <p className="text-xs uppercase tracking-[0.24em] text-[var(--text-muted)]">每日执行</p>
-          <h1 className="mt-2 text-3xl font-semibold text-[var(--text-primary)]">任务</h1>
-          <p className="mt-2 max-w-2xl text-sm text-[var(--text-secondary)]">
-            默认进入今日视图。你可以从收件箱或排期任务中拉取任务，标记为必做或专注，并把 KR 关联到执行动作上。
-          </p>
-        </div>
-        <Button
-          type="button"
-          variant="primary"
-          onClick={() => {
-            setTaskModal({ mode: 'create' });
-            setHasSubmittedCreate(false);
-          }}
-        >
-          新建任务
-        </Button>
-      </div>
-
-      <div className="grid gap-3 md:grid-cols-4">
-        {(['today', 'inbox', 'scheduled', 'done'] as const).map((view) => (
+      <PageIntro
+        eyebrow="每日执行"
+        title="任务"
+        description="默认进入今日视图。你可以从收件箱或排期任务中拉取任务，标记为必做或专注，并把 KR 关联到执行动作上。"
+        action={
           <Button
-            key={view}
             type="button"
-            variant={activeView === view ? 'primary' : 'secondary'}
-            onClick={() => setActiveView(view)}
-            className={`rounded-lg border px-4 py-4 text-left transition-colors ${
-              activeView === view
-                ? 'border-[var(--border-strong)] bg-[var(--bg-panel-strong)]'
-                : 'border-[var(--border-subtle)] bg-[var(--bg-panel)] hover:bg-[var(--bg-elevated)]'
-            }`}
+            variant="primary"
+            onClick={() => {
+              setTaskModal({ mode: 'create' });
+              setHasSubmittedCreate(false);
+            }}
           >
-            <p className="text-xs uppercase tracking-[0.18em] text-[var(--text-muted)]">{getTaskStatusLabel(view)}</p>
-            <p className="mt-2 text-2xl font-semibold text-[var(--text-primary)]">{viewCounts[view]}</p>
+            新建任务
           </Button>
-        ))}
-      </div>
+        }
+      />
+
+      <SurfacePanel emphasis="strong" className="metal-frame instrument-surface overflow-hidden">
+        <div className="grid gap-px bg-[var(--border-hairline)] md:grid-cols-4">
+          {(['today', 'inbox', 'scheduled', 'done'] as const).map((view) => (
+            <button
+              key={view}
+              type="button"
+              onClick={() => setActiveView(view)}
+              className={`px-4 py-4 text-left transition-colors ${
+                activeView === view
+                  ? 'bg-[color:rgba(180,204,255,0.08)] text-[var(--text-primary)]'
+                  : 'bg-[color:rgba(14,17,22,0.72)] text-[var(--text-secondary)] hover:bg-[color:rgba(255,255,255,0.04)] hover:text-[var(--text-primary)]'
+              }`}
+            >
+              <p className="text-[11px] uppercase tracking-[0.22em] text-[var(--text-muted)]">{getTaskStatusLabel(view)}</p>
+              <p className="mt-3 text-2xl font-semibold tracking-[-0.03em] text-[var(--text-primary)]">{viewCounts[view]}</p>
+            </button>
+          ))}
+        </div>
+      </SurfacePanel>
 
       <Modal
         open={taskModal !== null}
@@ -188,57 +190,110 @@ export function TasksClient({
         )}
       </Modal>
 
-      {activeView === 'today' && (
-        <div className="grid gap-4 lg:grid-cols-2">
-          <TaskLane
-            title="必做"
-            subtitle="今天必须推进的事项。"
-            items={today.must}
-            emptyText='还没有必做任务。可以从收件箱或排期中拉一个进来。'
-            onEdit={(task) => setTaskModal({ mode: 'edit', task })}
-          />
-          <TaskLane
-            title="专注"
-            subtitle="值得专门保护的深度工作。"
-            items={today.focus}
-            emptyText='还没有专注任务。新增今日任务时可选择专注。'
-            onEdit={(task) => setTaskModal({ mode: 'edit', task })}
-          />
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.35fr)_360px]">
+        <div className="space-y-6">
+          {activeView === 'today' && (
+            <div className="grid gap-4 lg:grid-cols-2">
+              <TaskLane
+                title="必做"
+                subtitle="今天必须推进的事项。"
+                items={today.must}
+                emptyText='还没有必做任务。可以从收件箱或排期中拉一个进来。'
+                onEdit={(task) => setTaskModal({ mode: 'edit', task })}
+              />
+              <TaskLane
+                title="专注"
+                subtitle="值得专门保护的深度工作。"
+                items={today.focus}
+                emptyText='还没有专注任务。新增今日任务时可选择专注。'
+                onEdit={(task) => setTaskModal({ mode: 'edit', task })}
+              />
+            </div>
+          )}
+
+          {activeView === 'inbox' && (
+            <TaskList
+              title="收件箱"
+              subtitle="新任务默认先进入这里。"
+              items={inbox}
+              emptyText='收件箱已清空。'
+              onEdit={(task) => setTaskModal({ mode: 'edit', task })}
+              showTodayActions
+              showScheduleAction
+            />
+          )}
+
+          {activeView === 'scheduled' && (
+            <TaskList
+              title="已排期"
+              subtitle="有明确日期、等待合适时机执行的任务。"
+              items={scheduled}
+              emptyText='暂无排期任务。'
+              onEdit={(task) => setTaskModal({ mode: 'edit', task })}
+              showTodayActions
+            />
+          )}
+
+          {activeView === 'done' && (
+            <TaskList
+              title="已完成"
+              subtitle="已完成任务会保留 KR 上下文，便于后续复盘。"
+              items={done}
+              emptyText='还没有完成的任务。'
+              onEdit={(task) => setTaskModal({ mode: 'edit', task })}
+            />
+          )}
         </div>
-      )}
 
-      {activeView === 'inbox' && (
-        <TaskList
-          title="收件箱"
-          subtitle="新任务默认先进入这里。"
-          items={inbox}
-          emptyText='收件箱已清空。'
-          onEdit={(task) => setTaskModal({ mode: 'edit', task })}
-          showTodayActions
-          showScheduleAction
-        />
-      )}
+        <SurfacePanel className="metal-frame instrument-surface p-5 md:p-6">
+          <SectionHeader
+            eyebrow="Execution Rail"
+            title="今日执行侧栏"
+            description="把当前视图最关键的执行信号固定在右侧，减少来回切换。"
+          />
+          <div className="mt-5 grid gap-3">
+            <InspectorMetric label="当前视图" value={getTaskStatusLabel(activeView)} />
+            <InspectorMetric label="总任务数" value={String(viewCounts[activeView])} />
+            <InspectorMetric label="今日必做" value={String(today.must.length)} />
+            <InspectorMetric label="专注任务" value={String(today.focus.length)} />
+          </div>
 
-      {activeView === 'scheduled' && (
-        <TaskList
-          title="已排期"
-          subtitle="有明确日期、等待合适时机执行的任务。"
-          items={scheduled}
-          emptyText='暂无排期任务。'
-          onEdit={(task) => setTaskModal({ mode: 'edit', task })}
-          showTodayActions
-        />
-      )}
+          <div className="mt-6 rounded-[16px] border border-[var(--border-hairline)] bg-[color:rgba(255,255,255,0.03)] p-4">
+            <p className="text-[11px] uppercase tracking-[0.22em] text-[var(--text-muted)]">执行提示</p>
+            <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">
+              {activeView === 'today'
+                ? '优先完成“必做”，再为“专注”任务保护连续时间块。'
+                : activeView === 'inbox'
+                  ? '收件箱中的任务优先完成分类：进今日、排期或直接取消。'
+                  : activeView === 'scheduled'
+                    ? '已排期任务需要被及时拉回今日，避免堆积成假计划。'
+                    : '已完成任务可作为复盘输入，检查是否保留了足够上下文。'}
+            </p>
+          </div>
 
-      {activeView === 'done' && (
-        <TaskList
-          title="已完成"
-          subtitle="已完成任务会保留 KR 上下文，便于后续复盘。"
-          items={done}
-          emptyText='还没有完成的任务。'
-          onEdit={(task) => setTaskModal({ mode: 'edit', task })}
-        />
-      )}
+          <div className="mt-6 rounded-[16px] border border-[var(--border-hairline)] bg-[color:rgba(255,255,255,0.03)] p-4">
+            <p className="text-[11px] uppercase tracking-[0.22em] text-[var(--text-muted)]">快速动作</p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant="primary"
+                onClick={() => {
+                  setTaskModal({ mode: 'create' });
+                  setHasSubmittedCreate(false);
+                }}
+              >
+                新建任务
+              </Button>
+              <Button type="button" variant="secondary" onClick={() => setActiveView('today')}>
+                回到今日
+              </Button>
+              <Button type="button" variant="secondary" onClick={() => setActiveView('inbox')}>
+                查看收件箱
+              </Button>
+            </div>
+          </div>
+        </SurfacePanel>
+      </div>
     </div>
   );
 }
@@ -257,13 +312,10 @@ function TaskLane({
   onEdit: (task: TaskItem) => void;
 }) {
   return (
-    <section className="rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-panel)] p-4">
-      <div className="mb-4">
-        <h2 className="text-lg font-semibold text-[var(--text-primary)]">{title}</h2>
-        <p className="mt-1 text-sm text-[var(--text-secondary)]">{subtitle}</p>
-      </div>
+    <SurfacePanel className="metal-frame instrument-surface p-4 md:p-5">
+      <SectionHeader title={title} description={subtitle} />
       {items.length === 0 ? <Empty text={emptyText} /> : <TaskCards items={items} onEdit={onEdit} />}
-    </section>
+    </SurfacePanel>
   );
 }
 
@@ -285,17 +337,14 @@ function TaskList({
   showScheduleAction?: boolean;
 }) {
   return (
-    <section className="rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-panel)] p-4">
-      <div className="mb-4">
-        <h2 className="text-lg font-semibold text-[var(--text-primary)]">{title}</h2>
-        <p className="mt-1 text-sm text-[var(--text-secondary)]">{subtitle}</p>
-      </div>
+    <SurfacePanel className="metal-frame instrument-surface p-4 md:p-5">
+      <SectionHeader title={title} description={subtitle} />
       {items.length === 0 ? (
         <Empty text={emptyText} />
       ) : (
         <TaskCards items={items} onEdit={onEdit} showTodayActions={showTodayActions} showScheduleAction={showScheduleAction} />
       )}
-    </section>
+    </SurfacePanel>
   );
 }
 
@@ -313,13 +362,13 @@ function TaskCards({
   return (
     <div className="space-y-3">
       {items.map((task) => (
-        <article key={task.id} className="rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-4">
+        <article key={task.id} className="metal-frame rounded-[16px] border border-[var(--border-hairline)] bg-[color:rgba(255,255,255,0.03)] p-4">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
                 <h3 className="text-base font-medium text-[var(--text-primary)]">{task.title}</h3>
                 {task.todayType && (
-                  <Badge className="rounded-full bg-[var(--bg-panel-strong)] px-2 py-1 text-[11px] uppercase tracking-[0.14em] text-[var(--text-secondary)]">
+                  <Badge>
                     {getTodayTypeLabel(task.todayType)}
                   </Badge>
                 )}
@@ -341,7 +390,7 @@ function TaskCards({
                     <a
                       key={link.keyResult.id}
                       href={`/okr/${link.keyResult.id}`}
-                      className="rounded-full border border-[var(--border-subtle)] px-2 py-1 text-xs text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
+                      className="rounded-full border border-[var(--border-hairline)] px-2 py-1 text-xs text-[var(--text-secondary)] transition-colors hover:border-[var(--border-glow)] hover:text-[var(--text-primary)]"
                     >
                       {link.keyResult.title}
                     </a>
@@ -393,6 +442,15 @@ function TaskCards({
           </div>
         </article>
       ))}
+    </div>
+  );
+}
+
+function InspectorMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="metal-frame rounded-[16px] border border-[var(--border-hairline)] bg-[color:rgba(255,255,255,0.03)] p-4">
+      <p className="text-[11px] uppercase tracking-[0.22em] text-[var(--text-muted)]">{label}</p>
+      <p className="mt-3 text-2xl font-semibold tracking-[-0.02em] text-[var(--text-primary)]">{value}</p>
     </div>
   );
 }

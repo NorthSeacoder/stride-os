@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Empty } from '@/components/ui';
+import { Badge, Empty, PageIntro, SectionHeader, SurfacePanel } from '@/components/ui';
 import { getKeyResultDetail } from '@/lib/services/okr-service';
 import {
   getConfidenceLabel,
@@ -31,54 +31,61 @@ export default async function KeyResultDetailPage({
 
   return (
     <div className="space-y-6">
-      <Link href="/okr" className="text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)]">
-        返回 OKR
-      </Link>
+      <PageIntro
+        eyebrow={`${keyResult.objective.period.name} / ${keyResult.objective.title}`}
+        title={keyResult.title}
+        description="这里汇总 KR 的状态、关联任务和 check-in 历史。"
+        action={
+          <Link href="/okr" className="rounded-[var(--radius-compact)] border border-[var(--border-hairline)] px-3 py-2 text-sm text-[var(--text-secondary)] transition-colors hover:border-[var(--border-glow)] hover:text-[var(--text-primary)]">
+            返回 OKR
+          </Link>
+        }
+      />
 
-      <div className="rounded-md border border-[var(--border-subtle)] bg-[var(--bg-panel)] p-5">
-        <p className="text-xs uppercase tracking-[0.18em] text-[var(--text-muted)]">
-          {keyResult.objective.period.name} / {keyResult.objective.title}
-        </p>
-        <h1 className="mt-2 text-3xl font-semibold text-[var(--text-primary)]">{keyResult.title}</h1>
-        <div className="mt-3 flex flex-wrap gap-3 text-sm text-[var(--text-secondary)]">
-          <span>类型：{getKeyResultTypeLabel(keyResult.type)}</span>
-          <span>状态：{getKeyResultStatusLabel(keyResult.status)}</span>
-          <span>信心：{getConfidenceLabel(keyResult.progress?.confidence)}</span>
-          <span>进度：{keyResult.progress?.progressValue ?? '暂无'}</span>
-        </div>
+      <div className="grid gap-3 md:grid-cols-4">
+        <InspectorMetric label="类型" value={getKeyResultTypeLabel(keyResult.type)} />
+        <InspectorMetric label="状态" value={getKeyResultStatusLabel(keyResult.status)} />
+        <InspectorMetric label="信心" value={getConfidenceLabel(keyResult.progress?.confidence)} />
+        <InspectorMetric label="进度" value={String(keyResult.progress?.progressValue ?? '暂无')} />
       </div>
 
-      <section className="rounded-md border border-[var(--border-subtle)] bg-[var(--bg-panel)] p-5">
-        <h2 className="text-lg font-semibold text-[var(--text-primary)]">关联任务</h2>
-        <p className="mt-1 text-sm text-[var(--text-secondary)]">任务流程中关联到这个 KR 的事项会显示在这里，作为执行材料。</p>
+      <SurfacePanel className="metal-frame instrument-surface p-5 md:p-6">
+        <SectionHeader
+          eyebrow="Execution Context"
+          title="关联任务"
+          description="任务流程中关联到这个 KR 的事项会显示在这里，作为执行材料。"
+        />
         <div className="mt-4 space-y-3">
           {keyResult.tasks.length === 0 ? (
             <Empty text="这个 KR 还没有关联任务。" />
           ) : (
             keyResult.tasks.map((task: { id: string; title: string; status: string; todayType: string | null; notes: string | null }) => (
-              <div key={task.id} className="rounded-md border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-4">
+              <div key={task.id} className="metal-frame rounded-[16px] border border-[var(--border-hairline)] bg-[color:rgba(255,255,255,0.03)] p-4">
                 <div className="flex flex-wrap items-center gap-2">
                   <p className="font-medium text-[var(--text-primary)]">{task.title}</p>
-                  <span className="text-xs text-[var(--text-muted)]">{getTaskStatusLabel(task.status)}</span>
-                  {task.todayType && <span className="text-xs text-[var(--text-muted)]">{getTodayTypeLabel(task.todayType)}</span>}
+                  <Badge>{getTaskStatusLabel(task.status)}</Badge>
+                  {task.todayType && <Badge>{getTodayTypeLabel(task.todayType)}</Badge>}
                 </div>
                 {task.notes && <p className="mt-2 text-sm text-[var(--text-secondary)]">{task.notes}</p>}
               </div>
             ))
           )}
         </div>
-      </section>
+      </SurfacePanel>
 
       <CheckInForm keyResultId={keyResult.id} />
 
-      <section className="rounded-md border border-[var(--border-subtle)] bg-[var(--bg-panel)] p-5">
-        <h2 className="text-lg font-semibold text-[var(--text-primary)]">Check-in 历史</h2>
+      <SurfacePanel className="metal-frame instrument-surface p-5 md:p-6">
+        <SectionHeader
+          eyebrow="History"
+          title="Check-in 历史"
+        />
         <div className="mt-4 space-y-3">
           {keyResult.checkIns.length === 0 ? (
             <Empty text="还没有 check-in 记录。" />
           ) : (
             keyResult.checkIns.map((checkIn: { id: string; confidence: string; progressValue: number | null; summary: string | null; blockers: string | null; nextActions: string | null; createdAt: Date }) => (
-              <div key={checkIn.id} className="rounded-md border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-4">
+              <div key={checkIn.id} className="metal-frame rounded-[16px] border border-[var(--border-hairline)] bg-[color:rgba(255,255,255,0.03)] p-4">
                 <div className="flex flex-wrap gap-3 text-sm text-[var(--text-secondary)]">
                   <span>{String(checkIn.createdAt).slice(0, 10)}</span>
                   <span>信心 {getConfidenceLabel(checkIn.confidence)}</span>
@@ -91,7 +98,16 @@ export default async function KeyResultDetailPage({
             ))
           )}
         </div>
-      </section>
+      </SurfacePanel>
+    </div>
+  );
+}
+
+function InspectorMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="metal-frame rounded-[16px] border border-[var(--border-hairline)] bg-[color:rgba(255,255,255,0.03)] p-4">
+      <p className="text-[11px] uppercase tracking-[0.22em] text-[var(--text-muted)]">{label}</p>
+      <p className="mt-3 text-lg font-semibold tracking-[-0.02em] text-[var(--text-primary)]">{value}</p>
     </div>
   );
 }

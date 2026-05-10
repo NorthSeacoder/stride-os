@@ -13,12 +13,18 @@ export function Badge({
 }) {
   const toneClass =
     tone === 'success'
-      ? 'bg-[var(--success-bg)] text-[var(--success-text)]'
+      ? 'border-[var(--success-border)] bg-[var(--success-bg)] text-[var(--success-text)]'
       : tone === 'warning'
-        ? 'bg-[var(--warning-bg)] text-[var(--warning-text)]'
+        ? 'border-[var(--warning-border)] bg-[var(--warning-bg)] text-[var(--warning-text)]'
         : tone === 'danger'
-          ? 'bg-[var(--danger-bg)] text-[var(--danger-text)]'
-          : 'bg-[var(--bg-elevated)] text-[var(--text-secondary)]';
+          ? 'border-[var(--danger-border)] bg-[var(--danger-bg)] text-[var(--danger-text)]'
+          : 'border-[var(--border-hairline)] bg-[color:rgba(255,255,255,0.04)] text-[var(--text-secondary)]';
 
-  return <span className={`inline-block rounded px-1.5 py-0.5 text-xs font-medium ${toneClass} ${className}`}>{children}</span>;
+  return (
+    <span
+      className={`inline-flex items-center rounded-full border px-2 py-1 text-[11px] font-medium uppercase tracking-[0.14em] ${toneClass} ${className}`}
+    >
+      {children}
+    </span>
+  );
 }

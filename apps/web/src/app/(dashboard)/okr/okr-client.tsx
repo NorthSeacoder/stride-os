@@ -1,6 +1,6 @@
 'use client';
 
-import { Badge, Button, Empty, ErrorAlert, SelectField, TextareaField, TextField } from '@/components/ui';
+import { Badge, Button, Empty, ErrorAlert, PageIntro, SectionHeader, SelectField, SurfacePanel, TextareaField, TextField } from '@/components/ui';
 import { useActionState, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import {
@@ -50,6 +50,7 @@ export function OkrClient({ periods }: { periods: PeriodView[] }) {
   const [showPeriodForm, setShowPeriodForm] = useState(false);
   const [objectivePeriodId, setObjectivePeriodId] = useState<string | null>(null);
   const [krObjectiveId, setKrObjectiveId] = useState<string | null>(null);
+  const [activePeriodId, setActivePeriodId] = useState<string | null>(periods[0]?.id ?? null);
   const [periodType, setPeriodType] = useState<PeriodType>('quarter');
   const [periodQuarter, setPeriodQuarter] = useState<Quarter>('q1');
   const [periodMonth, setPeriodMonth] = useState('01');
@@ -69,27 +70,35 @@ export function OkrClient({ periods }: { periods: PeriodView[] }) {
     if (!krState.error) setKrObjectiveId(null);
   }, [krState]);
 
+  useEffect(() => {
+    setActivePeriodId((current) => {
+      if (!periods.length) return null;
+      if (current && periods.some((period) => period.id === current)) return current;
+      return periods[0]?.id ?? null;
+    });
+  }, [periods]);
+
+  const activePeriod = periods.find((period) => period.id === activePeriodId) ?? periods[0] ?? null;
+
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-        <div>
-          <p className="text-xs uppercase tracking-[0.24em] text-[var(--text-muted)]">目标体系</p>
-          <h1 className="mt-2 text-3xl font-semibold text-[var(--text-primary)]">OKR</h1>
-          <p className="mt-2 max-w-2xl text-sm text-[var(--text-secondary)]">
-            在这里搭建 OKR 层级：周期、目标和关键结果。每个 KR 的 check-in 在详情页完成。
-          </p>
-        </div>
-        <Button
-          type="button"
-          variant="primary"
-          onClick={() => {
-            setPeriodType('quarter');
-            setShowPeriodForm((value) => !value);
-          }}
-        >
-          {showPeriodForm ? '收起周期表单' : '新建周期'}
-        </Button>
-      </div>
+      <PageIntro
+        eyebrow="目标体系"
+        title="OKR"
+        description="在这里搭建周期、目标和关键结果。每个 KR 的 check-in 仍在详情页完成。"
+        action={
+          <Button
+            type="button"
+            variant="primary"
+            onClick={() => {
+              setPeriodType('quarter');
+              setShowPeriodForm((value) => !value);
+            }}
+          >
+            {showPeriodForm ? '收起周期表单' : '新建周期'}
+          </Button>
+        }
+      />
 
       {showPeriodForm && (
         <PeriodForm
@@ -111,49 +120,109 @@ export function OkrClient({ periods }: { periods: PeriodView[] }) {
       {periods.length === 0 ? (
         <Empty text="还没有周期。先创建第一个周期，开始搭建 OKR 结构。" />
       ) : (
-        <div className="space-y-4">
-          {periods.map((period) => (
-            <section key={period.id} className="rounded-md border border-[var(--border-subtle)] bg-[var(--bg-panel)] p-5">
+        <div className="grid gap-6 xl:grid-cols-[320px_minmax(0,1fr)]">
+          <SurfacePanel className="metal-frame instrument-surface p-5 md:p-6">
+            <SectionHeader
+              eyebrow="Period Index"
+              title="周期列表"
+              description="先锁定当前周期，再在右侧展开目标和关键结果。"
+            />
+            <div className="mt-5 space-y-3">
+              {periods.map((period) => {
+                const active = activePeriod?.id === period.id;
+
+                return (
+                  <button
+                    key={period.id}
+                    type="button"
+                    onClick={() => setActivePeriodId(period.id)}
+                    className={`metal-frame block w-full rounded-[16px] border p-4 text-left transition-colors ${
+                      active
+                        ? 'border-[var(--border-glow)] bg-[color:rgba(180,204,255,0.08)]'
+                        : 'border-[var(--border-hairline)] bg-[color:rgba(255,255,255,0.03)] hover:border-[var(--border-glow)] hover:bg-[color:rgba(255,255,255,0.05)]'
+                    }`}
+                  >
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge>{getPeriodTypeLabel(period.type)}</Badge>
+                      <Badge>{getPeriodStatusLabel(period.status)}</Badge>
+                    </div>
+                    <p className="mt-3 text-lg font-semibold text-[var(--text-primary)]">{period.name}</p>
+                    <p className="mt-2 text-sm text-[var(--text-secondary)]">
+                      {period.startDate} 至 {period.endDate}
+                    </p>
+                    <p className="mt-3 text-xs text-[var(--text-muted)]">
+                      {period.objectives.length} 个目标 /{' '}
+                      {period.objectives.reduce((count, objective) => count + objective.keyResults.length, 0)} 个 KR
+                    </p>
+                  </button>
+                );
+              })}
+            </div>
+          </SurfacePanel>
+
+          {activePeriod ? (
+            <SurfacePanel className="metal-frame instrument-surface p-5 md:p-6">
               <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                 <div>
-                  <p className="text-xs uppercase tracking-[0.18em] text-[var(--text-muted)]">
-                    {getPeriodTypeLabel(period.type)} / {getPeriodStatusLabel(period.status)}
+                  <p className="text-[11px] uppercase tracking-[0.22em] text-[var(--text-muted)]">
+                    {getPeriodTypeLabel(activePeriod.type)} / {getPeriodStatusLabel(activePeriod.status)}
                   </p>
-                  <h2 className="mt-2 text-2xl font-semibold text-[var(--text-primary)]">{period.name}</h2>
+                  <h2 className="mt-2 text-3xl font-semibold tracking-[-0.02em] text-[var(--text-primary)]">{activePeriod.name}</h2>
                   <p className="mt-2 text-sm text-[var(--text-secondary)]">
-                    {period.startDate} 至 {period.endDate}
+                    {activePeriod.startDate} 至 {activePeriod.endDate}
                   </p>
                 </div>
                 <Button
                   type="button"
                   variant="secondary"
-                  onClick={() => setObjectivePeriodId(objectivePeriodId === period.id ? null : period.id)}
+                  onClick={() => setObjectivePeriodId(objectivePeriodId === activePeriod.id ? null : activePeriod.id)}
                 >
-                  {objectivePeriodId === period.id ? '收起目标表单' : '新增目标'}
+                  {objectivePeriodId === activePeriod.id ? '收起目标表单' : '新增目标'}
                 </Button>
               </div>
 
-              {objectivePeriodId === period.id && (
-                <form action={objectiveAction} className="mt-4 space-y-4 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-4">
-                  <input type="hidden" name="periodId" value={period.id} />
+              <div className="mt-5 grid gap-3 md:grid-cols-3">
+                <InspectorMetric label="目标数" value={String(activePeriod.objectives.length)} />
+                <InspectorMetric
+                  label="关键结果数"
+                  value={String(activePeriod.objectives.reduce((count, objective) => count + objective.keyResults.length, 0))}
+                />
+                <InspectorMetric
+                  label="活跃信心"
+                  value={
+                    activePeriod.objectives.some((objective) =>
+                      objective.keyResults.some((keyResult) => keyResult.confidence),
+                    )
+                      ? '已记录'
+                      : '待补充'
+                  }
+                />
+              </div>
+
+              {objectivePeriodId === activePeriod.id && (
+                <form action={objectiveAction} className="mt-5 grid gap-4 rounded-[18px] border border-[var(--border-hairline)] bg-[color:rgba(255,255,255,0.03)] p-4">
+                  <input type="hidden" name="periodId" value={activePeriod.id} />
                   {objectiveState.error && <ErrorAlert message={objectiveState.error} />}
                   <TextField name="title" label="目标标题" required />
                   <TextareaField name="description" label="描述" rows={2} />
-                  <Button type="submit" variant="primary">
-                    创建目标
-                  </Button>
+                  <div>
+                    <Button type="submit" variant="primary">
+                      创建目标
+                    </Button>
+                  </div>
                 </form>
               )}
 
-              <div className="mt-5 space-y-4">
-                {period.objectives.length === 0 ? (
+              <div className="mt-6 space-y-4">
+                {activePeriod.objectives.length === 0 ? (
                   <Empty text="这个周期下还没有目标。" />
                 ) : (
-                  period.objectives.map((objective) => (
-                    <div key={objective.id} className="rounded-md border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-4">
+                  activePeriod.objectives.map((objective) => (
+                    <div key={objective.id} className="metal-frame rounded-[18px] border border-[var(--border-hairline)] bg-[color:rgba(255,255,255,0.03)] p-4">
                       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                         <div>
-                          <h3 className="text-lg font-medium text-[var(--text-primary)]">{objective.title}</h3>
+                          <p className="text-[11px] uppercase tracking-[0.22em] text-[var(--text-muted)]">Objective</p>
+                          <h3 className="mt-2 text-xl font-medium text-[var(--text-primary)]">{objective.title}</h3>
                           {objective.description && <p className="mt-2 text-sm text-[var(--text-secondary)]">{objective.description}</p>}
                         </div>
                         <Button
@@ -166,7 +235,7 @@ export function OkrClient({ periods }: { periods: PeriodView[] }) {
                       </div>
 
                       {krObjectiveId === objective.id && (
-                        <form action={krAction} className="mt-4 grid gap-4 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-panel)] p-4 md:grid-cols-2">
+                        <form action={krAction} className="mt-4 grid gap-4 rounded-[16px] border border-[var(--border-hairline)] bg-[color:rgba(255,255,255,0.03)] p-4 md:grid-cols-2">
                           <input type="hidden" name="objectiveId" value={objective.id} />
                           {krState.error && <div className="md:col-span-2"><ErrorAlert message={krState.error} /></div>}
                           <div className="md:col-span-2">
@@ -198,9 +267,13 @@ export function OkrClient({ periods }: { periods: PeriodView[] }) {
                           <Empty text="这个目标下还没有关键结果。" />
                         ) : (
                           objective.keyResults.map((keyResult) => (
-                            <Link key={keyResult.id} href={`/okr/${keyResult.id}`} className="block rounded-md border border-[var(--border-subtle)] bg-[var(--bg-panel)] p-4 hover:bg-[var(--bg-canvas)]">
-                              <div className="flex flex-wrap items-center gap-3">
-                                <p className="font-medium text-[var(--text-primary)]">{keyResult.title}</p>
+                            <Link
+                              key={keyResult.id}
+                              href={`/okr/${keyResult.id}`}
+                              className="metal-frame block rounded-[16px] border border-[var(--border-hairline)] bg-[color:rgba(255,255,255,0.03)] p-4 transition-colors hover:border-[var(--border-glow)] hover:bg-[color:rgba(255,255,255,0.05)]"
+                            >
+                              <p className="font-medium text-[var(--text-primary)]">{keyResult.title}</p>
+                              <div className="mt-3 flex flex-wrap items-center gap-2">
                                 <Badge>{getKeyResultTypeLabel(keyResult.type)}</Badge>
                                 <Badge>{getKeyResultStatusLabel(keyResult.status)}</Badge>
                                 <Badge>进度 {keyResult.currentValue ?? '暂无'} / {keyResult.targetValue ?? '暂无'}</Badge>
@@ -214,10 +287,19 @@ export function OkrClient({ periods }: { periods: PeriodView[] }) {
                   ))
                 )}
               </div>
-            </section>
-          ))}
+            </SurfacePanel>
+          ) : null}
         </div>
       )}
+    </div>
+  );
+}
+
+function InspectorMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="metal-frame rounded-[16px] border border-[var(--border-hairline)] bg-[color:rgba(255,255,255,0.03)] p-4">
+      <p className="text-[11px] uppercase tracking-[0.22em] text-[var(--text-muted)]">{label}</p>
+      <p className="mt-3 text-2xl font-semibold tracking-[-0.02em] text-[var(--text-primary)]">{value}</p>
     </div>
   );
 }
@@ -281,7 +363,7 @@ function PeriodForm({
   ], []);
 
   return (
-    <form action={action} className="space-y-4 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-panel)] p-5">
+    <form action={action} className="metal-frame instrument-surface space-y-4 rounded-[18px] border border-[var(--border-hairline)] p-5">
       {error && <ErrorAlert message={error} />}
       <div className="grid gap-4 md:grid-cols-2">
         <TextField name="name" label="名称" required />
@@ -338,7 +420,7 @@ function PeriodDateFields({
     const year = new Date().getFullYear();
 
     return (
-      <div className="rounded-md border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-3 py-2 text-sm text-[var(--text-secondary)]">
+      <div className="rounded-[14px] border border-[var(--border-hairline)] bg-[color:rgba(255,255,255,0.03)] px-3 py-2 text-sm text-[var(--text-secondary)]">
         年度周期默认覆盖当前年，不需要单独选开始/结束日期。
         <input type="hidden" name="startDate" value={`${year}-01-01`} />
         <input type="hidden" name="endDate" value={`${year}-12-31`} />
@@ -364,7 +446,7 @@ function PeriodDateFields({
           onValueChange={(value) => onQuarterChange(value as Quarter)}
           options={options}
         />
-        <div className="rounded-md border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-3 py-2 text-sm text-[var(--text-secondary)]">
+        <div className="rounded-[14px] border border-[var(--border-hairline)] bg-[color:rgba(255,255,255,0.03)] px-3 py-2 text-sm text-[var(--text-secondary)]">
           当前季度会自动展开成具体起止日期。
           <input type="hidden" name="startDate" value={range.startDate} />
           <input type="hidden" name="endDate" value={range.endDate} />
@@ -389,7 +471,7 @@ function PeriodDateFields({
           onValueChange={onMonthChange}
           options={options}
         />
-        <div className="rounded-md border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-3 py-2 text-sm text-[var(--text-secondary)]">
+        <div className="rounded-[14px] border border-[var(--border-hairline)] bg-[color:rgba(255,255,255,0.03)] px-3 py-2 text-sm text-[var(--text-secondary)]">
           月度周期会自动展开成具体起止日期。
           <input type="hidden" name="startDate" value={range.startDate} />
           <input type="hidden" name="endDate" value={range.endDate} />
@@ -428,7 +510,7 @@ function PeriodDateFields({
         onValueChange={onCustomEndMonthChange}
         options={monthOptions.filter((option) => Number(option.value) >= startMonth)}
       />
-      <div className="rounded-md border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-3 py-2 text-sm text-[var(--text-secondary)] md:col-span-2">
+      <div className="rounded-[14px] border border-[var(--border-hairline)] bg-[color:rgba(255,255,255,0.03)] px-3 py-2 text-sm text-[var(--text-secondary)] md:col-span-2">
         自定义周期按月份粒度保存，系统会自动展开为具体日期。
         <input type="hidden" name="startDate" value={startRange.startDate} />
         <input type="hidden" name="endDate" value={endRange.endDate} />

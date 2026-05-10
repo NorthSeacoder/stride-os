@@ -2,17 +2,32 @@
 
 :root {
   --bg-canvas: #101010;
+  --bg-shell: #0b0d10;
+  --bg-sidebar: rgba(20, 23, 28, 0.9);
+  --bg-topbar: rgba(16, 18, 23, 0.82);
   --bg-elevated: #171717;
   --bg-panel: #1f1f1f;
   --bg-panel-strong: #2d2d2d;
   --bg-panel-contrast: #363636;
+  --bg-surface-1: rgba(28, 31, 37, 0.9);
+  --bg-surface-2: rgba(38, 42, 49, 0.94);
+  --bg-surface-3: rgba(50, 56, 66, 0.98);
   --border-subtle: #313131;
   --border-strong: #464646;
+  --border-hairline: rgba(238, 243, 255, 0.12);
+  --border-glow: rgba(185, 208, 255, 0.28);
   --text-primary: #f2f2f2;
   --text-secondary: #b8b8b8;
   --text-muted: #8f8f8f;
   --text-inverse: #111111;
   --focus-ring: #d8d8d8;
+  --accent-ice: #b4ccff;
+  --accent-ice-strong: #d7e5ff;
+  --shadow-panel: 0 18px 60px rgba(0, 0, 0, 0.42);
+  --shadow-shell: 0 28px 90px rgba(0, 0, 0, 0.5);
+  --radius-shell: 28px;
+  --radius-panel: 18px;
+  --radius-compact: 12px;
   --success-bg: #1a231c;
   --success-border: #35543b;
   --success-text: #9bc9a7;
@@ -23,4 +38,77 @@
   --danger-border: #6b3c3f;
   --danger-text: #d7a3a7;
   --danger-text-strong: #e2b5b8;
+}
+
+html {
+  background:
+    radial-gradient(circle at top, rgba(108, 128, 170, 0.12), transparent 34%),
+    linear-gradient(180deg, #090b0e 0%, #0d1014 52%, #0a0c10 100%);
+}
+
+body {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top right, rgba(140, 168, 220, 0.08), transparent 30%),
+    linear-gradient(180deg, #090b0e 0%, #0d1014 52%, #0a0c10 100%);
+}
+
+.app-shell-panel {
+  border: 1px solid var(--border-hairline);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.01)),
+    var(--bg-surface-1);
+  box-shadow: var(--shadow-panel);
+}
+
+.app-shell-panel-strong {
+  border: 1px solid var(--border-glow);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02)),
+    var(--bg-surface-2);
+  box-shadow: var(--shadow-panel);
+}
+
+.app-shell-divider {
+  border-color: var(--border-hairline);
+}
+
+.app-shell-grid {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+  background-position: center;
+  background-size: 28px 28px;
+}
+
+.metal-frame {
+  position: relative;
+  overflow: hidden;
+}
+
+.metal-frame::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-left: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.metal-frame::after {
+  content: '';
+  position: absolute;
+  left: 18px;
+  right: 18px;
+  top: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(180, 204, 255, 0.26), transparent);
+  pointer-events: none;
+}
+
+.instrument-surface {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.015)),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.02), transparent 45%),
+    var(--bg-surface-1);
 }

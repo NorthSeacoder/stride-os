@@ -7,3 +7,4 @@ export { Modal } from './modal';
 export { DatePickerField } from './date-picker-field';
 export { CheckboxField, SelectField, TextareaField, TextField } from './form-controls';
 export { FeedbackAlert, ToastProvider, useToast } from './toast';
+export { AsidePanel, PageIntro, SectionHeader, SurfacePanel } from './surfaces';
