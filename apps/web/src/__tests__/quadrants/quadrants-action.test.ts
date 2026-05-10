@@ -38,7 +38,9 @@ describe('quadrants action', () => {
   it('does nothing when user is missing', async () => {
     getSessionUser.mockResolvedValue(null);
 
-    await updateTaskQuadrantAction('task_1', { important: true, urgent: false });
+    await expect(updateTaskQuadrantAction('task_1', { important: true, urgent: false })).resolves.toEqual({
+      error: '未授权',
+    });
 
     expect(updateTaskQuadrant).not.toHaveBeenCalled();
   });
@@ -48,7 +50,9 @@ describe('quadrants action', () => {
     updateTaskQuadrant.mockResolvedValue({ id: 'task_1' });
     auditValues.mockResolvedValue(undefined);
 
-    await updateTaskQuadrantAction('task_1', { important: true, urgent: false });
+    await expect(updateTaskQuadrantAction('task_1', { important: true, urgent: false })).resolves.toEqual({
+      error: '',
+    });
 
     expect(updateTaskQuadrant).toHaveBeenCalledWith('task_1', {
       important: true,
@@ -56,5 +60,17 @@ describe('quadrants action', () => {
     });
     expect(revalidatePath).toHaveBeenCalledWith('/quadrants');
     expect(revalidatePath).toHaveBeenCalledWith('/dashboard');
+  });
+
+  it('returns not found when task service returns null', async () => {
+    getSessionUser.mockResolvedValue({ id: 'user_1' });
+    updateTaskQuadrant.mockResolvedValue(null);
+
+    await expect(updateTaskQuadrantAction('task_1', { important: true, urgent: false })).resolves.toEqual({
+      error: '未找到任务',
+    });
+
+    expect(auditValues).not.toHaveBeenCalled();
+    expect(revalidatePath).not.toHaveBeenCalled();
   });
 });

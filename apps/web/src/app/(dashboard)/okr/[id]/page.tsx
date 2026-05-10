@@ -35,7 +35,7 @@ export default async function KeyResultDetailPage({
         返回 OKR
       </Link>
 
-      <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-panel)] p-5">
+      <div className="rounded-md border border-[var(--border-subtle)] bg-[var(--bg-panel)] p-5">
         <p className="text-xs uppercase tracking-[0.18em] text-[var(--text-muted)]">
           {keyResult.objective.period.name} / {keyResult.objective.title}
         </p>
@@ -48,7 +48,7 @@ export default async function KeyResultDetailPage({
         </div>
       </div>
 
-      <section className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-panel)] p-5">
+      <section className="rounded-md border border-[var(--border-subtle)] bg-[var(--bg-panel)] p-5">
         <h2 className="text-lg font-semibold text-[var(--text-primary)]">关联任务</h2>
         <p className="mt-1 text-sm text-[var(--text-secondary)]">任务流程中关联到这个 KR 的事项会显示在这里，作为执行材料。</p>
         <div className="mt-4 space-y-3">
@@ -56,7 +56,7 @@ export default async function KeyResultDetailPage({
             <Empty text="这个 KR 还没有关联任务。" />
           ) : (
             keyResult.tasks.map((task: { id: string; title: string; status: string; todayType: string | null; notes: string | null }) => (
-              <div key={task.id} className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-4">
+              <div key={task.id} className="rounded-md border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-4">
                 <div className="flex flex-wrap items-center gap-2">
                   <p className="font-medium text-[var(--text-primary)]">{task.title}</p>
                   <span className="text-xs text-[var(--text-muted)]">{getTaskStatusLabel(task.status)}</span>
@@ -71,14 +71,14 @@ export default async function KeyResultDetailPage({
 
       <CheckInForm keyResultId={keyResult.id} />
 
-      <section className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-panel)] p-5">
+      <section className="rounded-md border border-[var(--border-subtle)] bg-[var(--bg-panel)] p-5">
         <h2 className="text-lg font-semibold text-[var(--text-primary)]">Check-in 历史</h2>
         <div className="mt-4 space-y-3">
           {keyResult.checkIns.length === 0 ? (
             <Empty text="还没有 check-in 记录。" />
           ) : (
             keyResult.checkIns.map((checkIn: { id: string; confidence: string; progressValue: number | null; summary: string | null; blockers: string | null; nextActions: string | null; createdAt: Date }) => (
-              <div key={checkIn.id} className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-4">
+              <div key={checkIn.id} className="rounded-md border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-4">
                 <div className="flex flex-wrap gap-3 text-sm text-[var(--text-secondary)]">
                   <span>{String(checkIn.createdAt).slice(0, 10)}</span>
                   <span>信心 {getConfidenceLabel(checkIn.confidence)}</span>

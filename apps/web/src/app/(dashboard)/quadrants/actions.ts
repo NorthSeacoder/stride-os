@@ -20,12 +20,12 @@ export async function updateTaskQuadrantAction(
 ) {
   const user = await requireQuadrantUser();
   if (!user) {
-    return;
+    return { error: '未授权' };
   }
 
   const task = await updateTaskQuadrant(taskId, input);
   if (!task) {
-    return;
+    return { error: '未找到任务' };
   }
 
   await db.insert(schema.auditLogs).values({
@@ -40,4 +40,5 @@ export async function updateTaskQuadrantAction(
   revalidatePath('/quadrants');
   revalidatePath('/dashboard');
   revalidatePath('/tasks');
+  return { error: '' };
 }

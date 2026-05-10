@@ -10,7 +10,7 @@ export function CheckInForm({ keyResultId }: { keyResultId: string }) {
   const [state, action] = useActionState(createKrCheckInAction, initialState);
 
   return (
-    <form action={action} className="space-y-4 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-panel)] p-5">
+    <form action={action} className="space-y-4 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-panel)] p-5">
       <input type="hidden" name="keyResultId" value={keyResultId} />
       <div>
         <h2 className="text-lg font-semibold text-[var(--text-primary)]">新增 Check-in</h2>

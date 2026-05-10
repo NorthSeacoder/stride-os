@@ -1,7 +1,16 @@
 'use client';
 
 import { useActionState, useEffect, useState } from 'react';
-import { Empty, ErrorAlert } from '@/components/ui';
+import {
+  CheckboxField,
+  DatePickerField,
+  Empty,
+  ErrorAlert,
+  Modal,
+  SelectField,
+  TextareaField,
+  TextField,
+} from '@/components/ui';
 import {
   getTaskEnergyLabel,
   getTaskPriorityLabel,
@@ -51,6 +60,11 @@ const initialState: TaskActionState = {
   error: '',
 };
 
+type TaskModalState =
+  | { mode: 'create'; task?: never }
+  | { mode: 'edit'; task: TaskItem }
+  | null;
+
 export function TasksClient({
   today,
   inbox,
@@ -65,22 +79,25 @@ export function TasksClient({
   keyResults: KeyResultOption[];
 }) {
   const [activeView, setActiveView] = useState<'today' | 'inbox' | 'scheduled' | 'done'>('today');
-  const [showCreateForm, setShowCreateForm] = useState(false);
-  const [editingTask, setEditingTask] = useState<TaskItem | null>(null);
+  const [taskModal, setTaskModal] = useState<TaskModalState>(null);
+  const [hasSubmittedCreate, setHasSubmittedCreate] = useState(false);
+  const [hasSubmittedUpdate, setHasSubmittedUpdate] = useState(false);
   const [createState, createAction] = useActionState(createTaskAction, initialState);
   const [updateState, updateAction] = useActionState(updateTaskAction, initialState);
 
   useEffect(() => {
-    if (!createState.error) {
-      setShowCreateForm(false);
+    if (hasSubmittedCreate && !createState.error) {
+      setTaskModal(null);
+      setHasSubmittedCreate(false);
     }
-  }, [createState]);
+  }, [createState, hasSubmittedCreate]);
 
   useEffect(() => {
-    if (!updateState.error) {
-      setEditingTask(null);
+    if (hasSubmittedUpdate && !updateState.error) {
+      setTaskModal(null);
+      setHasSubmittedUpdate(false);
     }
-  }, [updateState]);
+  }, [updateState, hasSubmittedUpdate]);
 
   const viewCounts = {
     today: today.must.length + today.focus.length,
@@ -102,8 +119,8 @@ export function TasksClient({
         <button
           type="button"
           onClick={() => {
-            setEditingTask(null);
-            setShowCreateForm(true);
+            setTaskModal({ mode: 'create' });
+            setHasSubmittedCreate(false);
           }}
           className="rounded-md border border-[var(--border-strong)] bg-[var(--bg-panel-strong)] px-4 py-2 text-sm font-medium text-[var(--text-primary)] transition-colors hover:bg-[var(--bg-panel-contrast)]"
         >
@@ -117,7 +134,7 @@ export function TasksClient({
             key={view}
             type="button"
             onClick={() => setActiveView(view)}
-            className={`rounded-xl border px-4 py-4 text-left transition-colors ${
+            className={`rounded-lg border px-4 py-4 text-left transition-colors ${
               activeView === view
                 ? 'border-[var(--border-strong)] bg-[var(--bg-panel-strong)]'
                 : 'border-[var(--border-subtle)] bg-[var(--bg-panel)] hover:bg-[var(--bg-elevated)]'
@@ -129,26 +146,44 @@ export function TasksClient({
         ))}
       </div>
 
-      {showCreateForm && (
+      <Modal
+        open={taskModal !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setTaskModal(null);
+            setHasSubmittedCreate(false);
+            setHasSubmittedUpdate(false);
+          }
+        }}
+        title={taskModal?.mode === 'edit' ? '编辑任务' : '新建任务'}
+        description="先记录最小可执行信息，需要时再补充上下文。"
+      >
+        {taskModal?.mode === 'create' && (
         <TaskForm
-          action={createAction}
+          action={(formData) => {
+            setHasSubmittedCreate(true);
+            createAction(formData);
+          }}
           error={createState.error}
           submitLabel="创建任务"
           keyResults={keyResults}
-          onCancel={() => setShowCreateForm(false)}
+          onCancel={() => setTaskModal(null)}
         />
-      )}
-
-      {editingTask && (
+        )}
+        {taskModal?.mode === 'edit' && (
         <TaskForm
-          action={updateAction}
+          action={(formData) => {
+            setHasSubmittedUpdate(true);
+            updateAction(formData);
+          }}
           error={updateState.error}
           submitLabel="更新任务"
-          task={editingTask}
+          task={taskModal.task}
           keyResults={keyResults}
-          onCancel={() => setEditingTask(null)}
+          onCancel={() => setTaskModal(null)}
         />
-      )}
+        )}
+      </Modal>
 
       {activeView === 'today' && (
         <div className="grid gap-4 lg:grid-cols-2">
@@ -157,14 +192,14 @@ export function TasksClient({
             subtitle="今天必须推进的事项。"
             items={today.must}
             emptyText='还没有必做任务。可以从收件箱或排期中拉一个进来。'
-            onEdit={setEditingTask}
+            onEdit={(task) => setTaskModal({ mode: 'edit', task })}
           />
           <TaskLane
             title="专注"
             subtitle="值得专门保护的深度工作。"
             items={today.focus}
             emptyText='还没有专注任务。新增今日任务时可选择专注。'
-            onEdit={setEditingTask}
+            onEdit={(task) => setTaskModal({ mode: 'edit', task })}
           />
         </div>
       )}
@@ -175,7 +210,7 @@ export function TasksClient({
           subtitle="新任务默认先进入这里。"
           items={inbox}
           emptyText='收件箱已清空。'
-          onEdit={setEditingTask}
+          onEdit={(task) => setTaskModal({ mode: 'edit', task })}
           showTodayActions
           showScheduleAction
         />
@@ -187,7 +222,7 @@ export function TasksClient({
           subtitle="有明确日期、等待合适时机执行的任务。"
           items={scheduled}
           emptyText='暂无排期任务。'
-          onEdit={setEditingTask}
+          onEdit={(task) => setTaskModal({ mode: 'edit', task })}
           showTodayActions
         />
       )}
@@ -198,7 +233,7 @@ export function TasksClient({
           subtitle="已完成任务会保留 KR 上下文，便于后续复盘。"
           items={done}
           emptyText='还没有完成的任务。'
-          onEdit={setEditingTask}
+          onEdit={(task) => setTaskModal({ mode: 'edit', task })}
         />
       )}
     </div>
@@ -219,7 +254,7 @@ function TaskLane({
   onEdit: (task: TaskItem) => void;
 }) {
   return (
-    <section className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-panel)] p-4">
+    <section className="rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-panel)] p-4">
       <div className="mb-4">
         <h2 className="text-lg font-semibold text-[var(--text-primary)]">{title}</h2>
         <p className="mt-1 text-sm text-[var(--text-secondary)]">{subtitle}</p>
@@ -247,7 +282,7 @@ function TaskList({
   showScheduleAction?: boolean;
 }) {
   return (
-    <section className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-panel)] p-4">
+    <section className="rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-panel)] p-4">
       <div className="mb-4">
         <h2 className="text-lg font-semibold text-[var(--text-primary)]">{title}</h2>
         <p className="mt-1 text-sm text-[var(--text-secondary)]">{subtitle}</p>
@@ -275,7 +310,7 @@ function TaskCards({
   return (
     <div className="space-y-3">
       {items.map((task) => (
-        <article key={task.id} className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-4">
+        <article key={task.id} className="rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-4">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
@@ -341,8 +376,8 @@ function TaskCards({
                 </>
               )}
               {showScheduleAction && (
-                <form action={async (formData: FormData) => scheduleTaskAction(task.id, String(formData.get('scheduledDate') ?? '').trim())} className="flex gap-2">
-                  <input type="date" name="scheduledDate" className="rounded-md border border-[var(--border-subtle)] bg-[var(--bg-panel)] px-2 py-2 text-sm text-[var(--text-primary)]" />
+                <form action={async (formData: FormData) => scheduleTaskAction(task.id, String(formData.get('scheduledDate') ?? '').trim())} className="flex min-w-56 gap-2">
+                  <DatePickerField name="scheduledDate" label="排期日期" allowClear={false} />
                   <button type="submit" className="rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm text-[var(--text-secondary)]">
                     排期
                   </button>
@@ -379,105 +414,76 @@ function TaskForm({
   onCancel: () => void;
 }) {
   const linkedKeyResultIds = new Set((task?.keyResultLinks ?? []).map((link) => link.keyResult.id));
+  const statusOptions = [
+    { value: 'inbox', label: '收件箱' },
+    { value: 'today', label: '今日' },
+    { value: 'scheduled', label: '已排期' },
+    { value: 'done', label: '已完成' },
+    { value: 'canceled', label: '已取消' },
+  ];
+  const todayTypeOptions = [
+    { value: '', label: '无' },
+    { value: 'must', label: '必做' },
+    { value: 'focus', label: '专注' },
+  ];
+  const priorityOptions = [
+    { value: '', label: '无' },
+    { value: 'P1', label: 'P1' },
+    { value: 'P2', label: 'P2' },
+    { value: 'P3', label: 'P3' },
+  ];
+  const energyOptions = [
+    { value: '', label: '无' },
+    { value: 'low', label: '低' },
+    { value: 'medium', label: '中' },
+    { value: 'high', label: '高' },
+  ];
+  const keyResultOptions = keyResults.map((keyResult) => ({
+    value: keyResult.id,
+    label: `${keyResult.objectiveTitle} / ${keyResult.title}`,
+  }));
 
   return (
-    <form action={action} className="space-y-4 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-panel)] p-5">
+    <form action={action} className="space-y-5">
       {task && <input type="hidden" name="id" value={task.id} />}
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-[var(--text-primary)]">{submitLabel}</h2>
-        <button type="button" onClick={onCancel} className="text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)]">
-          取消
-        </button>
-      </div>
-
       {error && <ErrorAlert message={error} />}
 
       <div className="grid gap-4 md:grid-cols-2">
-        <label className="block">
-          <span className="mb-1 block text-sm text-[var(--text-secondary)]">标题</span>
-          <input name="title" required defaultValue={task?.title ?? ''} className="w-full rounded-md border border-[var(--border-subtle)] bg-[var(--bg-canvas)] px-3 py-2 text-sm text-[var(--text-primary)]" />
-        </label>
-        <label className="block">
-          <span className="mb-1 block text-sm text-[var(--text-secondary)]">状态</span>
-          <select name="status" defaultValue={task?.status ?? 'inbox'} className="w-full rounded-md border border-[var(--border-subtle)] bg-[var(--bg-canvas)] px-3 py-2 text-sm text-[var(--text-primary)]">
-            <option value="inbox">收件箱</option>
-            <option value="today">今日</option>
-            <option value="scheduled">已排期</option>
-            <option value="done">已完成</option>
-            <option value="canceled">已取消</option>
-          </select>
-        </label>
-        <label className="block">
-          <span className="mb-1 block text-sm text-[var(--text-secondary)]">今日类型</span>
-          <select name="todayType" defaultValue={task?.todayType ?? ''} className="w-full rounded-md border border-[var(--border-subtle)] bg-[var(--bg-canvas)] px-3 py-2 text-sm text-[var(--text-primary)]">
-            <option value="">无</option>
-            <option value="must">必做</option>
-            <option value="focus">专注</option>
-          </select>
-        </label>
-        <label className="block">
-          <span className="mb-1 block text-sm text-[var(--text-secondary)]">排期日期</span>
-          <input type="date" name="scheduledDate" defaultValue={task?.scheduledDate ?? ''} className="w-full rounded-md border border-[var(--border-subtle)] bg-[var(--bg-canvas)] px-3 py-2 text-sm text-[var(--text-primary)]" />
-        </label>
-        <label className="block">
-          <span className="mb-1 block text-sm text-[var(--text-secondary)]">截止日期</span>
-          <input type="date" name="dueDate" defaultValue={task?.dueDate ?? ''} className="w-full rounded-md border border-[var(--border-subtle)] bg-[var(--bg-canvas)] px-3 py-2 text-sm text-[var(--text-primary)]" />
-        </label>
-        <label className="block">
-          <span className="mb-1 block text-sm text-[var(--text-secondary)]">优先级</span>
-          <select name="priority" defaultValue={task?.priority ?? ''} className="w-full rounded-md border border-[var(--border-subtle)] bg-[var(--bg-canvas)] px-3 py-2 text-sm text-[var(--text-primary)]">
-            <option value="">无</option>
-            <option value="P1">P1</option>
-            <option value="P2">P2</option>
-            <option value="P3">P3</option>
-          </select>
-        </label>
-        <label className="block">
-          <span className="mb-1 block text-sm text-[var(--text-secondary)]">精力消耗</span>
-          <select name="energy" defaultValue={task?.energy ?? ''} className="w-full rounded-md border border-[var(--border-subtle)] bg-[var(--bg-canvas)] px-3 py-2 text-sm text-[var(--text-primary)]">
-            <option value="">无</option>
-            <option value="low">低</option>
-            <option value="medium">中</option>
-            <option value="high">高</option>
-          </select>
-        </label>
+        <div className="md:col-span-2">
+          <TextField name="title" label="标题" required defaultValue={task?.title ?? ''} autoFocus />
+        </div>
+        <SelectField name="status" label="状态" defaultValue={task?.status ?? 'inbox'} options={statusOptions} />
+        <SelectField name="todayType" label="今日类型" defaultValue={task?.todayType ?? ''} options={todayTypeOptions} />
+        <DatePickerField name="scheduledDate" label="排期日期" defaultValue={task?.scheduledDate ?? ''} />
+        <DatePickerField name="dueDate" label="截止日期" defaultValue={task?.dueDate ?? ''} />
+        <SelectField name="priority" label="优先级" defaultValue={task?.priority ?? ''} options={priorityOptions} />
+        <SelectField name="energy" label="精力消耗" defaultValue={task?.energy ?? ''} options={energyOptions} />
       </div>
 
-      <label className="block">
-        <span className="mb-1 block text-sm text-[var(--text-secondary)]">备注</span>
-        <textarea name="notes" rows={3} defaultValue={task?.notes ?? ''} className="w-full rounded-md border border-[var(--border-subtle)] bg-[var(--bg-canvas)] px-3 py-2 text-sm text-[var(--text-primary)]" />
-      </label>
+      <TextareaField name="notes" label="备注" rows={3} defaultValue={task?.notes ?? ''} />
 
       <div className="grid gap-3 md:grid-cols-2">
-        <label className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
-          <input type="checkbox" name="important" defaultChecked={task?.important ?? false} />
-          重要
-        </label>
-        <label className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
-          <input type="checkbox" name="urgent" defaultChecked={task?.urgent ?? false} />
-          紧急
-        </label>
+        <CheckboxField name="important" label="重要" defaultChecked={task?.important ?? false} />
+        <CheckboxField name="urgent" label="紧急" defaultChecked={task?.urgent ?? false} />
       </div>
 
-      <label className="block">
-        <span className="mb-1 block text-sm text-[var(--text-secondary)]">关联关键结果</span>
-        <select
-          name="keyResultIds"
-          multiple
-          defaultValue={Array.from(linkedKeyResultIds)}
-          className="min-h-40 w-full rounded-md border border-[var(--border-subtle)] bg-[var(--bg-canvas)] px-3 py-2 text-sm text-[var(--text-primary)]"
-        >
-          {keyResults.map((keyResult) => (
-            <option key={keyResult.id} value={keyResult.id}>
-              {keyResult.objectiveTitle} / {keyResult.title}
-            </option>
-          ))}
-        </select>
-      </label>
+      <SelectField
+        name="keyResultIds"
+        label="关联关键结果"
+        multiple
+        size={6}
+        defaultValue={Array.from(linkedKeyResultIds).join(',')}
+        options={keyResultOptions}
+      />
 
-      <button type="submit" className="rounded-md border border-[var(--border-strong)] bg-[var(--bg-panel-strong)] px-4 py-2 text-sm font-medium text-[var(--text-primary)]">
-        {submitLabel}
-      </button>
+      <div className="flex justify-end gap-2">
+        <button type="button" onClick={onCancel} className="rounded-md border border-[var(--border-subtle)] px-4 py-2 text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)]">
+          取消
+        </button>
+        <button type="submit" className="rounded-md border border-[var(--border-strong)] bg-[var(--bg-panel-strong)] px-4 py-2 text-sm font-medium text-[var(--text-primary)]">
+          {submitLabel}
+        </button>
+      </div>
     </form>
   );
 }

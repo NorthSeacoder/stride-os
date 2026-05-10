@@ -1,6 +1,21 @@
 'use client';
 
-import { Empty } from '@/components/ui';
+import { useEffect, useMemo, useState, useTransition } from 'react';
+import type { ButtonHTMLAttributes, CSSProperties, Ref } from 'react';
+import {
+  DndContext,
+  DragOverlay,
+  KeyboardSensor,
+  PointerSensor,
+  closestCenter,
+  useDraggable,
+  useDroppable,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type DragStartEvent,
+} from '@dnd-kit/core';
+import { Empty, FeedbackAlert, SelectField } from '@/components/ui';
 import { getTaskStatusLabel } from '@/lib/presentation/labels';
 import { updateTaskQuadrantAction } from './actions';
 
@@ -57,12 +72,65 @@ const quadrantMeta: Record<QuadrantKey, { title: string; subtitle: string; impor
 };
 
 export function QuadrantsClient({ tasks }: { tasks: TaskItem[] }) {
-  const grouped = {
-    do: tasks.filter((task) => getQuadrant(task) === 'do'),
-    decide: tasks.filter((task) => getQuadrant(task) === 'decide'),
-    delegate: tasks.filter((task) => getQuadrant(task) === 'delegate'),
-    delete: tasks.filter((task) => getQuadrant(task) === 'delete'),
-  };
+  const [items, setItems] = useState(tasks);
+  const [activeTask, setActiveTask] = useState<TaskItem | null>(null);
+  const [error, setError] = useState('');
+  const [, startTransition] = useTransition();
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(KeyboardSensor),
+  );
+
+  useEffect(() => {
+    setItems(tasks);
+  }, [tasks]);
+
+  const grouped = useMemo(() => ({
+    do: items.filter((task) => getQuadrant(task) === 'do'),
+    decide: items.filter((task) => getQuadrant(task) === 'decide'),
+    delegate: items.filter((task) => getQuadrant(task) === 'delegate'),
+    delete: items.filter((task) => getQuadrant(task) === 'delete'),
+  }), [items]);
+
+  function moveTask(taskId: string, target: QuadrantKey) {
+    const meta = quadrantMeta[target];
+    setItems((current) => current.map((task) => task.id === taskId ? {
+      ...task,
+      important: meta.important,
+      urgent: meta.urgent,
+    } : task));
+  }
+
+  function persistMove(task: TaskItem, target: QuadrantKey) {
+    const previous = getQuadrant(task);
+    if (previous === target) return;
+
+    const meta = quadrantMeta[target];
+    setError('');
+    moveTask(task.id, target);
+
+    startTransition(async () => {
+      const result = await updateTaskQuadrantAction(task.id, { important: meta.important, urgent: meta.urgent });
+      if (result?.error) {
+        moveTask(task.id, previous);
+        setError(result.error);
+      }
+    });
+  }
+
+  function handleDragStart(event: DragStartEvent) {
+    const task = items.find((item) => item.id === event.active.id);
+    setActiveTask(task ?? null);
+  }
+
+  function handleDragEnd(event: DragEndEvent) {
+    const task = items.find((item) => item.id === event.active.id);
+    const target = event.over?.id;
+    setActiveTask(null);
+
+    if (!task || !isQuadrantKey(target)) return;
+    persistMove(task, target);
+  }
 
   return (
     <div className="space-y-6">
@@ -74,59 +142,180 @@ export function QuadrantsClient({ tasks }: { tasks: TaskItem[] }) {
         </p>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        {(Object.keys(quadrantMeta) as QuadrantKey[]).map((key) => (
-          <section key={key} className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-panel)] p-5">
-            <div className="mb-4">
-              <p className="text-xs uppercase tracking-[0.18em] text-[var(--text-muted)]">{quadrantMeta[key].subtitle}</p>
-              <h2 className="mt-2 text-xl font-semibold text-[var(--text-primary)]">{quadrantMeta[key].title}</h2>
-            </div>
-            {grouped[key].length === 0 ? (
-              <Empty text="这个象限里还没有任务。" />
-            ) : (
-              <div className="space-y-3">
-                {grouped[key].map((task) => (
-                  <article key={task.id} className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-4">
-                    <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                      <div>
-                        <div className="flex flex-wrap items-center gap-2">
-                          <p className="font-medium text-[var(--text-primary)]">{task.title}</p>
-                          <span className="text-xs text-[var(--text-muted)]">{getTaskStatusLabel(task.status)}</span>
-                          {task.dueDate && <span className="text-xs text-[var(--text-muted)]">截止 {task.dueDate}</span>}
-                        </div>
-                        {task.notes && <p className="mt-2 text-sm text-[var(--text-secondary)]">{task.notes}</p>}
-                        {task.keyResultLinks && task.keyResultLinks.length > 0 && (
-                          <div className="mt-3 flex flex-wrap gap-2">
-                            {task.keyResultLinks.map((link) => (
-                              <a key={link.keyResult.id} href={`/okr/${link.keyResult.id}`} className="rounded-full border border-[var(--border-subtle)] px-2 py-1 text-xs text-[var(--text-secondary)]">
-                                {link.keyResult.title}
-                              </a>
-                            ))}
-                          </div>
-                        )}
-                      </div>
+      {error && <FeedbackAlert tone="error" message={error} />}
 
-                      <div className="flex flex-wrap gap-2">
-                        {(Object.entries(quadrantMeta) as Array<[QuadrantKey, typeof quadrantMeta[QuadrantKey]]>).map(([nextKey, meta]) => (
-                          <form key={nextKey} action={async () => updateTaskQuadrantAction(task.id, { important: meta.important, urgent: meta.urgent })}>
-                            <button
-                              type="submit"
-                              disabled={nextKey === key}
-                              className="rounded-md border border-[var(--border-subtle)] px-3 py-2 text-xs text-[var(--text-secondary)] disabled:opacity-50"
-                            >
-                              {nextKey === key ? '当前所在' : meta.subtitle}
-                            </button>
-                          </form>
-                        ))}
-                      </div>
-                    </div>
-                  </article>
-                ))}
-              </div>
-            )}
-          </section>
-        ))}
-      </div>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+        onDragCancel={() => setActiveTask(null)}
+      >
+        <div className="grid gap-4 lg:grid-cols-2">
+          {(Object.keys(quadrantMeta) as QuadrantKey[]).map((key) => (
+            <QuadrantColumn
+              key={key}
+              quadrantKey={key}
+              tasks={grouped[key]}
+              onMove={persistMove}
+            />
+          ))}
+        </div>
+        <DragOverlay>
+          {activeTask && <TaskCard task={activeTask} currentQuadrant={getQuadrant(activeTask)} dragging />}
+        </DragOverlay>
+      </DndContext>
     </div>
+  );
+}
+
+function isQuadrantKey(value: unknown): value is QuadrantKey {
+  return value === 'do' || value === 'decide' || value === 'delegate' || value === 'delete';
+}
+
+function QuadrantColumn({
+  quadrantKey,
+  tasks,
+  onMove,
+}: {
+  quadrantKey: QuadrantKey;
+  tasks: TaskItem[];
+  onMove: (task: TaskItem, target: QuadrantKey) => void;
+}) {
+  const { isOver, setNodeRef } = useDroppable({ id: quadrantKey });
+  const meta = quadrantMeta[quadrantKey];
+
+  return (
+    <section
+      ref={setNodeRef}
+      className={`min-h-64 rounded-md border bg-[var(--bg-panel)] p-5 transition-colors ${
+        isOver ? 'border-[var(--border-strong)]' : 'border-[var(--border-subtle)]'
+      }`}
+    >
+      <div className="mb-4">
+        <p className="text-xs uppercase tracking-[0.18em] text-[var(--text-muted)]">{meta.subtitle}</p>
+        <h2 className="mt-2 text-xl font-semibold text-[var(--text-primary)]">{meta.title}</h2>
+      </div>
+      {tasks.length === 0 ? (
+        <Empty text="这个象限里还没有任务。" />
+      ) : (
+        <div className="space-y-3">
+          {tasks.map((task) => (
+            <DraggableTaskCard key={task.id} task={task} currentQuadrant={quadrantKey} onMove={onMove} />
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function DraggableTaskCard({
+  task,
+  currentQuadrant,
+  onMove,
+}: {
+  task: TaskItem;
+  currentQuadrant: QuadrantKey;
+  onMove: (task: TaskItem, target: QuadrantKey) => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: task.id });
+  const style = transform ? {
+    transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
+  } : undefined;
+
+  return (
+    <TaskCard
+      ref={setNodeRef}
+      task={task}
+      currentQuadrant={currentQuadrant}
+      onMove={onMove}
+      dragging={isDragging}
+      dragAttributes={attributes}
+      dragListeners={listeners}
+      style={style}
+    />
+  );
+}
+
+function TaskCard({
+  task,
+  currentQuadrant,
+  onMove,
+  dragging = false,
+  dragAttributes,
+  dragListeners,
+  style,
+  ref,
+}: {
+  task: TaskItem;
+  currentQuadrant: QuadrantKey;
+  onMove?: (task: TaskItem, target: QuadrantKey) => void;
+  dragging?: boolean;
+  dragAttributes?: ButtonHTMLAttributes<HTMLButtonElement>;
+  dragListeners?: ButtonHTMLAttributes<HTMLButtonElement>;
+  style?: CSSProperties;
+  ref?: Ref<HTMLElement>;
+}) {
+  const quadrantOptions = (Object.entries(quadrantMeta) as Array<[QuadrantKey, typeof quadrantMeta[QuadrantKey]]>).map(([key, meta]) => ({
+    value: key,
+    label: meta.title,
+  }));
+
+  return (
+    <article
+      ref={ref}
+      style={style}
+      className={`rounded-md border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-4 transition-opacity ${dragging ? 'opacity-70' : ''}`}
+    >
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+        <div className="min-w-0">
+          <button
+            type="button"
+            className="mb-2 cursor-grab rounded-md border border-[var(--border-subtle)] px-2 py-1 text-xs text-[var(--text-muted)] active:cursor-grabbing"
+            {...dragAttributes}
+            {...dragListeners}
+          >
+            拖动
+          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="font-medium text-[var(--text-primary)]">{task.title}</p>
+            <span className="text-xs text-[var(--text-muted)]">{getTaskStatusLabel(task.status)}</span>
+            {task.dueDate && <span className="text-xs text-[var(--text-muted)]">截止 {task.dueDate}</span>}
+          </div>
+          {task.notes && <p className="mt-2 text-sm text-[var(--text-secondary)]">{task.notes}</p>}
+          {task.keyResultLinks && task.keyResultLinks.length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {task.keyResultLinks.map((link) => (
+                  <a key={link.keyResult.id} href={`/okr/${link.keyResult.id}`} className="rounded-md border border-[var(--border-subtle)] px-2 py-1 text-xs text-[var(--text-secondary)]">
+                  {link.keyResult.title}
+                </a>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {onMove && (
+          <form
+            action={(formData: FormData) => {
+              const nextQuadrant = String(formData.get('quadrant') ?? '');
+              if (isQuadrantKey(nextQuadrant)) {
+                onMove(task, nextQuadrant);
+              }
+            }}
+            className="min-w-40"
+          >
+            <SelectField
+              name="quadrant"
+              label="移动到"
+              defaultValue={currentQuadrant}
+              options={quadrantOptions}
+            />
+            <button type="submit" className="mt-2 w-full rounded-md border border-[var(--border-subtle)] px-3 py-2 text-xs text-[var(--text-secondary)] hover:bg-[var(--bg-panel)] hover:text-[var(--text-primary)]">
+              移动
+            </button>
+          </form>
+        )}
+      </div>
+    </article>
   );
 }

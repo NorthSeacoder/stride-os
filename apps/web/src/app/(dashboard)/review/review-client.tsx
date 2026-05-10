@@ -74,7 +74,7 @@ export function ReviewClient({
 
       <div className="grid gap-6 xl:grid-cols-[2fr_1fr]">
         <div className="space-y-6">
-          <form action={generateAction} className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-panel)] p-5">
+          <form action={generateAction} className="rounded-md border border-[var(--border-subtle)] bg-[var(--bg-panel)] p-5">
             <div className="grid gap-4 md:grid-cols-2">
               <label className="block">
                 <span className="mb-1 block text-sm text-[var(--text-secondary)]">开始日期</span>
@@ -91,7 +91,7 @@ export function ReviewClient({
             </button>
           </form>
 
-          <div className="space-y-4 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-panel)] p-5">
+          <div className="space-y-4 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-panel)] p-5">
             <form id="review-save-form" action={saveAction} className="space-y-4">
             <input type="hidden" name="periodStart" value={draft.periodStart} />
             <input type="hidden" name="periodEnd" value={draft.periodEnd} />
@@ -133,7 +133,7 @@ export function ReviewClient({
           </div>
         </div>
 
-        <aside className="space-y-4 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-panel)] p-5">
+        <aside className="space-y-4 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-panel)] p-5">
           <div>
             <h2 className="text-lg font-semibold text-[var(--text-primary)]">历史记录</h2>
             <p className="mt-1 text-sm text-[var(--text-secondary)]">最近的周复盘草稿与已定稿记录。</p>
@@ -143,7 +143,7 @@ export function ReviewClient({
               <p className="text-sm text-[var(--text-secondary)]">还没有保存任何复盘。</p>
             ) : (
               reviews.map((review) => (
-                <div key={review.id} className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-4">
+                <div key={review.id} className="rounded-md border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-4">
                   <p className="font-medium text-[var(--text-primary)]">{review.title}</p>
                   <p className="mt-1 text-sm text-[var(--text-secondary)]">{review.periodStart} 至 {review.periodEnd}</p>
                   <p className="mt-2 text-xs text-[var(--text-muted)]">{getReviewStatusLabel(review.status)} / 更新于 {String(review.updatedAt).slice(0, 10)}</p>

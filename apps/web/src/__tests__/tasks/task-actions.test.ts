@@ -49,7 +49,7 @@ describe('task actions', () => {
     formData.set('title', 'Write review');
 
     await expect(createTaskAction({ error: '' }, formData)).resolves.toEqual({
-      error: 'Unauthorized',
+      error: '未授权',
     });
   });
 
@@ -60,7 +60,7 @@ describe('task actions', () => {
     formData.set('title', '   ');
 
     await expect(createTaskAction({ error: '' }, formData)).resolves.toEqual({
-      error: 'Title is required',
+      error: '标题不能为空',
     });
   });
 
@@ -90,5 +90,31 @@ describe('task actions', () => {
     );
     expect(replaceTaskKeyResultLinks).toHaveBeenCalledWith('task_1', ['kr_1', 'kr_2']);
     expect(revalidatePath).toHaveBeenCalledWith('/tasks');
+  });
+
+  it('creates a scheduled task with selected dates', async () => {
+    getSessionUser.mockResolvedValue({ id: 'user_1' });
+    createTask.mockResolvedValue({ id: 'task_1' });
+    replaceTaskKeyResultLinks.mockResolvedValue([]);
+    auditValues.mockResolvedValue(undefined);
+
+    const formData = new FormData();
+    formData.set('title', 'Plan launch');
+    formData.set('status', 'scheduled');
+    formData.set('scheduledDate', '2026-05-12');
+    formData.set('dueDate', '2026-05-20');
+
+    await expect(createTaskAction({ error: '' }, formData)).resolves.toEqual({
+      error: '',
+    });
+
+    expect(createTask).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: 'Plan launch',
+        status: 'scheduled',
+        scheduledDate: '2026-05-12',
+        dueDate: '2026-05-20',
+      }),
+    );
   });
 });

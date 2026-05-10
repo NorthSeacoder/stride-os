@@ -15,6 +15,13 @@
       "when": 1778319878118,
       "tag": "0001_bent_romulus",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1778320000000,
+      "tag": "0002_add_month_period_type",
+      "breakpoints": true
     }
   ]
 }

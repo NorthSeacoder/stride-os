@@ -7,6 +7,8 @@ type TransactionLike = {
   delete: typeof db.delete;
 };
 
+export type TaskStatusCounts = Record<TaskStatus, number>;
+
 export const TASK_STATUSES = ['inbox', 'today', 'scheduled', 'done', 'canceled'] as const;
 export const TODAY_TYPES = ['must', 'focus'] as const;
 export const TASK_PRIORITIES = ['P1', 'P2', 'P3'] as const;
@@ -374,28 +376,28 @@ export async function listTasksForKeyResult(keyResultId: string) {
 export async function replaceTaskKeyResultLinks(taskId: string, keyResultIds: string[]) {
   const dedupedIds = Array.from(new Set(keyResultIds));
 
-  return db.transaction(async (tx: TransactionLike) => {
-    await tx.delete(schema.taskKrLinks).where(eq(schema.taskKrLinks.taskId, taskId));
+  await db.transaction((tx: TransactionLike) => {
+    tx.delete(schema.taskKrLinks).where(eq(schema.taskKrLinks.taskId, taskId));
 
     if (dedupedIds.length > 0) {
-      await tx.insert(schema.taskKrLinks).values(
+      tx.insert(schema.taskKrLinks).values(
         dedupedIds.map((keyResultId) => ({
           taskId,
           keyResultId,
         })),
       );
     }
+  });
 
-    if (dedupedIds.length === 0) {
-      return [];
-    }
+  if (dedupedIds.length === 0) {
+    return [];
+  }
 
-    return tx.query.taskKrLinks.findMany({
-      where: and(eq(schema.taskKrLinks.taskId, taskId), inArray(schema.taskKrLinks.keyResultId, dedupedIds)),
-      with: {
-        keyResult: true,
-      },
-    });
+  return db.query.taskKrLinks.findMany({
+    where: and(eq(schema.taskKrLinks.taskId, taskId), inArray(schema.taskKrLinks.keyResultId, dedupedIds)),
+    with: {
+      keyResult: true,
+    },
   });
 }
 
@@ -543,6 +545,27 @@ export async function listTodayTaskCounts() {
     mustCount: must.length,
     focusCount: focus.length,
   };
+}
+
+export async function listTaskStatusCounts(): Promise<TaskStatusCounts> {
+  const tasks = await db.query.tasks.findMany({
+    columns: {
+      status: true,
+    },
+  });
+
+  const counts = TASK_STATUSES.reduce((acc, status) => {
+    acc[status] = 0;
+    return acc;
+  }, {} as TaskStatusCounts);
+
+  for (const task of tasks as Array<{ status: TaskStatus }>) {
+    if (isTaskStatus(task.status)) {
+      counts[task.status] += 1;
+    }
+  }
+
+  return counts;
 }
 
 export async function getTaskLinkKeyResultIds(taskId: string) {

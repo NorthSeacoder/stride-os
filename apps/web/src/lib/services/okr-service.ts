@@ -1,6 +1,5 @@
 import { and, asc, desc, eq, inArray, isNull, lte, gte } from 'drizzle-orm';
 import { db, schema } from '@stride-os/db';
-import { getConfidenceLabel } from '@/lib/presentation/labels';
 import { listTasksForKeyResult } from './task-service';
 
 type TransactionLike = {
@@ -8,7 +7,7 @@ type TransactionLike = {
   update: typeof db.update;
 };
 
-export const PERIOD_TYPES = ['year', 'quarter', 'custom'] as const;
+export const PERIOD_TYPES = ['year', 'quarter', 'month', 'custom'] as const;
 export const PERIOD_STATUSES = ['active', 'archived'] as const;
 export const OBJECTIVE_STATUSES = ['active', 'done', 'archived'] as const;
 export const KEY_RESULT_TYPES = ['numeric', 'milestone', 'hybrid'] as const;
@@ -81,17 +80,40 @@ function validateDateRange(startDate: string, endDate: string) {
   }
 }
 
+function normalizePeriodBounds(input: PeriodWriteInput) {
+  if (input.type === 'year') {
+    const year = input.startDate.slice(0, 4);
+    return {
+      startDate: `${year}-01-01`,
+      endDate: `${year}-12-31`,
+    };
+  }
+
+  if (input.type === 'quarter') {
+    return {
+      startDate: input.startDate,
+      endDate: input.endDate,
+    };
+  }
+
+  return {
+    startDate: input.startDate,
+    endDate: input.endDate,
+  };
+}
+
 function normalizePeriodInput(input: PeriodWriteInput) {
   const name = ensureTrimmed(input.name, '周期名称');
   const type = validateInSet(input.type, PERIOD_TYPES, '周期类型');
   const status = validateInSet(input.status ?? 'active', PERIOD_STATUSES, '周期状态');
-  validateDateRange(input.startDate, input.endDate);
+  const { startDate, endDate } = normalizePeriodBounds(input);
+  validateDateRange(startDate, endDate);
 
   return {
     name,
     type,
-    startDate: input.startDate,
-    endDate: input.endDate,
+    startDate,
+    endDate,
     status,
   };
 }

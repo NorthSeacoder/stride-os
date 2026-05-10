@@ -10,6 +10,7 @@ import {
 import {
   listCompletedTasksBetween,
   listOpenMustTasks,
+  listTaskStatusCounts,
   listTodayTaskCounts,
 } from './task-service';
 
@@ -298,9 +299,10 @@ export async function getLatestReview() {
 }
 
 export async function getDashboardSummary() {
-  const [currentPeriodSummary, todayTaskCounts, riskKeyResults, latestReview] = await Promise.all([
+  const [currentPeriodSummary, todayTaskCounts, taskStatusCounts, riskKeyResults, latestReview] = await Promise.all([
     getCurrentPeriodSummary(),
     listTodayTaskCounts(),
+    listTaskStatusCounts(),
     listRiskKeyResults(),
     getLatestReview(),
   ]);
@@ -308,6 +310,9 @@ export async function getDashboardSummary() {
   return {
     currentPeriodSummary,
     todayTaskCounts,
+    chartStats: {
+      taskStatusCounts,
+    },
     riskKeyResults,
     latestReview,
   };

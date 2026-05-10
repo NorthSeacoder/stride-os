@@ -114,7 +114,7 @@ const periodsColumns = {
 export const periods = pgTable('periods', periodsColumns, (table) => [
   index('idx_periods_status').on(table.status),
   index('idx_periods_start_date').on(table.startDate),
-  check('periods_type_check', sql`${table.type} in ('year', 'quarter', 'custom')`),
+  check('periods_type_check', sql`${table.type} in ('year', 'quarter', 'month', 'custom')`),
   check('periods_status_check', sql`${table.status} in ('active', 'archived')`),
   check('periods_date_range_check', sql`${table.endDate} >= ${table.startDate}`),
 ]);

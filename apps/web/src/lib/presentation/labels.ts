@@ -20,6 +20,7 @@ const energyLabels = {
 const periodTypeLabels = {
   year: '年度',
   quarter: '季度',
+  month: '月度',
   custom: '自定义',
 } as const;
 
