@@ -24,6 +24,7 @@
 - reverse proxy: `traefik`
 - docker network: `proxy`
 - shared postgres: `shared-postgres`
+- analytics: `umami` instance
 
 当前不作为默认依赖的公共服务：
 
@@ -88,8 +89,29 @@ web
 - 通过 `DATABASE_URL` 连接公共 `shared-postgres`
 - 通过 `DATABASE_SCHEMA` 指定当前项目 schema
 - 通过 `IMAGE_TAG` 固定到明确发布版本
-- 通过 Traefik labels 挂域名
+- 通过 Traefik labels 挂正式域名
+- 默认走 `websecure` + TLS
 - 不在项目 compose 内重复声明 Postgres 服务
+
+## Domain And Analytics
+
+生产环境建议通过 NAS / 1Panel 注入：
+
+- `HOST`
+- `NEXT_PUBLIC_APP_URL`
+- `NEXT_PUBLIC_UMAMI_SCRIPT_URL`
+- `NEXT_PUBLIC_UMAMI_WEBSITE_ID`
+
+站点统计接入方式：
+
+- Umami script URL 走环境变量
+- website id 走环境变量
+
+接入要求：
+
+- 追踪脚本直接注入应用根布局
+- `NEXT_PUBLIC_APP_URL` 必须与正式域名一致
+- Traefik `Host` 规则必须与正式域名一致
 
 ## Release Automation
 

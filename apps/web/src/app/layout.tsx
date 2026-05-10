@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Script from 'next/script';
 import { env } from '@stride-os/db/env';
 import './globals.css';
 
@@ -23,6 +24,14 @@ export default function RootLayout({
         className="bg-[var(--bg-canvas)] text-[var(--text-primary)] antialiased"
         style={{ fontFamily: 'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}
       >
+        {env.umamiScriptUrl && env.umamiWebsiteId ? (
+          <Script
+            defer
+            src={env.umamiScriptUrl}
+            data-website-id={env.umamiWebsiteId}
+            strategy="afterInteractive"
+          />
+        ) : null}
         {children}
       </body>
     </html>

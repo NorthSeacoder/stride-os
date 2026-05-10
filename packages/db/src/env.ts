@@ -55,6 +55,8 @@ function envFactory() {
   const adminEmail = optionalEnv('ADMIN_EMAIL', 'admin@example.com');
   const adminPassword = optionalEnv('ADMIN_PASSWORD', 'changeme123');
   const appUrl = optionalEnv('NEXT_PUBLIC_APP_URL', 'http://localhost:3000');
+  const umamiScriptUrl = optionalEnv('NEXT_PUBLIC_UMAMI_SCRIPT_URL', '');
+  const umamiWebsiteId = optionalEnv('NEXT_PUBLIC_UMAMI_WEBSITE_ID', '');
   const dockerRegistry = optionalEnv('DOCKER_REGISTRY', '');
   const dockerImageName = optionalEnv('DOCKER_IMAGE_NAME', 'stride-os');
 
@@ -79,6 +81,8 @@ function envFactory() {
     adminEmail,
     adminPassword,
     appUrl,
+    umamiScriptUrl,
+    umamiWebsiteId,
     dockerRegistry,
     dockerImageName,
     isDatabaseConfigured,

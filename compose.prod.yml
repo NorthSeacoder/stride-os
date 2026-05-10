@@ -11,8 +11,9 @@ services:
       - default
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.stride-os.rule=Host(`${HOST:-stride-os.local}`)"
-      - "traefik.http.routers.stride-os.entrypoints=web"
+      - "traefik.http.routers.stride-os.rule=Host(`${HOST}`)"
+      - "traefik.http.routers.stride-os.entrypoints=websecure"
+      - "traefik.http.routers.stride-os.tls=true"
       - "traefik.http.services.stride-os.loadbalancer.server.port=3000"
 
 networks:
