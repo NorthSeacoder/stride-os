@@ -1,10 +1,10 @@
 'use client';
 
-import { Button } from '@base-ui/react/button';
 import { Field } from '@base-ui/react/field';
 import { Popover } from '@base-ui/react/popover';
 import { useEffect, useState } from 'react';
 import { DayPicker } from 'react-day-picker';
+import { Button } from './button';
 
 type DatePickerFieldProps = {
   name: string;
@@ -59,7 +59,7 @@ export function DatePickerField({
         <div className="flex items-start gap-2">
           <Popover.Trigger
             render={
-              <Button className="flex h-10 min-h-10 w-full items-center overflow-hidden rounded-md border border-[var(--border-subtle)] bg-[var(--bg-canvas)] px-3 text-left text-sm text-[var(--text-primary)] outline-none transition-colors hover:bg-[var(--bg-elevated)] focus:border-[var(--border-strong)] focus:ring-2 focus:ring-[var(--focus-ring)]/30" />
+              <Button variant="secondary" className="flex h-10 min-h-10 w-full items-center overflow-hidden bg-[var(--bg-canvas)] px-3 text-left" />
             }
           >
             <span className="block truncate">{value || '选择日期'}</span>
@@ -68,7 +68,8 @@ export function DatePickerField({
             <Button
               type="button"
               onClick={() => setDate('')}
-              className="h-10 shrink-0 rounded-md border border-[var(--border-subtle)] px-3 text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)]"
+              variant="secondary"
+              className="h-10 shrink-0 px-3"
             >
               清空
             </Button>
@@ -92,8 +93,10 @@ export function DatePickerField({
                   selected: 'rounded-md bg-[var(--bg-panel-contrast)] text-[var(--text-primary)]',
                   today: 'text-[var(--warning-text)]',
                   nav: 'mb-2 flex justify-end gap-1',
-                  button_previous: 'rounded border border-[var(--border-subtle)] px-2 text-sm text-[var(--text-secondary)]',
-                  button_next: 'rounded border border-[var(--border-subtle)] px-2 text-sm text-[var(--text-secondary)]',
+                  button_previous:
+                    'rounded-md border border-[var(--border-subtle)] bg-[var(--bg-panel)] px-2 text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)]',
+                  button_next:
+                    'rounded-md border border-[var(--border-subtle)] bg-[var(--bg-panel)] px-2 text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)]',
                 }}
               />
             </Popover.Popup>

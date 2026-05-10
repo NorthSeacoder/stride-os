@@ -1,5 +1,7 @@
 'use client';
 
+import { Button } from '@/components/ui';
+
 export default function GlobalError({
   error,
   reset,
@@ -14,13 +16,14 @@ export default function GlobalError({
         <p className="mt-2 text-sm text-[var(--text-secondary)]">
           {error.digest ? `错误参考号：${error.digest}` : '请刷新页面，或重试刚才的操作。'}
         </p>
-        <button
+        <Button
           type="button"
+          variant="primary"
           onClick={() => reset()}
-          className="mt-4 rounded-md border border-[var(--border-strong)] bg-[var(--bg-panel-strong)] px-4 py-2 text-sm font-medium text-[var(--text-primary)] transition-colors hover:bg-[var(--bg-panel-contrast)] focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)]"
+          className="mt-4"
         >
           重试
-        </button>
+        </Button>
       </div>
     </main>
   );

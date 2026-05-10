@@ -15,7 +15,7 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from '@dnd-kit/core';
-import { Empty, FeedbackAlert, SelectField } from '@/components/ui';
+import { Button, Empty, FeedbackAlert, SelectField } from '@/components/ui';
 import { getTaskStatusLabel } from '@/lib/presentation/labels';
 import { updateTaskQuadrantAction } from './actions';
 
@@ -269,14 +269,16 @@ function TaskCard({
     >
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0">
-          <button
+          <Button
             type="button"
-            className="mb-2 cursor-grab rounded-md border border-[var(--border-subtle)] px-2 py-1 text-xs text-[var(--text-muted)] active:cursor-grabbing"
+            variant="secondary"
+            size="sm"
+            className="mb-2 cursor-grab px-2 py-1 text-xs text-[var(--text-muted)] active:cursor-grabbing"
             {...dragAttributes}
             {...dragListeners}
           >
             拖动
-          </button>
+          </Button>
           <div className="flex flex-wrap items-center gap-2">
             <p className="font-medium text-[var(--text-primary)]">{task.title}</p>
             <span className="text-xs text-[var(--text-muted)]">{getTaskStatusLabel(task.status)}</span>
@@ -310,9 +312,9 @@ function TaskCard({
               defaultValue={currentQuadrant}
               options={quadrantOptions}
             />
-            <button type="submit" className="mt-2 w-full rounded-md border border-[var(--border-subtle)] px-3 py-2 text-xs text-[var(--text-secondary)] hover:bg-[var(--bg-panel)] hover:text-[var(--text-primary)]">
+            <Button type="submit" variant="secondary" fullWidth className="mt-2 text-xs">
               移动
-            </button>
+            </Button>
           </form>
         )}
       </div>

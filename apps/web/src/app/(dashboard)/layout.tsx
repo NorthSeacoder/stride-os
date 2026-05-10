@@ -1,3 +1,4 @@
+import { Button } from '@/components/ui';
 import { getSessionUser } from '@/lib/auth/session';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
@@ -30,12 +31,9 @@ export default async function DashboardLayout({
             {user.name ?? user.email}
           </p>
           <form action="/api/auth/logout" method="POST">
-            <button
-              type="submit"
-              className="text-sm text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)]"
-            >
+            <Button type="submit" variant="ghost" size="sm" className="px-1">
               退出登录
-            </button>
+            </Button>
           </form>
         </div>
       </nav>

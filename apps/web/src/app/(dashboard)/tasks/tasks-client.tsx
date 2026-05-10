@@ -2,6 +2,8 @@
 
 import { useActionState, useEffect, useState } from 'react';
 import {
+  Badge,
+  Button,
   CheckboxField,
   DatePickerField,
   Empty,
@@ -116,23 +118,24 @@ export function TasksClient({
             默认进入今日视图。你可以从收件箱或排期任务中拉取任务，标记为必做或专注，并把 KR 关联到执行动作上。
           </p>
         </div>
-        <button
+        <Button
           type="button"
+          variant="primary"
           onClick={() => {
             setTaskModal({ mode: 'create' });
             setHasSubmittedCreate(false);
           }}
-          className="rounded-md border border-[var(--border-strong)] bg-[var(--bg-panel-strong)] px-4 py-2 text-sm font-medium text-[var(--text-primary)] transition-colors hover:bg-[var(--bg-panel-contrast)]"
         >
           新建任务
-        </button>
+        </Button>
       </div>
 
       <div className="grid gap-3 md:grid-cols-4">
         {(['today', 'inbox', 'scheduled', 'done'] as const).map((view) => (
-          <button
+          <Button
             key={view}
             type="button"
+            variant={activeView === view ? 'primary' : 'secondary'}
             onClick={() => setActiveView(view)}
             className={`rounded-lg border px-4 py-4 text-left transition-colors ${
               activeView === view
@@ -142,7 +145,7 @@ export function TasksClient({
           >
             <p className="text-xs uppercase tracking-[0.18em] text-[var(--text-muted)]">{getTaskStatusLabel(view)}</p>
             <p className="mt-2 text-2xl font-semibold text-[var(--text-primary)]">{viewCounts[view]}</p>
-          </button>
+          </Button>
         ))}
       </div>
 
@@ -316,12 +319,12 @@ function TaskCards({
               <div className="flex flex-wrap items-center gap-2">
                 <h3 className="text-base font-medium text-[var(--text-primary)]">{task.title}</h3>
                 {task.todayType && (
-                  <span className="rounded-full bg-[var(--bg-panel-strong)] px-2 py-1 text-[11px] uppercase tracking-[0.14em] text-[var(--text-secondary)]">
+                  <Badge className="rounded-full bg-[var(--bg-panel-strong)] px-2 py-1 text-[11px] uppercase tracking-[0.14em] text-[var(--text-secondary)]">
                     {getTodayTypeLabel(task.todayType)}
-                  </span>
+                  </Badge>
                 )}
-                {task.important && <span className="text-xs text-[var(--warning-text)]">重要</span>}
-                {task.urgent && <span className="text-xs text-[var(--danger-text)]">紧急</span>}
+                {task.important && <Badge tone="warning">重要</Badge>}
+                {task.urgent && <Badge tone="danger">紧急</Badge>}
               </div>
               {task.notes && <p className="mt-2 text-sm text-[var(--text-secondary)]">{task.notes}</p>}
               <div className="mt-3 flex flex-wrap gap-2 text-xs text-[var(--text-muted)]">
@@ -347,47 +350,43 @@ function TaskCards({
               )}
             </div>
             <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() => onEdit(task)}
-                className="rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-panel)] hover:text-[var(--text-primary)]"
-              >
+              <Button type="button" variant="secondary" onClick={() => onEdit(task)}>
                 编辑
-              </button>
+              </Button>
               {task.status !== 'done' && (
                 <form action={async () => completeTaskAction(task.id)}>
-                  <button type="submit" className="rounded-md border border-[var(--success-border)] px-3 py-2 text-sm text-[var(--success-text)]">
+                  <Button type="submit" variant="success">
                     完成
-                  </button>
+                  </Button>
                 </form>
               )}
               {showTodayActions && (
                 <>
                   <form action={async () => moveTaskToTodayAction(task.id, 'must')}>
-                    <button type="submit" className="rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm text-[var(--text-secondary)]">
+                    <Button type="submit" variant="secondary">
                       今日必做
-                    </button>
+                    </Button>
                   </form>
                   <form action={async () => moveTaskToTodayAction(task.id, 'focus')}>
-                    <button type="submit" className="rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm text-[var(--text-secondary)]">
+                    <Button type="submit" variant="secondary">
                       今日专注
-                    </button>
+                    </Button>
                   </form>
                 </>
               )}
               {showScheduleAction && (
                 <form action={async (formData: FormData) => scheduleTaskAction(task.id, String(formData.get('scheduledDate') ?? '').trim())} className="flex min-w-56 gap-2">
                   <DatePickerField name="scheduledDate" label="排期日期" allowClear={false} />
-                  <button type="submit" className="rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm text-[var(--text-secondary)]">
+                  <Button type="submit" variant="secondary">
                     排期
-                  </button>
+                  </Button>
                 </form>
               )}
               {task.status !== 'canceled' && task.status !== 'done' && (
                 <form action={async () => cancelTaskAction(task.id)}>
-                  <button type="submit" className="rounded-md border border-[var(--danger-border)] px-3 py-2 text-sm text-[var(--danger-text)]">
+                  <Button type="submit" variant="danger">
                     取消
-                  </button>
+                  </Button>
                 </form>
               )}
             </div>
@@ -477,12 +476,12 @@ function TaskForm({
       />
 
       <div className="flex justify-end gap-2">
-        <button type="button" onClick={onCancel} className="rounded-md border border-[var(--border-subtle)] px-4 py-2 text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)]">
+        <Button type="button" variant="secondary" onClick={onCancel}>
           取消
-        </button>
-        <button type="submit" className="rounded-md border border-[var(--border-strong)] bg-[var(--bg-panel-strong)] px-4 py-2 text-sm font-medium text-[var(--text-primary)]">
+        </Button>
+        <Button type="submit" variant="primary">
           {submitLabel}
-        </button>
+        </Button>
       </div>
     </form>
   );

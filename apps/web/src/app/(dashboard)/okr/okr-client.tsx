@@ -1,8 +1,8 @@
 'use client';
 
+import { Badge, Button, Empty, ErrorAlert, SelectField, TextareaField, TextField } from '@/components/ui';
 import { useActionState, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Empty, ErrorAlert } from '@/components/ui';
 import {
   getConfidenceLabel,
   getKeyResultStatusLabel,
@@ -79,16 +79,16 @@ export function OkrClient({ periods }: { periods: PeriodView[] }) {
             在这里搭建 OKR 层级：周期、目标和关键结果。每个 KR 的 check-in 在详情页完成。
           </p>
         </div>
-        <button
+        <Button
           type="button"
+          variant="primary"
           onClick={() => {
             setPeriodType('quarter');
             setShowPeriodForm((value) => !value);
           }}
-          className="rounded-md border border-[var(--border-strong)] bg-[var(--bg-panel-strong)] px-4 py-2 text-sm font-medium text-[var(--text-primary)]"
         >
           {showPeriodForm ? '收起周期表单' : '新建周期'}
-        </button>
+        </Button>
       </div>
 
       {showPeriodForm && (
@@ -124,30 +124,24 @@ export function OkrClient({ periods }: { periods: PeriodView[] }) {
                     {period.startDate} 至 {period.endDate}
                   </p>
                 </div>
-                <button
+                <Button
                   type="button"
+                  variant="secondary"
                   onClick={() => setObjectivePeriodId(objectivePeriodId === period.id ? null : period.id)}
-                  className="rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm text-[var(--text-secondary)]"
                 >
                   {objectivePeriodId === period.id ? '收起目标表单' : '新增目标'}
-                </button>
+                </Button>
               </div>
 
               {objectivePeriodId === period.id && (
                 <form action={objectiveAction} className="mt-4 space-y-4 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-4">
                   <input type="hidden" name="periodId" value={period.id} />
                   {objectiveState.error && <ErrorAlert message={objectiveState.error} />}
-                  <label className="block">
-                    <span className="mb-1 block text-sm text-[var(--text-secondary)]">目标标题</span>
-                    <input name="title" required className="w-full rounded-md border border-[var(--border-subtle)] bg-[var(--bg-canvas)] px-3 py-2 text-sm text-[var(--text-primary)]" />
-                  </label>
-                  <label className="block">
-                    <span className="mb-1 block text-sm text-[var(--text-secondary)]">描述</span>
-                    <textarea name="description" rows={2} className="w-full rounded-md border border-[var(--border-subtle)] bg-[var(--bg-canvas)] px-3 py-2 text-sm text-[var(--text-primary)]" />
-                  </label>
-                  <button type="submit" className="rounded-md border border-[var(--border-strong)] bg-[var(--bg-panel-strong)] px-4 py-2 text-sm font-medium text-[var(--text-primary)]">
+                  <TextField name="title" label="目标标题" required />
+                  <TextareaField name="description" label="描述" rows={2} />
+                  <Button type="submit" variant="primary">
                     创建目标
-                  </button>
+                  </Button>
                 </form>
               )}
 
@@ -162,47 +156,39 @@ export function OkrClient({ periods }: { periods: PeriodView[] }) {
                           <h3 className="text-lg font-medium text-[var(--text-primary)]">{objective.title}</h3>
                           {objective.description && <p className="mt-2 text-sm text-[var(--text-secondary)]">{objective.description}</p>}
                         </div>
-                        <button
+                        <Button
                           type="button"
+                          variant="secondary"
                           onClick={() => setKrObjectiveId(krObjectiveId === objective.id ? null : objective.id)}
-                          className="rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm text-[var(--text-secondary)]"
                         >
                           {krObjectiveId === objective.id ? '收起 KR 表单' : '新增关键结果'}
-                        </button>
+                        </Button>
                       </div>
 
                       {krObjectiveId === objective.id && (
                         <form action={krAction} className="mt-4 grid gap-4 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-panel)] p-4 md:grid-cols-2">
                           <input type="hidden" name="objectiveId" value={objective.id} />
                           {krState.error && <div className="md:col-span-2"><ErrorAlert message={krState.error} /></div>}
-                          <label className="block md:col-span-2">
-                            <span className="mb-1 block text-sm text-[var(--text-secondary)]">KR 标题</span>
-                            <input name="title" required className="w-full rounded-md border border-[var(--border-subtle)] bg-[var(--bg-canvas)] px-3 py-2 text-sm text-[var(--text-primary)]" />
-                          </label>
-                          <label className="block">
-                            <span className="mb-1 block text-sm text-[var(--text-secondary)]">类型</span>
-                            <select name="type" defaultValue="numeric" className="w-full rounded-md border border-[var(--border-subtle)] bg-[var(--bg-canvas)] px-3 py-2 text-sm text-[var(--text-primary)]">
-                              <option value="numeric">数值型</option>
-                              <option value="milestone">里程碑型</option>
-                              <option value="hybrid">混合型</option>
-                            </select>
-                          </label>
-                          <label className="block">
-                            <span className="mb-1 block text-sm text-[var(--text-secondary)]">单位</span>
-                            <input name="unit" className="w-full rounded-md border border-[var(--border-subtle)] bg-[var(--bg-canvas)] px-3 py-2 text-sm text-[var(--text-primary)]" />
-                          </label>
-                          <label className="block">
-                            <span className="mb-1 block text-sm text-[var(--text-secondary)]">目标值</span>
-                            <input name="targetValue" type="number" step="0.01" className="w-full rounded-md border border-[var(--border-subtle)] bg-[var(--bg-canvas)] px-3 py-2 text-sm text-[var(--text-primary)]" />
-                          </label>
-                          <label className="block">
-                            <span className="mb-1 block text-sm text-[var(--text-secondary)]">当前值</span>
-                            <input name="currentValue" type="number" step="0.01" className="w-full rounded-md border border-[var(--border-subtle)] bg-[var(--bg-canvas)] px-3 py-2 text-sm text-[var(--text-primary)]" />
-                          </label>
                           <div className="md:col-span-2">
-                            <button type="submit" className="rounded-md border border-[var(--border-strong)] bg-[var(--bg-panel-strong)] px-4 py-2 text-sm font-medium text-[var(--text-primary)]">
+                            <TextField name="title" label="KR 标题" required />
+                          </div>
+                          <SelectField
+                            name="type"
+                            label="类型"
+                            defaultValue="numeric"
+                            options={[
+                              { value: 'numeric', label: '数值型' },
+                              { value: 'milestone', label: '里程碑型' },
+                              { value: 'hybrid', label: '混合型' },
+                            ]}
+                          />
+                          <TextField name="unit" label="单位" />
+                          <TextField name="targetValue" label="目标值" type="number" step="0.01" />
+                          <TextField name="currentValue" label="当前值" type="number" step="0.01" />
+                          <div className="md:col-span-2">
+                            <Button type="submit" variant="primary">
                               创建关键结果
-                            </button>
+                            </Button>
                           </div>
                         </form>
                       )}
@@ -215,10 +201,10 @@ export function OkrClient({ periods }: { periods: PeriodView[] }) {
                             <Link key={keyResult.id} href={`/okr/${keyResult.id}`} className="block rounded-md border border-[var(--border-subtle)] bg-[var(--bg-panel)] p-4 hover:bg-[var(--bg-canvas)]">
                               <div className="flex flex-wrap items-center gap-3">
                                 <p className="font-medium text-[var(--text-primary)]">{keyResult.title}</p>
-                                <span className="text-xs text-[var(--text-muted)]">{getKeyResultTypeLabel(keyResult.type)}</span>
-                                <span className="text-xs text-[var(--text-muted)]">{getKeyResultStatusLabel(keyResult.status)}</span>
-                                <span className="text-xs text-[var(--text-muted)]">进度 {keyResult.currentValue ?? '暂无'} / {keyResult.targetValue ?? '暂无'}</span>
-                                <span className="text-xs text-[var(--text-muted)]">信心 {getConfidenceLabel(keyResult.confidence)}</span>
+                                <Badge>{getKeyResultTypeLabel(keyResult.type)}</Badge>
+                                <Badge>{getKeyResultStatusLabel(keyResult.status)}</Badge>
+                                <Badge>进度 {keyResult.currentValue ?? '暂无'} / {keyResult.targetValue ?? '暂无'}</Badge>
+                                <Badge>信心 {getConfidenceLabel(keyResult.confidence)}</Badge>
                               </div>
                             </Link>
                           ))
@@ -298,25 +284,14 @@ function PeriodForm({
     <form action={action} className="space-y-4 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-panel)] p-5">
       {error && <ErrorAlert message={error} />}
       <div className="grid gap-4 md:grid-cols-2">
-        <label className="block">
-          <span className="mb-1 block text-sm text-[var(--text-secondary)]">名称</span>
-          <input name="name" required className="w-full rounded-md border border-[var(--border-subtle)] bg-[var(--bg-canvas)] px-3 py-2 text-sm text-[var(--text-primary)]" />
-        </label>
-        <label className="block">
-          <span className="mb-1 block text-sm text-[var(--text-secondary)]">类型</span>
-          <select
-            name="type"
-            value={periodType}
-            onChange={(event) => onPeriodTypeChange(event.target.value as PeriodType)}
-            className="w-full rounded-md border border-[var(--border-subtle)] bg-[var(--bg-canvas)] px-3 py-2 text-sm text-[var(--text-primary)]"
-          >
-            {typeOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </label>
+        <TextField name="name" label="名称" required />
+        <SelectField
+          name="type"
+          label="类型"
+          value={periodType}
+          onValueChange={(value) => onPeriodTypeChange(value as PeriodType)}
+          options={typeOptions}
+        />
       </div>
 
       <PeriodDateFields
@@ -331,9 +306,9 @@ function PeriodForm({
         onCustomEndMonthChange={onCustomEndMonthChange}
       />
 
-      <button type="submit" className="rounded-md border border-[var(--border-strong)] bg-[var(--bg-panel-strong)] px-4 py-2 text-sm font-medium text-[var(--text-primary)]">
+      <Button type="submit" variant="primary">
         创建周期
-      </button>
+      </Button>
     </form>
   );
 }
@@ -382,16 +357,13 @@ function PeriodDateFields({
 
     return (
       <div className="grid gap-4 md:grid-cols-2">
-        <label className="block">
-          <span className="mb-1 block text-sm text-[var(--text-secondary)]">季度</span>
-          <select name="quarter" value={quarter} onChange={(event) => onQuarterChange(event.target.value as Quarter)} className="w-full rounded-md border border-[var(--border-subtle)] bg-[var(--bg-canvas)] px-3 py-2 text-sm text-[var(--text-primary)]">
-            {options.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </label>
+        <SelectField
+          name="quarter"
+          label="季度"
+          value={quarter}
+          onValueChange={(value) => onQuarterChange(value as Quarter)}
+          options={options}
+        />
         <div className="rounded-md border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-3 py-2 text-sm text-[var(--text-secondary)]">
           当前季度会自动展开成具体起止日期。
           <input type="hidden" name="startDate" value={range.startDate} />
@@ -410,16 +382,13 @@ function PeriodDateFields({
 
     return (
       <div className="grid gap-4 md:grid-cols-2">
-        <label className="block">
-          <span className="mb-1 block text-sm text-[var(--text-secondary)]">月份</span>
-          <select name="month" value={month} onChange={(event) => onMonthChange(event.target.value)} className="w-full rounded-md border border-[var(--border-subtle)] bg-[var(--bg-canvas)] px-3 py-2 text-sm text-[var(--text-primary)]">
-            {options.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </label>
+        <SelectField
+          name="month"
+          label="月份"
+          value={month}
+          onValueChange={onMonthChange}
+          options={options}
+        />
         <div className="rounded-md border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-3 py-2 text-sm text-[var(--text-secondary)]">
           月度周期会自动展开成具体起止日期。
           <input type="hidden" name="startDate" value={range.startDate} />
@@ -440,44 +409,25 @@ function PeriodDateFields({
 
   return (
     <div className="grid gap-4 md:grid-cols-2">
-      <label className="block">
-        <span className="mb-1 block text-sm text-[var(--text-secondary)]">开始月份</span>
-        <select
-          name="startMonth"
-          value={String(startMonth).padStart(2, '0')}
-          onChange={(event) => {
-            const nextValue = event.target.value;
-            onCustomStartMonthChange(nextValue);
-            if (Number(nextValue) > endMonth) {
-              onCustomEndMonthChange(nextValue);
-            }
-          }}
-          className="w-full rounded-md border border-[var(--border-subtle)] bg-[var(--bg-canvas)] px-3 py-2 text-sm text-[var(--text-primary)]"
-        >
-          {monthOptions.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-      </label>
-      <label className="block">
-        <span className="mb-1 block text-sm text-[var(--text-secondary)]">结束月份</span>
-        <select
-          name="endMonth"
-          value={String(endMonth).padStart(2, '0')}
-          onChange={(event) => onCustomEndMonthChange(event.target.value)}
-          className="w-full rounded-md border border-[var(--border-subtle)] bg-[var(--bg-canvas)] px-3 py-2 text-sm text-[var(--text-primary)]"
-        >
-          {monthOptions
-            .filter((option) => Number(option.value) >= startMonth)
-            .map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-        </select>
-      </label>
+      <SelectField
+        name="startMonth"
+        label="开始月份"
+        value={String(startMonth).padStart(2, '0')}
+        onValueChange={(nextValue) => {
+          onCustomStartMonthChange(nextValue);
+          if (Number(nextValue) > endMonth) {
+            onCustomEndMonthChange(nextValue);
+          }
+        }}
+        options={monthOptions}
+      />
+      <SelectField
+        name="endMonth"
+        label="结束月份"
+        value={String(endMonth).padStart(2, '0')}
+        onValueChange={onCustomEndMonthChange}
+        options={monthOptions.filter((option) => Number(option.value) >= startMonth)}
+      />
       <div className="rounded-md border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-3 py-2 text-sm text-[var(--text-secondary)] md:col-span-2">
         自定义周期按月份粒度保存，系统会自动展开为具体日期。
         <input type="hidden" name="startDate" value={startRange.startDate} />

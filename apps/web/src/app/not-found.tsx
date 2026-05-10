@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import { LinkButton } from '@/components/ui';
 
 export default function NotFound() {
   return (
@@ -10,18 +10,12 @@ export default function NotFound() {
           你访问的资源在当前模板中不可用。
         </p>
         <div className="mt-5 flex justify-center gap-3">
-          <Link
-            href="/"
-            className="rounded-md border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-4 py-2 text-sm text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-panel)] hover:text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)]"
-          >
+          <LinkButton href="/" variant="secondary">
             首页
-          </Link>
-          <Link
-            href="/dashboard"
-            className="rounded-md border border-[var(--border-strong)] bg-[var(--bg-panel-strong)] px-4 py-2 text-sm font-medium text-[var(--text-primary)] transition-colors hover:bg-[var(--bg-panel-contrast)] focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)]"
-          >
+          </LinkButton>
+          <LinkButton href="/dashboard" variant="primary">
             工作台
-          </Link>
+          </LinkButton>
         </div>
       </div>
     </main>

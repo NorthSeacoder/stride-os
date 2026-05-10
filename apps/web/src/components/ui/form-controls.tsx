@@ -3,7 +3,7 @@
 import { Checkbox } from '@base-ui/react/checkbox';
 import { Field } from '@base-ui/react/field';
 import { Select } from '@base-ui/react/select';
-import { useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import type { ComponentPropsWithoutRef, ReactNode } from 'react';
 
 type FieldShellProps = {
@@ -48,13 +48,27 @@ type TextareaFieldProps = ComponentPropsWithoutRef<'textarea'> & {
 };
 
 export function TextareaField({ label, error, description, className = '', ...props }: TextareaFieldProps) {
+  const generatedId = useId();
+  const controlId = props.id ?? generatedId;
+  const descriptionId = description ? `${controlId}-description` : undefined;
+  const errorId = error ? `${controlId}-error` : undefined;
+  const describedBy = [descriptionId, errorId].filter(Boolean).join(' ') || undefined;
+
   return (
-    <FieldShell label={label} error={error} description={description}>
+    <div className="block">
+      <label htmlFor={controlId} className="mb-1 block text-sm text-[var(--text-secondary)]">
+        {label}
+      </label>
       <textarea
         {...props}
+        id={controlId}
+        aria-describedby={describedBy}
+        aria-invalid={error ? true : undefined}
         className={`w-full rounded-md border border-[var(--border-subtle)] bg-[var(--bg-canvas)] px-3 py-2 text-sm text-[var(--text-primary)] outline-none transition-colors focus:border-[var(--border-strong)] focus:ring-2 focus:ring-[var(--focus-ring)]/30 ${className}`}
       />
-    </FieldShell>
+      {description && <p id={descriptionId} className="mt-1 text-xs text-[var(--text-muted)]">{description}</p>}
+      {error && <p id={errorId} className="mt-1 text-xs text-[var(--danger-text)]">{error}</p>}
+    </div>
   );
 }
 
@@ -66,45 +80,96 @@ type SelectOption = {
 type SelectFieldProps = {
   name: string;
   label: string;
+  value?: string;
   defaultValue?: string;
+  placeholder?: string;
   multiple?: boolean;
   size?: number;
+  disabled?: boolean;
   options: SelectOption[];
   error?: string;
   description?: string;
+  onValueChange?: (value: string) => void;
 };
 
-export function SelectField({ name, label, defaultValue = '', multiple = false, size, options, error, description }: SelectFieldProps) {
-  const [value, setValue] = useState(defaultValue);
+export function SelectField({
+  name,
+  label,
+  value,
+  defaultValue = '',
+  placeholder = '请选择',
+  multiple = false,
+  size,
+  disabled = false,
+  options,
+  error,
+  description,
+  onValueChange,
+}: SelectFieldProps) {
+  const isControlled = value !== undefined;
+  const [internalValue, setInternalValue] = useState(defaultValue);
+
+  useEffect(() => {
+    if (!isControlled) {
+      setInternalValue(defaultValue);
+    }
+  }, [defaultValue, isControlled]);
+
+  const currentValue = isControlled ? value : internalValue;
 
   if (multiple) {
+    const selectedValues = currentValue ? currentValue.split(',').filter(Boolean) : [];
+
     return (
       <FieldShell label={label} error={error} description={description}>
-        <select
-          name={name}
-          multiple
-          size={size}
-          defaultValue={defaultValue ? defaultValue.split(',') : []}
-          className="min-h-32 w-full rounded-md border border-[var(--border-subtle)] bg-[var(--bg-canvas)] px-3 py-2 text-sm text-[var(--text-primary)] outline-none transition-colors focus:border-[var(--border-strong)] focus:ring-2 focus:ring-[var(--focus-ring)]/30"
+        {selectedValues.map((selectedValue) => (
+          <input key={selectedValue} type="hidden" name={name} value={selectedValue} />
+        ))}
+        <div
+          className="grid gap-2 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-canvas)] p-3"
+          style={size ? { minHeight: `${size * 2.5}rem` } : undefined}
         >
           {options.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
+            <label key={option.value} className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
+              <Checkbox.Root
+                checked={selectedValues.includes(option.value)}
+                disabled={disabled}
+                onCheckedChange={(checked) => {
+                  const nextValues = checked === true
+                    ? [...selectedValues, option.value]
+                    : selectedValues.filter((value) => value !== option.value);
+                  const nextValue = nextValues.join(',');
+                  if (!isControlled) setInternalValue(nextValue);
+                  onValueChange?.(nextValue);
+                }}
+                className="flex size-4 items-center justify-center rounded border border-[var(--border-subtle)] bg-[var(--bg-canvas)] text-[var(--text-primary)] outline-none focus:ring-2 focus:ring-[var(--focus-ring)]/30 data-[checked]:bg-[var(--bg-panel-contrast)]"
+              >
+                <Checkbox.Indicator className="text-xs leading-none">✓</Checkbox.Indicator>
+              </Checkbox.Root>
+              <span>{option.label}</span>
+            </label>
           ))}
-        </select>
+        </div>
       </FieldShell>
     );
   }
 
-  const selected = options.find((option) => option.value === value);
+  const selected = options.find((option) => option.value === currentValue);
 
   return (
     <FieldShell label={label} error={error} description={description}>
-      <input type="hidden" name={name} value={value} />
-      <Select.Root value={value} onValueChange={(nextValue) => setValue(nextValue ?? '')}>
-        <Select.Trigger className="flex w-full items-center justify-between rounded-md border border-[var(--border-subtle)] bg-[var(--bg-canvas)] px-3 py-2 text-left text-sm text-[var(--text-primary)] outline-none transition-colors focus:border-[var(--border-strong)] focus:ring-2 focus:ring-[var(--focus-ring)]/30">
-          <Select.Value>{selected?.label ?? '请选择'}</Select.Value>
+      <input type="hidden" name={name} value={currentValue} />
+      <Select.Root
+        disabled={disabled}
+        value={currentValue}
+        onValueChange={(nextValue) => {
+          const resolvedValue = nextValue ?? '';
+          if (!isControlled) setInternalValue(resolvedValue);
+          onValueChange?.(resolvedValue);
+        }}
+      >
+        <Select.Trigger className="flex w-full items-center justify-between rounded-md border border-[var(--border-subtle)] bg-[var(--bg-canvas)] px-3 py-2 text-left text-sm text-[var(--text-primary)] outline-none transition-colors focus:border-[var(--border-strong)] focus:ring-2 focus:ring-[var(--focus-ring)]/30 disabled:cursor-not-allowed disabled:opacity-50">
+          <Select.Value>{selected?.label ?? placeholder}</Select.Value>
           <Select.Icon className="text-[var(--text-muted)]">⌄</Select.Icon>
         </Select.Trigger>
         <Select.Portal>
@@ -130,23 +195,29 @@ export function SelectField({ name, label, defaultValue = '', multiple = false, 
 type CheckboxFieldProps = {
   name: string;
   label: string;
+  checked?: boolean;
   defaultChecked?: boolean;
   value?: string;
+  description?: string;
 };
 
-export function CheckboxField({ name, label, defaultChecked = false, value = 'on' }: CheckboxFieldProps) {
+export function CheckboxField({ name, label, checked, defaultChecked = false, value = 'on', description }: CheckboxFieldProps) {
   return (
-    <label className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
+    <label className="flex items-start gap-2 text-sm text-[var(--text-secondary)]">
       <input type="hidden" name={name} value="" />
       <Checkbox.Root
         name={name}
         value={value}
+        checked={checked}
         defaultChecked={defaultChecked}
         className="flex size-4 items-center justify-center rounded border border-[var(--border-subtle)] bg-[var(--bg-canvas)] text-[var(--text-primary)] outline-none focus:ring-2 focus:ring-[var(--focus-ring)]/30 data-[checked]:bg-[var(--bg-panel-contrast)]"
       >
         <Checkbox.Indicator className="text-xs leading-none">✓</Checkbox.Indicator>
       </Checkbox.Root>
-      {label}
+      <span>
+        <span>{label}</span>
+        {description && <span className="mt-1 block text-xs text-[var(--text-muted)]">{description}</span>}
+      </span>
     </label>
   );
 }

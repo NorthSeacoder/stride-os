@@ -1,7 +1,7 @@
 'use client';
 
+import { Badge, Button, Empty, ErrorAlert, SelectField, TextareaField, TextField } from '@/components/ui';
 import { useActionState, useEffect, useState } from 'react';
-import { Empty } from '@/components/ui';
 import { getExampleStatusLabel } from '@/lib/presentation/labels';
 import {
   createExampleAction,
@@ -63,13 +63,9 @@ export function ExamplesClient({ items }: { items: ExampleItem[] }) {
     <div>
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-bold text-[var(--text-primary)]">示例</h1>
-        <button
-          type="button"
-          onClick={startCreate}
-          className="min-h-11 rounded-md border border-[var(--border-strong)] bg-[var(--bg-panel-strong)] px-4 py-2 text-sm font-medium text-[var(--text-primary)] transition-colors hover:bg-[var(--bg-panel-contrast)] focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] sm:min-h-0"
-        >
+        <Button type="button" variant="primary" onClick={startCreate} className="min-h-11 sm:min-h-0">
           新增条目
-        </button>
+        </Button>
       </div>
 
       {showCreateForm && (
@@ -100,35 +96,24 @@ export function ExamplesClient({ items }: { items: ExampleItem[] }) {
               <div className="min-w-0">
                 <p className="break-words font-medium text-[var(--text-primary)]">{item.title}</p>
                 <p className="mt-1 text-sm text-[var(--text-secondary)]">
-                  <span className={`inline-block rounded px-1.5 py-0.5 text-xs font-medium ${
-                    item.status === 'active' ? 'bg-[var(--success-bg)] text-[var(--success-text)]' :
-                    item.status === 'archived' ? 'bg-[var(--bg-elevated)] text-[var(--text-secondary)]' :
-                    'bg-[var(--warning-bg)] text-[var(--warning-text)]'
-                  }`}>
+                  <Badge tone={item.status === 'active' ? 'success' : item.status === 'archived' ? 'neutral' : 'warning'}>
                     {getExampleStatusLabel(item.status)}
-                  </span>
+                  </Badge>
                   {item.notes && <span className="ml-2 break-words">{item.notes}</span>}
                 </p>
               </div>
               <div className="flex shrink-0 gap-3">
-                <button
-                  type="button"
-                  onClick={() => startEdit(item)}
-                  className="min-h-11 rounded px-1 text-sm text-[var(--text-primary)] transition-colors hover:text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] sm:min-h-0"
-                >
+                <Button type="button" variant="ghost" onClick={() => startEdit(item)} className="min-h-11 px-1 sm:min-h-0">
                   编辑
-                </button>
+                </Button>
                 <form
                   action={async () => {
                     await deleteExampleAction(item.id);
                   }}
                 >
-                  <button
-                    type="submit"
-                    className="min-h-11 rounded px-1 text-sm text-[var(--danger-text)] transition-colors hover:text-[var(--danger-text-strong)] focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] sm:min-h-0"
-                  >
+                  <Button type="submit" variant="danger" className="min-h-11 px-1 sm:min-h-0">
                     删除
-                  </button>
+                  </Button>
                 </form>
               </div>
             </div>
@@ -155,59 +140,26 @@ function ExampleForm({
   return (
     <form action={action} className="mb-6 space-y-3 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-panel)] p-4">
       {item && <input type="hidden" name="id" value={item.id} />}
-      {error && (
-        <div className="rounded-md border border-[var(--danger-border)] bg-[var(--danger-bg)] p-3 text-sm text-[var(--danger-text)]">
-          {error}
-        </div>
-      )}
-      <div>
-        <label htmlFor={`${submitLabel}-title`} className="mb-1 block text-sm font-medium text-[var(--text-primary)]">标题</label>
-        <input
-          id={`${submitLabel}-title`}
-          name="title"
-          type="text"
-          defaultValue={item?.title ?? ''}
-          required
-          className="w-full rounded-md border border-[var(--border-subtle)] bg-[var(--bg-canvas)] px-3 py-2 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)]"
-        />
-      </div>
-      <div>
-        <label htmlFor={`${submitLabel}-status`} className="mb-1 block text-sm font-medium text-[var(--text-primary)]">状态</label>
-        <select
-          id={`${submitLabel}-status`}
-          name="status"
-          defaultValue={item?.status ?? 'active'}
-          className="w-full rounded-md border border-[var(--border-subtle)] bg-[var(--bg-canvas)] px-3 py-2 text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)]"
-        >
-          <option value="active">启用</option>
-          <option value="archived">已归档</option>
-          <option value="draft">草稿</option>
-        </select>
-      </div>
-      <div>
-        <label htmlFor={`${submitLabel}-notes`} className="mb-1 block text-sm font-medium text-[var(--text-primary)]">备注</label>
-        <textarea
-          id={`${submitLabel}-notes`}
-          name="notes"
-          defaultValue={item?.notes ?? ''}
-          rows={3}
-          className="w-full rounded-md border border-[var(--border-subtle)] bg-[var(--bg-canvas)] px-3 py-2 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)]"
-        />
-      </div>
+      {error && <ErrorAlert message={error} />}
+      <TextField id={`${submitLabel}-title`} name="title" label="标题" defaultValue={item?.title ?? ''} required />
+      <SelectField
+        name="status"
+        label="状态"
+        defaultValue={item?.status ?? 'active'}
+        options={[
+          { value: 'active', label: '启用' },
+          { value: 'archived', label: '已归档' },
+          { value: 'draft', label: '草稿' },
+        ]}
+      />
+      <TextareaField id={`${submitLabel}-notes`} name="notes" label="备注" defaultValue={item?.notes ?? ''} rows={3} />
       <div className="flex flex-col gap-2 sm:flex-row">
-        <button
-          type="submit"
-          className="min-h-11 rounded-md border border-[var(--border-strong)] bg-[var(--bg-panel-strong)] px-4 py-2 text-sm font-medium text-[var(--text-primary)] transition-colors hover:bg-[var(--bg-panel-contrast)] focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] sm:min-h-0"
-        >
+        <Button type="submit" variant="primary" className="min-h-11 sm:min-h-0">
           {submitLabel}
-        </button>
-        <button
-          type="button"
-          onClick={onCancel}
-          className="min-h-11 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-panel)] px-4 py-2 text-sm text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] sm:min-h-0"
-        >
+        </Button>
+        <Button type="button" variant="secondary" onClick={onCancel} className="min-h-11 sm:min-h-0">
           取消
-        </button>
+        </Button>
       </div>
     </form>
   );

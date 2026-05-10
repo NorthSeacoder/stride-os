@@ -1,7 +1,7 @@
 'use client';
 
+import { Button, ErrorAlert, SelectField, TextareaField, TextField } from '@/components/ui';
 import { useActionState } from 'react';
-import { ErrorAlert } from '@/components/ui';
 import { createKrCheckInAction, type OkrActionState } from '../actions';
 
 const initialState: OkrActionState = { error: '' };
@@ -18,34 +18,24 @@ export function CheckInForm({ keyResultId }: { keyResultId: string }) {
       </div>
       {state.error && <ErrorAlert message={state.error} />}
       <div className="grid gap-4 md:grid-cols-2">
-        <label className="block">
-          <span className="mb-1 block text-sm text-[var(--text-secondary)]">进度值</span>
-          <input name="progressValue" type="number" step="0.01" className="w-full rounded-md border border-[var(--border-subtle)] bg-[var(--bg-canvas)] px-3 py-2 text-sm text-[var(--text-primary)]" />
-        </label>
-        <label className="block">
-          <span className="mb-1 block text-sm text-[var(--text-secondary)]">信心</span>
-          <select name="confidence" defaultValue="medium" className="w-full rounded-md border border-[var(--border-subtle)] bg-[var(--bg-canvas)] px-3 py-2 text-sm text-[var(--text-primary)]">
-            <option value="low">低</option>
-            <option value="medium">中</option>
-            <option value="high">高</option>
-          </select>
-        </label>
+        <TextField name="progressValue" label="进度值" type="number" step="0.01" />
+        <SelectField
+          name="confidence"
+          label="信心"
+          defaultValue="medium"
+          options={[
+            { value: 'low', label: '低' },
+            { value: 'medium', label: '中' },
+            { value: 'high', label: '高' },
+          ]}
+        />
       </div>
-      <label className="block">
-        <span className="mb-1 block text-sm text-[var(--text-secondary)]">总结</span>
-        <textarea name="summary" rows={2} className="w-full rounded-md border border-[var(--border-subtle)] bg-[var(--bg-canvas)] px-3 py-2 text-sm text-[var(--text-primary)]" />
-      </label>
-      <label className="block">
-        <span className="mb-1 block text-sm text-[var(--text-secondary)]">阻塞项</span>
-        <textarea name="blockers" rows={2} className="w-full rounded-md border border-[var(--border-subtle)] bg-[var(--bg-canvas)] px-3 py-2 text-sm text-[var(--text-primary)]" />
-      </label>
-      <label className="block">
-        <span className="mb-1 block text-sm text-[var(--text-secondary)]">下一步动作</span>
-        <textarea name="nextActions" rows={2} className="w-full rounded-md border border-[var(--border-subtle)] bg-[var(--bg-canvas)] px-3 py-2 text-sm text-[var(--text-primary)]" />
-      </label>
-      <button type="submit" className="rounded-md border border-[var(--border-strong)] bg-[var(--bg-panel-strong)] px-4 py-2 text-sm font-medium text-[var(--text-primary)]">
+      <TextareaField name="summary" label="总结" rows={2} />
+      <TextareaField name="blockers" label="阻塞项" rows={2} />
+      <TextareaField name="nextActions" label="下一步动作" rows={2} />
+      <Button type="submit" variant="primary">
         保存 Check-in
-      </button>
+      </Button>
     </form>
   );
 }

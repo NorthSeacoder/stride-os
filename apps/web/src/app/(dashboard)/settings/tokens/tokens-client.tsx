@@ -1,5 +1,6 @@
 'use client';
 
+import { Button, ErrorAlert, FeedbackAlert, TextField } from '@/components/ui';
 import { useActionState } from 'react';
 import { createTokenAction, revokeTokenAction, type TokenActionState } from './actions';
 
@@ -28,10 +29,8 @@ export function TokensClient({
   return (
     <div>
       {createdToken && (
-        <div className="mb-4 rounded-md border border-[var(--success-border)] bg-[var(--success-bg)] p-4">
-          <p className="text-sm font-medium text-[var(--success-text)]">
-            令牌已创建，请立即复制。关闭后不会再次显示：
-          </p>
+        <div className="mb-4 space-y-3 rounded-md border border-[var(--success-border)] bg-[var(--success-bg)] p-4">
+          <FeedbackAlert tone="success" message="令牌已创建，请立即复制。关闭后不会再次显示：" />
           <code className="mt-2 block rounded border border-[var(--border-subtle)] bg-[var(--bg-canvas)] p-2 text-xs break-all text-[var(--text-primary)]">
             {createdToken}
           </code>
@@ -39,28 +38,20 @@ export function TokensClient({
       )}
 
       <form action={createAction} className="mb-4 flex flex-col gap-2 sm:flex-row">
-        <label htmlFor="token-name" className="sr-only">令牌名称</label>
-        <input
+        <TextField
           id="token-name"
           name="name"
-          type="text"
+          label="令牌名称"
           placeholder="令牌名称"
           required
-          className="flex-1 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-canvas)] px-3 py-2 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)]"
+          className="flex-1"
         />
-        <button
-          type="submit"
-          className="min-h-11 rounded-md border border-[var(--border-strong)] bg-[var(--bg-panel-strong)] px-4 py-2 text-sm font-medium text-[var(--text-primary)] transition-colors hover:bg-[var(--bg-panel-contrast)] focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] sm:min-h-0"
-        >
+        <Button type="submit" variant="primary">
           创建
-        </button>
+        </Button>
       </form>
 
-      {state.error && (
-        <div className="mb-4 rounded-md border border-[var(--danger-border)] bg-[var(--danger-bg)] p-3 text-sm text-[var(--danger-text)]">
-          {state.error}
-        </div>
-      )}
+      {state.error && <ErrorAlert message={state.error} />}
 
       {tokens.length === 0 ? (
         <p className="text-sm text-[var(--text-secondary)]">暂无可用令牌。</p>
@@ -80,12 +71,9 @@ export function TokensClient({
                   await revokeTokenAction(token.id);
                 }}
               >
-                <button
-                  type="submit"
-                  className="min-h-11 shrink-0 rounded px-1 text-left text-sm text-[var(--danger-text)] transition-colors hover:text-[var(--danger-text-strong)] focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] sm:min-h-0"
-                >
+                <Button type="submit" variant="danger" className="min-h-11 shrink-0 px-1 sm:min-h-0">
                   吊销
-                </button>
+                </Button>
               </form>
             </div>
           ))}

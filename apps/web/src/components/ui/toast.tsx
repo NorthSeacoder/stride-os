@@ -6,7 +6,7 @@ import { createContext, useCallback, useContext, useMemo, type ReactNode } from 
 type ToastMessage = {
   title: string;
   description?: string;
-  tone?: 'success' | 'error' | 'neutral';
+  tone?: 'success' | 'error' | 'neutral' | 'warning';
 };
 
 type ToastContextValue = {
@@ -81,13 +81,15 @@ export function FeedbackAlert({
   tone = 'neutral',
 }: {
   message: string;
-  tone?: 'success' | 'error' | 'neutral';
+  tone?: 'success' | 'error' | 'neutral' | 'warning';
 }) {
   const toneClass =
     tone === 'success'
       ? 'border-[var(--success-border)] bg-[var(--success-bg)] text-[var(--success-text)]'
       : tone === 'error'
         ? 'border-[var(--danger-border)] bg-[var(--danger-bg)] text-[var(--danger-text)]'
+        : tone === 'warning'
+          ? 'border-[var(--warning-border)] bg-[var(--warning-bg)] text-[var(--warning-text)]'
         : 'border-[var(--border-subtle)] bg-[var(--bg-panel)] text-[var(--text-secondary)]';
 
   return <div className={`rounded-md border p-3 text-sm ${toneClass}`}>{message}</div>;

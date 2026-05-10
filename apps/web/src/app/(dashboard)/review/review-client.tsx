@@ -1,7 +1,7 @@
 'use client';
 
+import { Button, DatePickerField, ErrorAlert, TextareaField, TextField } from '@/components/ui';
 import { useActionState, useEffect, useState } from 'react';
-import { ErrorAlert } from '@/components/ui';
 import { getReviewStatusLabel } from '@/lib/presentation/labels';
 import {
   finalizeReviewAction,
@@ -76,57 +76,46 @@ export function ReviewClient({
         <div className="space-y-6">
           <form action={generateAction} className="rounded-md border border-[var(--border-subtle)] bg-[var(--bg-panel)] p-5">
             <div className="grid gap-4 md:grid-cols-2">
-              <label className="block">
-                <span className="mb-1 block text-sm text-[var(--text-secondary)]">开始日期</span>
-                <input type="date" name="periodStart" defaultValue={draft.periodStart} className="w-full rounded-md border border-[var(--border-subtle)] bg-[var(--bg-canvas)] px-3 py-2 text-sm text-[var(--text-primary)]" />
-              </label>
-              <label className="block">
-                <span className="mb-1 block text-sm text-[var(--text-secondary)]">结束日期</span>
-                <input type="date" name="periodEnd" defaultValue={draft.periodEnd} className="w-full rounded-md border border-[var(--border-subtle)] bg-[var(--bg-canvas)] px-3 py-2 text-sm text-[var(--text-primary)]" />
-              </label>
+              <DatePickerField name="periodStart" label="开始日期" defaultValue={draft.periodStart} allowClear={false} />
+              <DatePickerField name="periodEnd" label="结束日期" defaultValue={draft.periodEnd} allowClear={false} />
             </div>
             {generateState.error && <div className="mt-4"><ErrorAlert message={generateState.error} /></div>}
-            <button type="submit" className="mt-4 rounded-md border border-[var(--border-strong)] bg-[var(--bg-panel-strong)] px-4 py-2 text-sm font-medium text-[var(--text-primary)]">
+            <Button type="submit" variant="primary" className="mt-4">
               生成草稿
-            </button>
+            </Button>
           </form>
 
           <div className="space-y-4 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-panel)] p-5">
             <form id="review-save-form" action={saveAction} className="space-y-4">
-            <input type="hidden" name="periodStart" value={draft.periodStart} />
-            <input type="hidden" name="periodEnd" value={draft.periodEnd} />
-            <input type="hidden" name="keyResultIds" value={draft.keyResultIds.join(',')} />
-            <input type="hidden" name="structuredSummary" value={JSON.stringify(draft.structuredSummary)} />
-            {saveState.error && <ErrorAlert message={saveState.error} />}
-            <label className="block">
-              <span className="mb-1 block text-sm text-[var(--text-secondary)]">标题</span>
-              <input
+              <input type="hidden" name="periodStart" value={draft.periodStart} />
+              <input type="hidden" name="periodEnd" value={draft.periodEnd} />
+              <input type="hidden" name="keyResultIds" value={draft.keyResultIds.join(',')} />
+              <input type="hidden" name="structuredSummary" value={JSON.stringify(draft.structuredSummary)} />
+              {saveState.error && <ErrorAlert message={saveState.error} />}
+              <TextField
                 name="title"
+                label="标题"
                 value={draft.title}
                 onChange={(event) => setDraft({ ...draft, title: event.target.value })}
-                className="w-full rounded-md border border-[var(--border-subtle)] bg-[var(--bg-canvas)] px-3 py-2 text-sm text-[var(--text-primary)]"
               />
-            </label>
-            <label className="block">
-              <span className="mb-1 block text-sm text-[var(--text-secondary)]">正文</span>
-              <textarea
+              <TextareaField
                 name="body"
+                label="正文"
                 rows={16}
                 value={draft.body}
                 onChange={(event) => setDraft({ ...draft, body: event.target.value })}
-                className="w-full rounded-md border border-[var(--border-subtle)] bg-[var(--bg-canvas)] px-3 py-2 font-mono text-sm text-[var(--text-primary)]"
+                className="font-mono"
               />
-            </label>
             </form>
             <div className="flex flex-wrap gap-3">
-              <button form="review-save-form" type="submit" className="rounded-md border border-[var(--border-strong)] bg-[var(--bg-panel-strong)] px-4 py-2 text-sm font-medium text-[var(--text-primary)]">
+              <Button form="review-save-form" type="submit" variant="primary">
                 保存草稿
-              </button>
+              </Button>
               {savedReviewId && (
                 <form action={async () => finalizeReviewAction(savedReviewId)}>
-                  <button type="submit" className="rounded-md border border-[var(--success-border)] px-4 py-2 text-sm font-medium text-[var(--success-text)]">
+                  <Button type="submit" variant="success">
                     归档定稿
-                  </button>
+                  </Button>
                 </form>
               )}
             </div>

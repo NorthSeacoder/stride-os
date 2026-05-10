@@ -2,6 +2,7 @@
 
 import { Dialog } from '@base-ui/react/dialog';
 import type { ReactNode } from 'react';
+import { Button } from './button';
 
 type ModalProps = {
   open: boolean;
@@ -27,9 +28,7 @@ export function Modal({ open, onOpenChange, title, description, children, footer
                 </Dialog.Description>
               )}
             </div>
-            <Dialog.Close className="rounded-md border border-[var(--border-subtle)] px-2 py-1 text-sm text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)]">
-              关闭
-            </Dialog.Close>
+            <Dialog.Close render={<Button variant="secondary" size="sm">关闭</Button>} />
           </div>
           <div className="max-h-[calc(min(720px,100vh-2rem)-8rem)] overflow-y-auto px-5 py-4">{children}</div>
           {footer && <div className="border-t border-[var(--border-subtle)] px-5 py-4">{footer}</div>}
