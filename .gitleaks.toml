@@ -1,0 +1,12 @@
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Template defaults and test fixtures"
+paths = [
+  '''(^|/)\.env\.example$''',
+  '''(^|/)\.env\.postgres\.example$''',
+]
+regexes = [
+  '''admin@example\.com''',
+]

@@ -2,123 +2,157 @@
 
 ## Purpose
 
-本文档记录 `Stride OS` 在 NAS 环境下的基础部署约束，避免后续业务开发阶段重复摸索公共基础设施。
+本文档记录 `Stride OS` 当前真实生效的 NAS 发布流程，覆盖容器、域名、HTTPS、统计脚本和数据库接入。目标是让后续新版本发布时，不再重复踩一遍基础设施细节。
 
-默认原则：
+当前区分两条运行路径：
 
-- shared infra first：优先复用 NAS 公共基础设施
-- self-host first：保持项目可在单机 / NAS 自主部署
-- 项目只携带自身业务容器，不重复声明公共基础设施
+- 本地开发：SQLite-first
+- NAS/线上部署：PostgreSQL-first
 
-当前仓库区分两条路径：
+## Effective Topology
 
-- 本地默认开发：SQLite-first
-- NAS/服务器部署：PostgreSQL-first
+本次上线后的实际拓扑如下：
 
-本文仅覆盖部署路径，不是本地首次启动指南。
+1. `stride-os` 应用容器运行在 NAS 上
+2. NAS 上的应用通过 Docker 网络访问共享 `shared-postgres`
+3. NAS 内部 HTTP 入口由项目容器提供
+4. 阿里云服务器上的 `1Panel/OpenResty` 负责正式域名 `<APP_DOMAIN>` 的 HTTPS 终止
+5. 阿里云站点把外部请求反代到 NAS 的 HTTP 上游
+6. Umami 脚本由应用根布局注入
+
+这意味着：
+
+- 应用部署和容器运维在 NAS 处理
+- 域名、证书、外层 HTTPS 在阿里云 `1Panel` 处理
+- 不再维护“只改 OpenResty 文件、不进面板”的长期状态
 
 ## Shared Infrastructure
 
-当前 NAS 上可复用的公共基础设施：
+当前复用的公共基础设施：
 
-- reverse proxy: `traefik`
-- docker network: `proxy`
-- shared postgres: `shared-postgres`
-- analytics: `umami` instance
+- NAS Docker 主机
+- `shared-postgres`
+- 项目 Docker 网络
+- Umami 统计服务
+- 阿里云 `1Panel` + OpenResty
 
-当前不作为默认依赖的公共服务：
+当前未作为默认依赖：
 
 - `redis`
-- browser automation containers
-- object storage
+- 对象存储
+- 浏览器自动化容器
 
-## Shared PostgreSQL
+## Shared PostgreSQL Rules
 
-运行原则：
+共享 PostgreSQL 的约束保持不变：
 
-- 公共实例负责数据库服务本身
-- 每个业务项目负责自己的 schema、user、password、migration、seed
-- 禁止应用长期使用 `postgres` 超级用户
-- 禁止把 Postgres 直接暴露到公网
-
-默认隔离策略：
-
-- 默认采用共享 database + 项目独立 schema
-- 独立 database 作为可选 fallback，仅在确有隔离或权限要求时使用
-- 不依赖表名前缀作为主隔离机制
-
-## Project Onboarding
-
-新项目接入公共 PostgreSQL 时，至少需要：
-
-1. 确认目标共享 database
-2. 创建项目独立 schema
-3. 创建项目独立数据库用户
-4. 授权该用户访问自己的 schema
-5. 在项目 `.env` 中写入连接信息和 schema 名
-6. 用项目自己的 migration 初始化 schema
-
-推荐从 `.env.postgres.example` 开始，而不是 `.env.example`。
+- 每个项目使用独立 schema
+- 每个项目使用独立数据库用户
+- 应用连接不用超级用户
+- migration、seed、授权由项目自己负责
 
 推荐环境变量：
 
 ```text
 DATABASE_DRIVER=postgres
-DB_HOST=shared-postgres
+DB_HOST=<shared_postgres_host>
 DB_PORT=5432
-DB_NAME=<shared_db_name>
+DB_NAME=postgres
 DB_USER=<project_db_user>
 DB_PASSWORD=<project_db_password>
 DB_SSL=false
-DATABASE_SCHEMA=stride_os
-DATABASE_URL=postgresql://<project_db_user>:<project_db_password>@shared-postgres:5432/<shared_db_name>
+DATABASE_SCHEMA=<project_schema>
+DATABASE_URL=postgresql://<project_db_user>:<project_db_password>@<shared_postgres_host>:5432/postgres
 ```
 
-## Production Compose Pattern
+## Release Flow
 
-NAS 生产环境下，项目 `compose.prod.yml` 应优先采用单服务模式：
+当前稳定发布流程：
+
+1. 本地提交代码并推送远程分支
+2. 通过版本 tag 触发 GitHub Actions 构建镜像
+3. 产出镜像推送到 `ghcr.io/northseacoder/stride-os:<tag>`
+4. NAS 上更新 `/vol1/1000/Docker/stride-os/.env` 与 `docker-compose.yml`
+5. 拉取新镜像并重建容器
+6. 用正式域名做登录、关键页面和日志检查
+
+当前已验证版本：
+
+- `v0.1.0`
+- `v0.1.1`
+
+其中 `v0.1.1` 包含 PostgreSQL `search_path` 修复。
+
+## NAS Side Steps
+
+NAS 项目目录：
 
 ```text
-web
+/vol1/1000/Docker/stride-os
 ```
 
-约束：
+典型操作顺序：
 
-- `web` 加入外部 `proxy` network
-- `DATABASE_DRIVER=postgres`
-- 通过 `DATABASE_URL` 连接公共 `shared-postgres`
-- 通过 `DATABASE_SCHEMA` 指定当前项目 schema
-- 通过 `IMAGE_TAG` 固定到明确发布版本
-- 通过 Traefik labels 挂正式域名
-- 默认走 `websecure` + TLS
-- 不在项目 compose 内重复声明 Postgres 服务
+1. 准备 `.env`
+2. 固定 `IMAGE_TAG`
+3. 确认 `DATABASE_URL`、`DATABASE_SCHEMA`、`SESSION_SECRET`
+4. `docker pull ghcr.io/northseacoder/stride-os:<tag>`
+5. `docker compose up -d`
+6. `docker logs stride-os` 检查启动
 
-## Domain And Analytics
-
-生产环境建议通过 NAS / 1Panel 注入：
+项目容器最少需要确认这些变量：
 
 - `HOST`
+- `PORT`
 - `NEXT_PUBLIC_APP_URL`
 - `NEXT_PUBLIC_UMAMI_SCRIPT_URL`
 - `NEXT_PUBLIC_UMAMI_WEBSITE_ID`
+- `DATABASE_URL`
+- `DATABASE_SCHEMA`
+- `SESSION_SECRET`
 
-站点统计接入方式：
+Umami 接入建议：
 
-- Umami script URL 走环境变量
-- website id 走环境变量
+- script: `<UMAMI_SCRIPT_URL>`
+- website id: `<UMAMI_WEBSITE_ID>`
 
-接入要求：
+## 1Panel Domain Steps
 
-- 追踪脚本直接注入应用根布局
-- `NEXT_PUBLIC_APP_URL` 必须与正式域名一致
-- Traefik `Host` 规则必须与正式域名一致
+当前推荐做法是让 `1Panel` 成为域名和 HTTPS 的唯一配置入口。
 
-## Release Automation
+面板侧步骤：
 
-稳定开发后，推荐通过 git tag（如 `v0.1.0`）触发 GitHub Actions 自动构建并推送镜像。
+1. 在 `1Panel` 新建站点，域名填 `<APP_DOMAIN>`
+2. 反向代理上游指向 NAS 的 HTTP 地址
+3. 在站点内申请或绑定 SSL 证书
+4. 开启 HTTPS
+5. 保持站点配置与 `1Panel` 数据库元信息一致，不再手改后长期漂移
 
-约束：
+注意：
 
-- `main` 负责 CI，版本 tag 负责 release image
-- 本地 `docker build` / `docker compose` 路径必须继续可用
-- registry、镜像名、tag 规则和凭据来源需要在仓库文档或 workflow 注释中写清楚
+- 如果只在 OpenResty 文件里临时加域名，`1Panel` 页面可能看不到对应站点
+- 如果准备长期维护，最好回到面板托管
+- 面板里已有可复用 ACME / DNS 配置时，可以直接复用，不必为每个站点重建
+
+## Verification Checklist
+
+每次发布后至少检查：
+
+1. `docker ps` 中镜像 tag 是否正确
+2. `docker logs stride-os` 是否出现启动异常
+3. 首页是否正常返回
+4. 登录是否成功
+5. 关键写操作是否产生 2xx 而不是 5xx
+6. 阿里云站点 access log / error log 是否干净
+
+## Common Failure Zones
+
+这次部署暴露出的高频故障点：
+
+1. schema 已创建，但 migration 并未真正落到该 schema
+2. 应用连接虽然能连上 PG，但 `search_path` 设置错误
+3. 业务用户没有拿到表和序列权限
+4. 共享数据库里存在别的 schema 同名表，容易制造误判
+5. 面板配置与手工 OpenResty 配置漂移
+
+数据库细节见 [database.md](./database.md)。
