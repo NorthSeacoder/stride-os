@@ -63,7 +63,7 @@ function getDb(): DbInstance {
     } else {
       const pool = new Pool({
         connectionString: env.databaseUrl,
-        options: `--search_path=${env.databaseSchema}`,
+        options: `-c search_path=${env.databaseSchema}`,
       });
 
       _db = drizzlePg(pool, {
