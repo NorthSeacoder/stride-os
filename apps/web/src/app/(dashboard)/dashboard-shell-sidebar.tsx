@@ -31,7 +31,9 @@ export function DashboardShellSidebar({ user, children }: DashboardShellSidebarP
   useEffect(() => {
     try {
       setCollapsed(window.localStorage.getItem(STORAGE_KEY) === 'true');
-    } catch {}
+    } catch {
+      // Ignore unavailable localStorage and fall back to default state.
+    }
   }, []);
 
   function toggleCollapsed() {
@@ -39,39 +41,30 @@ export function DashboardShellSidebar({ user, children }: DashboardShellSidebarP
       const next = !current;
       try {
         window.localStorage.setItem(STORAGE_KEY, String(next));
-      } catch {}
+      } catch {
+        // Ignore unavailable localStorage and keep the in-memory toggle.
+      }
       return next;
     });
   }
 
-  const displayName = user.name ?? '未命名用户';
-  const initials = displayName.slice(0, 1).toUpperCase();
-
   return (
     <div className="flex h-full min-h-0 flex-col lg:flex-row">
       <aside
-        className={`border-b app-shell-divider min-h-0 overflow-y-auto bg-(--bg-sidebar) backdrop-blur-xl transition-[width,padding] duration-200 lg:flex lg:h-full lg:flex-col lg:border-b-0 lg:border-r ${
-          collapsed ? 'px-2.5 py-3 lg:w-22 lg:px-2.5 lg:py-3' : 'px-3.5 py-3.5 lg:w-64 lg:px-4 lg:py-4'
+        className={`border-b app-shell-divider min-h-0 bg-(--bg-sidebar) backdrop-blur-xl transition-[width,padding] duration-200 lg:flex lg:h-full lg:flex-col lg:border-b-0 lg:border-r ${
+          collapsed ? 'px-1.5 py-2 lg:w-15 lg:px-1.5 lg:py-2' : 'px-2 py-2.5 lg:w-48 lg:px-2 lg:py-3'
         }`}
       >
-        <div className={`flex items-start ${collapsed ? 'justify-center lg:flex-col lg:items-center' : 'justify-between lg:block'}`}>
-          <div className={collapsed ? 'flex flex-col items-center text-center' : ''}>
-            <p className={`text-[11px] uppercase tracking-[0.26em] text-(--text-muted) ${collapsed ? 'sr-only' : ''}`}>Stride OS</p>
+        <div className={`flex items-center ${collapsed ? 'justify-center' : 'justify-between'} gap-2`}>
+          {!collapsed && (
             <Link
               href="/dashboard"
-              className={`mt-2 block font-semibold tracking-[-0.03em] text-(--text-primary) ${collapsed ? 'text-base' : 'text-xl'}`}
-              title={collapsed ? 'Stride OS' : undefined}
+              className="min-w-0 text-sm font-semibold tracking-[-0.02em] text-(--text-primary)"
             >
-              {collapsed ? 'SO' : 'Aluminum Workstation'}
+              Stride OS
             </Link>
-            {!collapsed && (
-              <p className="mt-2 max-w-[16rem] text-sm text-(--text-secondary)">
-                目标、执行、象限与复盘汇聚到同一张操作台。
-              </p>
-            )}
-          </div>
-
-          <div className={`flex items-center gap-2 ${collapsed ? 'mt-3 lg:mt-4 lg:flex-col' : 'mt-0 lg:mt-4 lg:justify-between'}`}>
+          )}
+          <div className={`flex items-center gap-2 ${collapsed ? 'lg:flex-col' : ''}`}>
             <Button
               type="button"
               variant="secondary"
@@ -91,7 +84,7 @@ export function DashboardShellSidebar({ user, children }: DashboardShellSidebarP
           </div>
         </div>
 
-        <nav className={`mt-6 ${collapsed ? 'space-y-2' : 'lg:flex-1'}`}>
+        <nav className={`mt-3 ${collapsed ? 'space-y-1' : 'lg:flex-1'}`}>
           <div className="space-y-2">
             {navItems.map((item) => {
               const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
@@ -102,10 +95,10 @@ export function DashboardShellSidebar({ user, children }: DashboardShellSidebarP
                   key={item.href}
                   href={item.href}
                   title={collapsed ? item.label : undefined}
-                  className={`flex rounded-[14px] border transition-[background-color,border-color,color,width] ${
+                  className={`flex rounded-[8px] border transition-[background-color,border-color,color,width] ${
                     collapsed
-                      ? 'items-center justify-center px-0 py-3'
-                      : 'items-center justify-between px-3 py-3'
+                      ? 'items-center justify-center px-0 py-2'
+                      : 'items-center justify-between px-2.5 py-2.25'
                   } ${
                     active
                       ? 'border-(--border-glow) bg-[color:rgba(180,204,255,0.08)] text-(--text-primary)'
@@ -128,32 +121,18 @@ export function DashboardShellSidebar({ user, children }: DashboardShellSidebarP
           </div>
         </nav>
 
-        <div
-          className={`mt-6 rounded-[18px] border border-(--border-hairline) bg-[color:rgba(255,255,255,0.03)] ${
-            collapsed ? 'p-2.5' : 'p-4'
-          }`}
-        >
-          <div className={`flex ${collapsed ? 'justify-center' : 'items-start gap-3'}`}>
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-(--border-glow) bg-[color:rgba(180,204,255,0.08)] text-sm font-semibold text-(--accent-ice-strong)">
-              {initials}
-            </div>
-            {!collapsed && (
-              <div className="min-w-0">
-                <p className="text-[11px] uppercase tracking-[0.22em] text-(--text-muted)">Current User</p>
-                <p className="mt-2 text-sm font-medium text-(--text-primary)">{displayName}</p>
-                <p className="mt-1 break-all text-sm text-(--text-secondary)">{user.email}</p>
-              </div>
-            )}
-          </div>
-
-          <div className={`mt-4 flex ${collapsed ? 'justify-center' : 'items-center justify-between gap-3'}`}>
-            {!collapsed && <p className="text-xs text-(--text-muted)">会话已连接</p>}
-            <form action="/api/auth/logout" method="POST">
-              <Button type="submit" variant="ghost" size="sm" className={collapsed ? 'w-10 px-0' : ''} title="退出登录">
-                {collapsed ? <LogoutIcon /> : '退出登录'}
-              </Button>
-            </form>
-          </div>
+        <div className={`mt-auto pt-2 ${collapsed ? 'flex justify-center' : ''}`}>
+          <form action="/api/auth/logout" method="POST" className={collapsed ? '' : 'w-full'}>
+            <Button
+              type="submit"
+              variant="ghost"
+              size="sm"
+              className={collapsed ? 'w-9 px-0' : 'w-full justify-center'}
+              title={user.name ?? user.email}
+            >
+              {collapsed ? <LogoutIcon /> : '退出登录'}
+            </Button>
+          </form>
         </div>
       </aside>
 

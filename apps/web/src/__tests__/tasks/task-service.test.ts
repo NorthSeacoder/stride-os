@@ -5,7 +5,6 @@ const txDelete = vi.fn(() => ({ where: txDeleteWhere }));
 const txInsertValues = vi.fn();
 const txInsert = vi.fn(() => ({ values: txInsertValues }));
 const txUpdateSet = vi.fn();
-const txUpdateWhere = vi.fn();
 const txUpdate = vi.fn(() => ({ set: txUpdateSet }));
 const transaction = vi.fn(async (callback: (tx: unknown) => Promise<unknown>) => callback({
   delete: txDelete,

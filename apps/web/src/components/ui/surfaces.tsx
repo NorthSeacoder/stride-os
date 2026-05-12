@@ -13,7 +13,7 @@ export function SurfacePanel({
   return (
     <section
       {...props}
-      className={`rounded-[var(--radius-panel)] ${surfaceClass} ${className}`.trim()}
+      className={`min-w-0 rounded-[var(--radius-panel)] ${surfaceClass} ${className}`.trim()}
     >
       {children}
     </section>
@@ -28,7 +28,7 @@ export function AsidePanel({
   return (
     <aside
       {...props}
-      className={`rounded-[var(--radius-panel)] app-shell-panel ${className}`.trim()}
+      className={`min-w-0 rounded-[var(--radius-panel)] app-shell-panel ${className}`.trim()}
     >
       {children}
     </aside>

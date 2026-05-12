@@ -13,7 +13,6 @@ import {
   ErrorAlert,
   getFieldError,
   Modal,
-  PageIntro,
   SelectField,
   TextareaField,
   TextField,
@@ -267,25 +266,7 @@ export function TasksClient({
   }
 
   return (
-    <div className="flex h-[calc(100dvh-8.5rem)] min-h-[720px] flex-col gap-4">
-      <PageIntro
-        eyebrow="Task Workspace"
-        title="任务"
-        description="三列工作区：左侧切来源，中间处理任务，右侧查看详情。"
-        action={
-          <Button
-            type="button"
-            variant="primary"
-            onClick={() => {
-              setTaskModal({ mode: 'create' });
-              setHasSubmittedCreate(false);
-            }}
-          >
-            新建任务
-          </Button>
-        }
-      />
-
+    <div className="flex h-full min-h-0 flex-col">
       <Modal
         open={showCreateList}
         onOpenChange={(open) => {
@@ -347,7 +328,7 @@ export function TasksClient({
           <TaskForm
             key={`task-form-edit-${taskModal.task.id}`}
             recurrenceEditable={false}
-            onSubmitForm={(formData, isRecurring) => {
+            onSubmitForm={(formData) => {
               setHasSubmittedUpdate(true);
               startTransition(() => {
                 if (taskModal.task.definition) {
@@ -369,14 +350,22 @@ export function TasksClient({
         )}
       </Modal>
 
-      <div className="grid min-h-0 flex-1 gap-px overflow-hidden rounded-[20px] border border-(--border-hairline) bg-(--border-hairline) xl:grid-cols-[280px_minmax(0,1fr)_360px]">
+      <div
+        className={`grid min-h-0 flex-1 gap-px overflow-hidden rounded-[10px] border border-(--border-hairline) bg-(--border-hairline) ${
+          selectedTask ? 'xl:grid-cols-[220px_minmax(0,1fr)_300px]' : 'xl:grid-cols-[220px_minmax(0,1fr)]'
+        }`}
+      >
         <section className="flex min-h-0 flex-col bg-(--bg-surface-1)">
-          <div className="border-b app-shell-divider px-4 py-4">
-            <p className="text-[11px] uppercase tracking-[0.24em] text-(--text-muted)">Sources</p>
-            <h2 className="mt-2 text-lg font-semibold tracking-[-0.02em] text-(--text-primary)">智能列表与清单</h2>
+          <div className="border-b app-shell-divider px-3 py-2.5">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-[11px] uppercase tracking-[0.22em] text-(--text-muted)">Sources</p>
+              <Button type="button" variant="ghost" size="sm" onClick={() => setShowCreateList(true)}>
+                新建
+              </Button>
+            </div>
           </div>
-          <div className="min-h-0 overflow-y-auto px-3 py-3">
-            <div className="space-y-5">
+          <div className="min-h-0 overflow-y-auto px-2 py-2.5">
+            <div className="space-y-4">
               <div className="space-y-2">
                 <div className="flex items-center justify-between px-1">
                   <p className="text-[11px] uppercase tracking-[0.22em] text-(--text-muted)">智能列表</p>
@@ -397,32 +386,29 @@ export function TasksClient({
                 })}
               </div>
 
-              <div className="border-t app-shell-divider pt-4" />
+              <div className="border-t app-shell-divider pt-2.5" />
 
               <div className="space-y-2">
-                <div className="flex items-center justify-between px-1">
+                <div className="px-1">
                   <p className="text-[11px] uppercase tracking-[0.22em] text-(--text-muted)">清单</p>
-                  <Button type="button" variant="ghost" size="sm" onClick={() => setShowCreateList(true)}>
-                    新建
-                  </Button>
                 </div>
                 {listSources.length === 0 ? (
-                  <div className="rounded-[14px] border border-dashed border-(--border-hairline) px-3 py-5 text-sm text-(--text-muted)">
+                  <div className="rounded-[10px] border border-dashed border-(--border-hairline) px-3 py-4 text-sm text-(--text-muted)">
                     还没有自定义清单。
                   </div>
                 ) : listSources.map((source) => {
-                const active = source.id === selectedSource?.id;
-                return (
+                  const active = source.id === selectedSource?.id;
+                  return (
                     <SourceButton
-                    key={source.id}
-                    source={source}
-                    active={active}
-                    onClick={() => {
-                      setSelectedSourceId(source.id);
-                      setSelectedTaskId(null);
-                    }}
-                  />
-                );
+                      key={source.id}
+                      source={source}
+                      active={active}
+                      onClick={() => {
+                        setSelectedSourceId(source.id);
+                        setSelectedTaskId(null);
+                      }}
+                    />
+                  );
                 })}
               </div>
             </div>
@@ -431,25 +417,34 @@ export function TasksClient({
 
         <section className="min-h-0 bg-(--bg-surface-1)">
           <div className="dashboard-main-scroll flex h-full min-h-0 flex-col overflow-y-auto">
-            <div className="sticky top-0 z-10 border-b app-shell-divider bg-[color:rgba(17,20,25,0.92)] px-5 py-4 backdrop-blur-md">
+            <div className="sticky top-0 z-10 border-b app-shell-divider bg-[color:rgba(17,20,25,0.92)] px-3.5 py-2.5 backdrop-blur-md">
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <p className="text-[11px] uppercase tracking-[0.22em] text-(--text-muted)">Task List</p>
-                  <h2 className="mt-1 text-lg font-semibold tracking-[-0.02em] text-(--text-primary)">
+                  <h2 className="mt-1 text-base font-semibold text-(--text-primary)">
                     {selectedSource?.title ?? '任务'}
                   </h2>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Button type="button" variant="secondary" size="sm">排序</Button>
-                  <Button type="button" variant="secondary" size="sm">更多</Button>
+                  <Button
+                    type="button"
+                    variant="primary"
+                    size="sm"
+                    onClick={() => {
+                      setTaskModal({ mode: 'create' });
+                      setHasSubmittedCreate(false);
+                    }}
+                  >
+                    新建任务
+                  </Button>
                 </div>
               </div>
-              <div className="mt-4 rounded-[14px] border border-(--border-hairline) bg-[color:rgba(255,255,255,0.03)] px-3 py-3 text-sm text-(--text-muted)">
+              <div className="mt-2.5 rounded-[8px] border border-(--border-hairline) bg-[color:rgba(255,255,255,0.03)] px-3 py-2 text-sm text-(--text-muted)">
                 + 添加任务至「{selectedSource?.title ?? '收集箱'}」
               </div>
             </div>
 
-            <div className="min-h-0 space-y-5 px-5 py-5">
+            <div className="min-h-0 space-y-4 px-3 py-3">
               {groups.length === 0 ? (
                 <Empty text="当前来源还没有任务。" />
               ) : (
@@ -460,24 +455,24 @@ export function TasksClient({
                       <span className="text-xs text-(--text-muted)">{group.items.length}</span>
                     </div>
                     {group.items.length === 0 ? (
-                      <div className="rounded-[16px] border border-dashed border-(--border-hairline) px-4 py-6 text-sm text-(--text-muted)">
+                      <div className="rounded-[10px] border border-dashed border-(--border-hairline) px-4 py-5 text-sm text-(--text-muted)">
                         当前分组暂无任务。
                       </div>
                     ) : (
-                      <div className="space-y-3">
+                      <div className="space-y-1.5">
                         {(group.items as TaskItem[]).map((task) => {
                           const active = task.id === selectedTask?.id;
                           const completed = Boolean(task.completedAt);
                           return (
                             <article
                               key={task.id}
-                              className={`rounded-[18px] border px-4 py-4 transition-colors ${
+                              className={`rounded-[8px] border px-3 py-2.5 transition-colors ${
                                 active
                                   ? 'border-(--border-glow) bg-[color:rgba(180,204,255,0.07)]'
                                   : 'border-(--border-hairline) bg-[color:rgba(255,255,255,0.03)]'
                               }`}
                             >
-                              <div className="flex items-start gap-3">
+                              <div className="flex items-center gap-3">
                                 <button
                                   type="button"
                                   aria-label={completed ? '标记为未完成' : '标记为已完成'}
@@ -494,7 +489,7 @@ export function TasksClient({
                                       })();
                                     });
                                   }}
-                                  className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${
+                                  className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${
                                     completed
                                       ? 'border-(--accent-ice) bg-[color:rgba(180,204,255,0.14)] text-(--accent-ice-strong)'
                                       : 'border-(--border-hairline) text-transparent'
@@ -507,20 +502,18 @@ export function TasksClient({
                                   onClick={() => setSelectedTaskId(task.id)}
                                   className="min-w-0 flex-1 text-left"
                                 >
-                                  <div className="flex flex-wrap items-center gap-2">
-                                    <p className={`text-sm font-medium ${completed ? 'text-(--text-muted) line-through' : 'text-(--text-primary)'}`}>
+                                  <div className="flex items-center gap-3">
+                                    <p className={`min-w-0 truncate text-sm font-medium ${completed ? 'text-(--text-muted) line-through' : 'text-(--text-primary)'}`}>
                                       {task.title}
                                     </p>
                                     {selectedSource?.kind === 'smart' && task.list?.name && (
                                       <Badge>{task.list.name}</Badge>
                                     )}
-                                  </div>
-                                  <div className="mt-2 flex flex-wrap gap-2 text-xs text-(--text-muted)">
-                                    {task.dueDate && <span>截止 {task.dueDate}</span>}
-                                    {completed && <span>已完成</span>}
+                                    {task.dueDate && <span className="text-xs text-(--text-muted)">截止 {task.dueDate}</span>}
+                                    {completed && <span className="text-xs text-(--text-muted)">已完成</span>}
                                   </div>
                                 </button>
-                                <Button type="button" variant="ghost" size="sm" onClick={() => setTaskModal({ mode: 'edit', task })}>
+                                <Button type="button" variant="ghost" size="sm" className="px-2" onClick={() => setTaskModal({ mode: 'edit', task })}>
                                   编辑
                                 </Button>
                               </div>
@@ -536,35 +529,37 @@ export function TasksClient({
           </div>
         </section>
 
-        <section className="min-h-0 bg-(--bg-surface-1)">
-          <div className="dashboard-main-scroll flex h-full min-h-0 flex-col overflow-y-auto">
-            <div className="sticky top-0 z-10 border-b app-shell-divider bg-[color:rgba(17,20,25,0.92)] px-5 py-4 backdrop-blur-md">
-              <p className="text-[11px] uppercase tracking-[0.22em] text-(--text-muted)">Task Detail</p>
-              <h2 className="mt-1 text-lg font-semibold tracking-[-0.02em] text-(--text-primary)">详情</h2>
-            </div>
-            <div className="min-h-0 flex-1 px-5 py-5">
-              {selectedTask ? (
+        {selectedTask ? (
+          <section className="min-h-0 bg-(--bg-surface-1)">
+            <div className="dashboard-main-scroll flex h-full min-h-0 flex-col overflow-y-auto">
+              <div className="sticky top-0 z-10 border-b app-shell-divider bg-[color:rgba(17,20,25,0.92)] px-3.5 py-2.5 backdrop-blur-md">
+                <div className="flex items-start gap-3">
+                  <div>
+                    <p className="text-[11px] uppercase tracking-[0.22em] text-(--text-muted)">Task Detail</p>
+                    <h2 className="mt-1 text-base font-semibold text-(--text-primary)">详情</h2>
+                  </div>
+                </div>
+              </div>
+              <div className="min-h-0 flex-1 px-3 py-3">
                 <div className="space-y-4">
                   <div>
-                    <p className="text-2xl font-semibold tracking-[-0.03em] text-(--text-primary)">{selectedTask.title}</p>
+                    <p className="text-xl font-semibold text-(--text-primary)">{selectedTask.title}</p>
                     <div className="mt-3 flex flex-wrap gap-2 text-xs text-(--text-muted)">
                       {selectedTask.list?.name && <span>清单 {selectedTask.list.name}</span>}
                       {selectedTask.dueDate && <span>截止 {selectedTask.dueDate}</span>}
                     </div>
                   </div>
-                  <div className="rounded-[18px] border border-(--border-hairline) bg-[color:rgba(255,255,255,0.03)] p-4">
+                  <div className="rounded-[10px] border border-(--border-hairline) bg-[color:rgba(255,255,255,0.03)] p-4">
                     <p className="text-[11px] uppercase tracking-[0.22em] text-(--text-muted)">描述</p>
                     <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-(--text-secondary)">
                       {selectedTask.description || selectedTask.notes || '暂无描述。'}
                     </p>
                   </div>
                 </div>
-              ) : (
-                <Empty text="选择一条任务以查看详情。" />
-              )}
+              </div>
             </div>
-          </div>
-        </section>
+          </section>
+        ) : null}
       </div>
     </div>
   );
@@ -638,28 +633,26 @@ function TaskForm({
     >
       {error && <ErrorAlert message={error} />}
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <div className="md:col-span-2">
-          <form.Field
-            name="title"
-            validators={{
-              onChange: ({ value }) => (value.trim() ? undefined : '标题不能为空'),
-            }}
-          >
-            {(field) => (
-              <TextField
-                name={field.name}
-                label="标题"
-                required
-                autoFocus
-                value={field.state.value}
-                error={getFieldError(field)}
-                onBlur={field.handleBlur}
-                onChange={(event) => field.handleChange(event.target.value)}
-              />
-            )}
-          </form.Field>
-        </div>
+      <div className="space-y-4">
+        <form.Field
+          name="title"
+          validators={{
+            onChange: ({ value }) => (value.trim() ? undefined : '标题不能为空'),
+          }}
+        >
+          {(field) => (
+            <TextField
+              name={field.name}
+              label="标题"
+              required
+              autoFocus
+              value={field.state.value}
+              error={getFieldError(field)}
+              onBlur={field.handleBlur}
+              onChange={(event) => field.handleChange(event.target.value)}
+            />
+          )}
+        </form.Field>
         <form.Field name="listId">
           {(field) => (
             <SelectField
@@ -674,25 +667,26 @@ function TaskForm({
         </form.Field>
         <form.Field name="dueDate">
           {(field) => (
-            <div className="space-y-2">
-              <div className="flex flex-wrap gap-2">
-                <Button type="button" variant="secondary" size="sm" onClick={() => field.handleChange(today)}>
-                  今日
-                </Button>
-                <Button type="button" variant="secondary" size="sm" onClick={() => field.handleChange(tomorrow)}>
-                  明日
-                </Button>
-                <Button type="button" variant="secondary" size="sm" onClick={() => field.handleChange(nextWeek)}>
-                  下周
-                </Button>
+            <div className="rounded-[10px] border border-(--border-hairline) bg-[color:rgba(255,255,255,0.03)] p-4">
+              <div className="mb-3">
+                <p className="text-sm text-(--text-secondary)">日期</p>
+                <p className="mt-1 text-xs text-(--text-muted)">先选常用日期，特殊时间再展开日历。</p>
               </div>
-              <DatePickerField
-                name={field.name}
-                label="日期"
-                value={field.state.value}
-                error={getFieldError(field)}
-                onValueChange={field.handleChange}
-              />
+              <div className="mb-4 grid gap-2 sm:grid-cols-3">
+                <QuickDateButton label="今日" active={field.state.value === today} onClick={() => field.handleChange(today)} />
+                <QuickDateButton label="明日" active={field.state.value === tomorrow} onClick={() => field.handleChange(tomorrow)} />
+                <QuickDateButton label="下周" active={field.state.value === nextWeek} onClick={() => field.handleChange(nextWeek)} />
+              </div>
+              <div className="border-t app-shell-divider pt-4">
+                <DatePickerField
+                  name={field.name}
+                  label="选择日期"
+                  value={field.state.value}
+                  error={getFieldError(field)}
+                  allowClear={false}
+                  onValueChange={field.handleChange}
+                />
+              </div>
             </div>
           )}
         </form.Field>
@@ -711,7 +705,7 @@ function TaskForm({
         )}
       </form.Field>
 
-      <div className="space-y-4 rounded-[18px] border border-(--border-hairline) bg-[color:rgba(255,255,255,0.03)] p-4">
+      <div className="space-y-4 rounded-[10px] border border-(--border-hairline) bg-[color:rgba(255,255,255,0.03)] p-4">
         <form.Field name="isRecurring">
           {(field) => (
             <CheckboxField
@@ -797,7 +791,7 @@ function TaskForm({
             label="关联关键结果"
             description="把执行动作绑到 KR，后续 dashboard 与 review 才能复用这条上下文。"
             multiple
-            size={6}
+            size={3}
             value={field.state.value.join(',')}
             options={keyResultOptions}
             onValueChange={(value) => field.handleChange(value ? value.split(',').filter(Boolean) : [])}
@@ -824,6 +818,28 @@ function TaskForm({
   );
 }
 
+function QuickDateButton({
+  label,
+  active,
+  onClick,
+}: {
+  label: string;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <Button
+      type="button"
+      variant={active ? 'primary' : 'secondary'}
+      size="sm"
+      className={active ? '' : 'bg-transparent'}
+      onClick={onClick}
+    >
+      {label}
+    </Button>
+  );
+}
+
 function SourceButton({
   source,
   active,
@@ -837,14 +853,14 @@ function SourceButton({
     <button
       type="button"
       onClick={onClick}
-      className={`flex w-full items-center justify-between rounded-[14px] border px-3 py-3 text-left transition-colors ${
+      className={`flex w-full items-center justify-between rounded-[10px] border px-3 py-2.5 text-left transition-colors ${
         active
           ? 'border-(--border-glow) bg-[color:rgba(180,204,255,0.08)] text-(--text-primary)'
           : 'border-transparent text-(--text-secondary) hover:border-(--border-hairline) hover:bg-[color:rgba(255,255,255,0.04)] hover:text-(--text-primary)'
       }`}
     >
       <span className="flex min-w-0 items-center gap-3">
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-(--border-hairline) text-xs uppercase text-(--text-muted)">
+        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-(--border-hairline) text-[11px] uppercase text-(--text-muted)">
           {source.icon.slice(0, 2)}
         </span>
         <span className="min-w-0">

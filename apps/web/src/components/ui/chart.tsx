@@ -39,8 +39,8 @@ export function ChartContainer({
   return (
     <ChartContext.Provider value={config}>
       <div
-        className={`chart-surface min-w-0 ${className}`.trim()}
-        style={{ minWidth: 0, ...buildChartStyle(config) }}
+        className={`chart-surface min-h-0 min-w-0 ${className}`.trim()}
+        style={{ width: '100%', height: '100%', minWidth: 0, minHeight: 0, ...buildChartStyle(config) }}
       >
         <ResponsiveContainer width="100%" height="100%">
           {children}

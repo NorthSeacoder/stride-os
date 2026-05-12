@@ -57,7 +57,7 @@ export function DashboardTaskStatusChart({
           </Link>
         }
       />
-      <div className="mt-5 grid gap-4 lg:grid-cols-[minmax(0,1fr)_180px]">
+      <div className="mt-5 grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1fr)_180px]">
         <ChartContainer config={taskStatusChartConfig} className="h-64 min-h-64">
           <BarChart data={data} barGap={12}>
             <CartesianGrid vertical={false} stroke="rgba(255,255,255,0.08)" />
@@ -85,7 +85,7 @@ export function DashboardTodayLoadChart({
   const total = data.reduce((sum, item) => sum + item.value, 0);
 
   return (
-    <div className="mt-5 grid gap-4 lg:grid-cols-[180px_minmax(0,1fr)]">
+    <div className="mt-5 grid min-w-0 gap-4 lg:grid-cols-[180px_minmax(0,1fr)]">
       <ChartContainer config={todayLoadChartConfig} className="h-44 min-h-44">
         <PieChart>
           <Pie
@@ -128,7 +128,7 @@ export function DashboardReviewClosureChart({
   data: ReadonlyArray<{ key: 'risk' | 'closure'; label: string; value: number; detail: string }>;
 }) {
   return (
-    <div className="mt-5 grid gap-4 lg:grid-cols-[minmax(0,1fr)_220px]">
+    <div className="mt-5 grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1fr)_220px]">
       <ChartContainer config={reviewSummaryChartConfig} className="h-56 min-h-56">
         <BarChart data={data} layout="vertical" barSize={26}>
           <CartesianGrid horizontal={false} stroke="rgba(255,255,255,0.08)" />

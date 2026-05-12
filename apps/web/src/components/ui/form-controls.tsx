@@ -126,11 +126,11 @@ export function SelectField({
           <input key={selectedValue} type="hidden" name={name} value={selectedValue} />
         ))}
         <div
-          className="grid gap-2 rounded-[14px] border border-(--border-hairline) bg-[color:rgba(255,255,255,0.03)] p-3"
-          style={size ? { minHeight: `${size * 2.5}rem` } : undefined}
+          className="grid gap-1.5 rounded-[10px] border border-(--border-hairline) bg-[color:rgba(255,255,255,0.03)] p-2.5"
+          style={size ? { minHeight: `${size * 2.15}rem` } : undefined}
         >
           {options.map((option) => (
-            <label key={option.value} className="flex items-center gap-2 text-sm text-(--text-secondary)">
+            <label key={option.value} className="flex items-center gap-2 text-sm leading-5 text-(--text-secondary)">
               <Checkbox.Root
                 checked={selectedValues.includes(option.value)}
                 disabled={disabled}
