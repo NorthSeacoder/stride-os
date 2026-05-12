@@ -78,10 +78,10 @@ export const v1Spec = {
     '/tasks/today': {
       get: {
         operationId: 'listTodayTasks',
-        summary: 'List today tasks grouped by Must and Focus',
+        summary: 'List tasks for the today smart source',
         security: [{ bearerAuth: [] }, { cookieAuth: [] }],
         responses: {
-          '200': { description: 'Today task groups', content: { 'application/json': { schema: { $ref: '#/components/schemas/TodayTasksResponse' } } } },
+          '200': { description: 'Today tasks', content: { 'application/json': { schema: { type: 'array', items: { $ref: '#/components/schemas/TaskItem' } } } } },
           '401': { description: 'Unauthorized' },
         },
       },
@@ -89,7 +89,7 @@ export const v1Spec = {
     '/tasks/inbox': {
       get: {
         operationId: 'listInboxTasks',
-        summary: 'List inbox tasks',
+        summary: 'List tasks for the inbox smart source',
         security: [{ bearerAuth: [] }, { cookieAuth: [] }],
         responses: {
           '200': { description: 'Inbox tasks', content: { 'application/json': { schema: { type: 'array', items: { $ref: '#/components/schemas/TaskItem' } } } } },
@@ -227,9 +227,8 @@ export const v1Spec = {
           id: { type: 'string', format: 'uuid' },
           title: { type: 'string' },
           notes: { type: ['string', 'null'] },
+          description: { type: ['string', 'null'] },
           status: { type: 'string' },
-          todayType: { type: ['string', 'null'] },
-          scheduledDate: { type: ['string', 'null'], format: 'date' },
           dueDate: { type: ['string', 'null'], format: 'date' },
           completedAt: { type: ['string', 'null'], format: 'date-time' },
           important: { type: 'boolean' },
@@ -239,14 +238,6 @@ export const v1Spec = {
           keyResultLinks: { type: 'array', items: { $ref: '#/components/schemas/TaskLink' } },
         },
         required: ['id', 'title', 'status', 'important', 'urgent'],
-      },
-      TodayTasksResponse: {
-        type: 'object',
-        properties: {
-          must: { type: 'array', items: { $ref: '#/components/schemas/TaskItem' } },
-          focus: { type: 'array', items: { $ref: '#/components/schemas/TaskItem' } },
-        },
-        required: ['must', 'focus'],
       },
       CurrentOkrSummary: {
         type: ['object', 'null'],

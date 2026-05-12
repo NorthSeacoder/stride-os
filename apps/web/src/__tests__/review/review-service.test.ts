@@ -1,5 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+const ensureTodayRecurringTasks = vi.fn();
+const listCompletedTasksBetween = vi.fn();
+const listOpenTodayDueTasks = vi.fn();
+const listCheckInsInRange = vi.fn();
+const listKeyResultsByIds = vi.fn();
+
 const {
   reviewsFindFirst,
   reviewsFindMany,
@@ -70,15 +76,16 @@ const tx = {
 };
 
 vi.mock('@/lib/services/task-service', () => ({
-  listCompletedTasksBetween: vi.fn(),
-  listOpenMustTasks: vi.fn(),
+  ensureTodayRecurringTasks: (...args: unknown[]) => ensureTodayRecurringTasks(...args),
+  listCompletedTasksBetween: (...args: unknown[]) => listCompletedTasksBetween(...args),
+  listOpenTodayDueTasks: (...args: unknown[]) => listOpenTodayDueTasks(...args),
   listTodayTaskCounts: vi.fn(),
 }));
 
 vi.mock('@/lib/services/okr-service', () => ({
   getCurrentPeriodSummary: vi.fn(),
-  listCheckInsInRange: vi.fn(),
-  listKeyResultsByIds: vi.fn(),
+  listCheckInsInRange: (...args: unknown[]) => listCheckInsInRange(...args),
+  listKeyResultsByIds: (...args: unknown[]) => listKeyResultsByIds(...args),
   listRiskKeyResults: vi.fn(),
 }));
 
@@ -98,11 +105,16 @@ vi.mock('@stride-os/db', () => ({
   schema: mockedSchema,
 }));
 
-import { finalizeReview, saveReviewDraft } from '@/lib/services/review-service';
+import { buildWeeklyReviewDraft, finalizeReview, saveReviewDraft } from '@/lib/services/review-service';
 
 describe('review service', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    ensureTodayRecurringTasks.mockResolvedValue(undefined);
+    listCompletedTasksBetween.mockResolvedValue([]);
+    listOpenTodayDueTasks.mockResolvedValue([]);
+    listCheckInsInRange.mockResolvedValue([]);
+    listKeyResultsByIds.mockResolvedValue([]);
 
     updateReviewSet.mockReturnValue({
       where: (...args: unknown[]) => updateReviewWhere(...args),
@@ -121,6 +133,16 @@ describe('review service', () => {
     });
     finalizeUpdateWhere.mockReturnValue({
       returning: (...args: unknown[]) => finalizeUpdateReturning(...args),
+    });
+  });
+
+  it('ensures today recurring tasks before building weekly draft', async () => {
+    const draft = await buildWeeklyReviewDraft('2026-05-05', '2026-05-11');
+
+    expect(ensureTodayRecurringTasks).toHaveBeenCalledTimes(1);
+    expect(draft.structuredSummary).toMatchObject({
+      completedTaskCount: 0,
+      openTodayDueCount: 0,
     });
   });
 

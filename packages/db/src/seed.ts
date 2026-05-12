@@ -8,6 +8,46 @@ import * as sqliteSchema from './schema/sqlite';
 import { eq } from 'drizzle-orm';
 import { hashPassword } from './utils/password';
 
+async function ensureInboxListSqlite(sqliteDb: BetterSQLite3Database<typeof sqliteSchema>) {
+  const existingInbox = await sqliteDb
+    .select({ id: sqliteSchema.taskLists.id })
+    .from(sqliteSchema.taskLists)
+    .where(eq(sqliteSchema.taskLists.slug, 'inbox'))
+    .limit(1);
+
+  if (existingInbox.length > 0) {
+    return;
+  }
+
+  await sqliteDb.insert(sqliteSchema.taskLists).values({
+    name: '收集箱',
+    icon: 'inbox',
+    kind: 'system',
+    slug: 'inbox',
+    sortOrder: 0,
+  });
+}
+
+async function ensureInboxListPostgres(postgresDb: NodePgDatabase<typeof postgresSchema>) {
+  const existingInbox = await postgresDb
+    .select({ id: postgresSchema.taskLists.id })
+    .from(postgresSchema.taskLists)
+    .where(eq(postgresSchema.taskLists.slug, 'inbox'))
+    .limit(1);
+
+  if (existingInbox.length > 0) {
+    return;
+  }
+
+  await postgresDb.insert(postgresSchema.taskLists).values({
+    name: '收集箱',
+    icon: 'inbox',
+    kind: 'system',
+    slug: 'inbox',
+    sortOrder: 0,
+  });
+}
+
 async function seed() {
   const location = env.databaseDriver === 'postgres'
     ? `schema ${env.databaseSchema}`
@@ -16,6 +56,8 @@ async function seed() {
 
   if (env.databaseDriver === 'sqlite') {
     const sqliteDb = db as BetterSQLite3Database<typeof sqliteSchema>;
+
+    await ensureInboxListSqlite(sqliteDb);
 
     const existingAdmin = await sqliteDb
       .select({ id: sqliteSchema.users.id })
@@ -37,6 +79,8 @@ async function seed() {
     });
   } else {
     const postgresDb = db as NodePgDatabase<typeof postgresSchema>;
+
+    await ensureInboxListPostgres(postgresDb);
 
     const existingAdmin = await postgresDb
       .select({ id: postgresSchema.users.id })

@@ -22,6 +22,20 @@
       "when": 1778320000000,
       "tag": "0002_add_month_period_type",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1778547232525,
+      "tag": "0003_opposite_dust",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1778550866549,
+      "tag": "0004_tearful_morg",
+      "breakpoints": true
     }
   ]
 }

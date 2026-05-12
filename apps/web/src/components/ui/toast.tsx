@@ -56,11 +56,11 @@ function ToastList() {
         <Toast.Root
           key={toast.id}
           toast={toast}
-          className="rounded-md border border-[var(--border-subtle)] bg-[var(--bg-panel)] p-4 text-sm shadow-xl"
+          className="rounded-md border border-(--border-subtle) bg-(--bg-panel) p-4 text-sm shadow-xl"
         >
           <Toast.Content>
-            <Toast.Title className="font-medium text-[var(--text-primary)]" />
-            <Toast.Description className="mt-1 text-[var(--text-secondary)]" />
+            <Toast.Title className="font-medium text-(--text-primary)" />
+            <Toast.Description className="mt-1 text-(--text-secondary)" />
           </Toast.Content>
         </Toast.Root>
       ))}
@@ -85,12 +85,12 @@ export function FeedbackAlert({
 }) {
   const toneClass =
     tone === 'success'
-      ? 'border-[var(--success-border)] bg-[var(--success-bg)] text-[var(--success-text)]'
+      ? 'border-(--success-border) bg-(--success-bg) text-(--success-text)'
       : tone === 'error'
-        ? 'border-[var(--danger-border)] bg-[var(--danger-bg)] text-[var(--danger-text)]'
+        ? 'border-(--danger-border) bg-(--danger-bg) text-(--danger-text)'
         : tone === 'warning'
-          ? 'border-[var(--warning-border)] bg-[var(--warning-bg)] text-[var(--warning-text)]'
-        : 'border-[var(--border-subtle)] bg-[var(--bg-panel)] text-[var(--text-secondary)]';
+          ? 'border-(--warning-border) bg-(--warning-bg) text-(--warning-text)'
+        : 'border-(--border-subtle) bg-(--bg-panel) text-(--text-secondary)';
 
   return <div className={`rounded-md border p-3 text-sm ${toneClass}`}>{message}</div>;
 }

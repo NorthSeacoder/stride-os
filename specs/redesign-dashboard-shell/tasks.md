@@ -1,6 +1,6 @@
 # Tasks: 重塑 Dashboard 工作台视觉壳层
 
-**Workspace**: `redesign-dashboard-shell` | **Date**: 2026-05-10  
+**Workspace**: `redesign-dashboard-shell` | **Date**: 2026-05-11  
 **Input**: `specs/redesign-dashboard-shell/spec.md` + `plan.md`  
 **Prerequisites**: spec.md (必须), plan.md (必须), data-model.md (不需要)
 
@@ -8,96 +8,113 @@
 
 ## 执行原则
 
-- 先收口壳层和 token，再改页面骨架
-- 先完成视觉锚点页，再扩散到其余页面
-- 不改业务规则、不改服务层、不改路由职责
-- 每个阶段都带局部验证，避免最后一次性返工
+- 先建立 `shadcn` 管理入口和壳层边界，再推进页面替换
+- 先打通共享基座（shell / date / form / chart），再做页面消费
+- dashboard、tasks、review、settings 是本轮核心路径；okr、quadrants 只做必要接入
+- 每个阶段都带局部验证，避免最后一次性集成返工
 
 ---
 
-## Phase 1: Shell 与视觉基础
+## Phase 1: 实施前置与共享壳层
 
-**目标**: 建立统一工作台 shell、视觉 token 和复用容器，为后续页面改造提供稳定底座。
+**目标**: 建立 `shadcn` 管理入口、收口 dashboard shell，并为后续组件替换准备稳定骨架。
 
-- [x] T001 [US1][US2] 扩展全局视觉 token，建立“石墨底 + 金属面板 + 冷白细边 + 冰蓝强调”的基础变量体系
-  - scope: `apps/web/src/app/globals.css`
-  - verify: 局部检查变量命名、层级和现有页面兼容性；确认未破坏登录页和基础控件可读性
+- [x] T001 [US5][US8] 建立项目级 `shadcn` 管理入口与最小配置，确认组件继续落在 `apps/web/src/components/ui`
+  - scope: `apps/web/components.json` 或等效配置、项目级 skill 安装前置说明、`apps/web/src/components/ui` 目录组织
+  - verify: 能明确后续 `shadcn add` 的落点与管理方式；不误接到 `packages/ui`
 
-- [x] T002 [US1][US2] 重构 dashboard route group 的统一 shell，加入左侧主导航、顶部状态栏和主内容工作区
-  - scope: `apps/web/src/app/(dashboard)/layout.tsx`
-  - verify: 手动检查六个页面都进入同一壳层；导航链接可用；当前页有清晰定位反馈
+- [x] T002 [US1][US4][US8] 重构 dashboard route group shell，移除重复顶部信息，把当前用户与退出操作收敛到侧边栏稳定控制区
+  - scope: `apps/web/src/app/(dashboard)/layout.tsx`, `apps/web/src/app/(dashboard)/dashboard-shell-nav.tsx`
+  - verify: 六个 dashboard 页面共享同一壳层；用户信息/登出仅保留一处主控制区；当前页导航反馈正常
 
-- [x] T003 [US2][US5] 提炼共享 surface 容器和必要的 UI 原子样式，减少页面重复 className
-  - scope: `apps/web/src/components/ui/index.ts`, `apps/web/src/components/ui/button.tsx`, `apps/web/src/components/ui/badge.tsx`, `apps/web/src/components/ui/modal.tsx`, 可选新增轻量容器组件
-  - verify: 组件编译通过；按钮、面板、标题区、弹窗在新壳层下风格一致；不引入业务语义
+- [x] T003 [US1][US4][US8] 修正主内容滚动边界，确保 `main` 独立滚动、sidebar 不随长页面内容失位
+  - scope: `apps/web/src/app/(dashboard)/layout.tsx`, `apps/web/src/app/globals.css`
+  - verify: 长内容页面滚动时 sidebar 稳定；短内容和空页面不塌陷；窄宽度下壳层仍可用
+
+- [x] T004 [US2][US8] 收敛全局视觉 token 与 Tailwind 变量类名写法规范，建立共享 surface 使用约定
+  - scope: `apps/web/src/app/globals.css`, `apps/web/src/components/ui/*`
+  - verify: 当前触达文件中的 `text-[var(--...)]` 等写法按约定规整；登录页与基础控件可读性不回退
 
 ---
 
-## Phase 2: 视觉锚点页面
+## Phase 2: 共享组件基座
 
-**目标**: 先完成 `dashboard` 和 `quadrants` 两个风格锚点页，验证整套视觉方向是否成立。
+**目标**: 用 `shadcn` 管理的共享组件层替换当前私有 date / chart / form 基座，并保持与现有 Base UI 和 React 19 action 流程兼容。
 
-- [x] T004 [US3] 重组 `dashboard` 页面为“状态条 + 核心进展区 + 摘要区”，在不增接口的前提下提升总览扫描效率
-  - scope: `apps/web/src/app/(dashboard)/dashboard/page.tsx`
-  - verify: 手动检查总览、进展、摘要三层结构清晰；风险 KR、任务分布、最近复盘仍完整可见；空状态不塌
+- [x] T005 [US5][US8] 重组共享 UI 层导出与来源规则，明确哪些组件由 `shadcn` 管理、哪些继续以 Base UI wrapper 形式保留
+  - scope: `apps/web/src/components/ui/index.ts`, `apps/web/src/components/ui/surfaces.tsx`, `apps/web/src/components/ui/button.tsx`, `apps/web/src/components/ui/form-controls.tsx`
+  - verify: 共享 UI 出口清晰；不再继续扩大页面私有基础组件；现有页面编译关系不被破坏
 
-- [x] T005 [US4][US5] 重构 `quadrants` 页面为“中央象限盘 + 辅助详情区”，保留现有 dnd-kit 拖拽链路
+- [x] T006 [US5][US8] 以 `shadcn` 管理的 calendar/date-picker 重建日期输入基座，并保持 `YYYY-MM-DD` 提交契约
+  - scope: `apps/web/src/components/ui/date-picker-field.tsx`, 可选新增 `apps/web/src/components/ui/calendar.tsx`
+  - verify: 任务与复盘场景可继续提交正确日期；清空、默认值、空态与可读性正常
+
+- [x] T007 [US5][US8] 为复杂客户端表单建立 `@tanstack/react-form` 接入基座，并定义与 `useActionState` 共存的提交桥接模式
+  - scope: 可选新增 `apps/web/src/components/ui/form.tsx`, `apps/web/src/app/(dashboard)/tasks/tasks-client.tsx`, `apps/web/src/app/(dashboard)/review/review-client.tsx`
+  - verify: 至少一个复杂表单场景可用新基座承接字段状态；server action 提交流程不回退
+
+- [x] T008 [US5][US6][US8] 引入统一 chart 组件基座，替换页面私有图形表达所需的共享容器、配色与空态规则
+  - scope: 可选新增 `apps/web/src/components/ui/chart.tsx`, `apps/web/src/components/ui/index.ts`
+  - verify: chart 基座能承接 dashboard 统计图；空数据和小数据场景有统一输出
+
+---
+
+## Phase 3: Dashboard 与核心页面接入
+
+**目标**: 优先完成 dashboard 图表化与 settings / tasks / review 三个高价值页面，验证壳层与组件治理路线。
+
+- [x] T009 [US3][US6][US8] 重构 `dashboard` 页面，收敛任务状态分布、今日执行负载、风险/闭环摘要为统一图表与摘要组件
+  - scope: `apps/web/src/app/(dashboard)/dashboard/page.tsx`, `apps/web/src/lib/services/review-service.ts`
+  - verify: 三类统计表达统一；数值与图表一致；零数据空态稳定；关键指标仍可直读
+
+- [x] T010 [US3][US5][US8] 选定 `tasks` 作为复杂表单与 date picker 首个试点，替换新建/编辑任务中的日期与字段状态管理
+  - scope: `apps/web/src/app/(dashboard)/tasks/tasks-client.tsx`, `apps/web/src/app/(dashboard)/tasks/actions.ts`
+  - verify: 新建、编辑、排期、状态切换正常；日期选择体验升级；表单错误与提交状态不回退
+
+- [x] T011 [US3][US5][US8] 选定 `review` 作为第二个复杂表单试点，升级日期范围选择与草稿编辑表单容器
+  - scope: `apps/web/src/app/(dashboard)/review/review-client.tsx`, `apps/web/src/app/(dashboard)/review/actions.ts`
+  - verify: 生成草稿、保存草稿、日期范围输入正常；复杂字段状态与错误提示更稳定
+
+- [x] T012 [US4][US8] 重构 `settings` 分组控制台，确保首页与子页只展示当前分组内容，并明确“偏好”禁用/占位状态
+  - scope: `apps/web/src/app/(dashboard)/settings/page.tsx`, `apps/web/src/app/(dashboard)/settings/settings-nav.tsx`, `apps/web/src/app/(dashboard)/settings/tokens/tokens-client.tsx`
+  - verify: `/settings` 与 `/settings/tokens` 导航状态严格一致；账户页不污染 tokens 页；偏好不再伪装成可点击入口
+
+---
+
+## Phase 4: 其余页面接入与一致性收尾
+
+**目标**: 将统一壳层和新组件系统扩展到其余 workspace，并完成收尾验证。
+
+- [x] T013 [US3][US8] 对 `okr` 页面做必要接入改造，使其消费新壳层与共享 surface/date 基座，但不扩大到业务重构
+  - scope: `apps/web/src/app/(dashboard)/okr/okr-client.tsx`, `apps/web/src/app/(dashboard)/okr/page.tsx`
+  - verify: 当前目标工作台布局保持清晰；现有创建 period/objective/KR/check-in 链路不受影响
+
+- [x] T014 [US7][US8] 对 `quadrants` 页面做必要接入改造，使其适配新 shell 与共享视觉规则，同时保留 dnd-kit 交互链路
   - scope: `apps/web/src/app/(dashboard)/quadrants/quadrants-client.tsx`
-  - verify: 手动检查中央 2x2 区域成为主焦点；拖拽、错误回滚、键盘/点击替代操作仍可用；低数据量下布局稳
+  - verify: 中央象限盘仍为主焦点；拖拽、错误回滚、低数据量空态稳定
 
-- [x] T006 [US2][US3][US4] 对照确认过的出图方向做一次视觉校准，修正锚点页中不符合“铝金属工作台”的局部样式
-  - scope: `apps/web/src/app/(dashboard)/dashboard/page.tsx`, `apps/web/src/app/(dashboard)/quadrants/quadrants-client.tsx`, 相关共享 UI/样式文件
-  - verify: 人工比对页面实际效果与已生成参考图；确认没有退回普通深色 SaaS 观感
-
----
-
-## Phase 3: 其余页面骨架升级
-
-**目标**: 将统一壳层和视觉系统扩展到 `okr / tasks / review / settings`，保证六页属于同一产品系统。
-
-- [x] T007 [US3][US5] 重组 `okr` 页面为“目标列表区 + 当前目标详情区”的工作台布局
-  - scope: `apps/web/src/app/(dashboard)/okr/page.tsx`, `apps/web/src/app/(dashboard)/okr/okr-client.tsx`
-  - verify: 当前目标焦点明确；列表与详情分区清楚；原有 period/list/check-in 数据流不受影响
-
-- [x] T008 [US3][US5] 重组 `tasks` 页面为“顶部过滤条 + 任务流 + 今日执行侧栏”的执行控制台布局
-  - scope: `apps/web/src/app/(dashboard)/tasks/tasks-client.tsx`
-  - verify: 今日/收件箱/已排期/已完成切换正常；新建/编辑任务 modal 仍可用；任务卡信息密度提升但不拥挤
-
-- [x] T009 [US3][US5] 重组 `review` 页面为更安静的“总结 + 分析 + 下步行动”式布局
-  - scope: `apps/web/src/app/(dashboard)/review/review-client.tsx`
-  - verify: 生成草稿、保存草稿、归档定稿入口仍清晰；表单与历史记录层级更稳；文本可读性达标
-
-- [x] T010 [US3][US5] 重组 `settings` 页面为分组控制台式布局，并保留账户与 API 令牌入口
-  - scope: `apps/web/src/app/(dashboard)/settings/page.tsx`
-  - verify: 账户信息和 token 管理入口易发现；简单页面不被过度装饰；分组层次清楚
-
----
-
-## Phase 4: 一致性验证与收尾
-
-**目标**: 完成全局一致性修正、静态检查和关键交互回归，确保视觉升级低风险交付。
-
-- [x] T011 [US1][US2][US3][US5] 做六个页面的一致性巡检并修正偏差，包括导航高亮、标题区、面板边界、空状态、长页面滚动表现
+- [x] T015 [US1][US2][US3][US5][US6][US8] 做全局一致性巡检，修正六页在 shell、surface、date、form、chart、Tailwind 写法上的偏差
   - scope: `apps/web/src/app/(dashboard)/**/*`, `apps/web/src/components/ui/*`, `apps/web/src/app/globals.css`
-  - verify: 六页切换无明显割裂；长内容和空状态稳定；深色对比度达标
+  - verify: 六页切换无明显割裂；共享组件使用方式稳定；样式规范不再明显回流
 
-- [x] T012 [US5] 运行静态检查并做关键路径人工验收，记录仍需后续 feature 处理的问题
-  - scope: `pnpm lint`, `pnpm typecheck`, 必要时补局部手测记录
-  - verify: lint/typecheck 通过；关键交互回归完成；未解决问题被明确记录，不静默遗留
+- [x] T016 [US8] 运行静态检查并完成关键路径人工验收，记录仍需后续 feature 处理的遗留项
+  - scope: `pnpm lint`, `pnpm typecheck`, 必要时补手测记录
+  - verify: lint/typecheck 通过；dashboard/tasks/review/settings 核心路径手测完成；遗留项被明确记录
 
 ---
 
 ## 依赖与顺序
 
-- `T001 -> T002 -> T003` 是基础关键路径，必须先完成。
-- `T004` 和 `T005` 依赖 shell/token 基础完成，可顺序执行，建议先 `dashboard` 再 `quadrants`。
-- `T006` 依赖 `T004`、`T005` 完成，用于锚点页视觉校准。
-- `T007`、`T008`、`T009`、`T010` 依赖 `T001-T003`，建议按 `okr -> tasks -> review -> settings` 执行，但在实现资源允许时可部分并行。
-- `T011`、`T012` 必须在所有页面改造完成后执行。
+- `T001 -> T002 -> T003 -> T004` 是共享前置，必须先完成。
+- `T005 -> T006 -> T007 -> T008` 是组件基座关键路径；其中 `T007`、`T008` 依赖 `T005`，`T006` 可与 `T007` 部分并行。
+- `T009` 依赖 `T008`；`T010`、`T011` 依赖 `T006`，且复杂表单升级建议在 `T007` 后执行。
+- `T012` 依赖 `T002`、`T003`，可与 `T009-T011` 并行。
+- `T013`、`T014` 放在核心页面验证后再推进，避免过早扩散。
+- `T015`、`T016` 必须在所有实现任务完成后执行。
 
 关键路径：
 
-- `T001 -> T002 -> T003 -> T004 -> T005 -> T006 -> T011 -> T012`
+- `T001 -> T002 -> T003 -> T004 -> T005 -> T006 -> T007 -> T008 -> T009 -> T010 -> T011 -> T015 -> T016`
 
 ---
 
@@ -105,16 +122,21 @@
 
 | 场景 / 需求 | 对应任务 |
 |-------------|----------|
-| US1 统一工作台壳层 | T001, T002, T011 |
-| US2 铝金属工作台视觉语言 | T001, T003, T006, T011 |
-| US3 六页布局骨架与扫描效率 | T004, T007, T008, T009, T010, T011 |
-| US4 四象限最高辨识度 | T005, T006, T011 |
-| US5 低风险升级与回归控制 | T003, T005, T007, T008, T009, T010, T012 |
+| US1 统一高可用壳层 | T002, T003, T015 |
+| US2 铝金属工作台视觉语言 | T004, T005, T015 |
+| US3 六页布局骨架与扫描效率 | T009, T010, T011, T012, T013, T014, T015 |
+| US4 设置页导航与账户控制 | T002, T012, T015 |
+| US5 `shadcn` + Base UI 组件治理 | T001, T005, T006, T007, T008 |
+| US6 Dashboard 图表统一 | T008, T009, T015 |
+| US7 四象限最高辨识度 | T014, T015 |
+| US8 低风险升级与样式治理 | T004, T007, T015, T016 |
 
 ---
 
 ## Notes
 
-- 若实现过程中发现当前共享 UI 原子层不足以支撑页面复用，可在 `T003` 内补少量轻量容器组件，但不要把这一步膨胀成完整设计系统重构。
-- 若 `dashboard` 或 `quadrants` 的视觉锚点效果未达预期，不应继续批量推进其余页面，先在 `T006` 收敛。
-- 本任务清单已足够进入实现，下一步建议直接 `implement`；若希望我按阶段自动推进，则用 `execute-plan`。
+- 旧 `tasks.md` 属于上一轮“纯视觉壳层改造”拆解，且状态已全部完成；本次已按新 `spec/plan` 重写，不应复用旧完成状态。
+- `pnpm dlx skills add shadcn/ui` 属于实施前置动作，建议在 `T001` 内决定并记录是否执行。
+- 若 `shadcn` 生成物与现有 Base UI wrapper 发生明显结构冲突，应先在 `T005` 收口规则，再继续页面接入。
+- 当前任务清单已足够进入实现；下一步建议直接 `implement`，或者用 `execute-plan` 按阶段推进。
+- `T016` 本轮以核心路径静态检查、构建验证与代码级巡检收口：已确认 `dashboard/tasks/review/settings/okr/quadrants` 主路径中旧式 `text-[var(--...)]` / `border-[var(--...)]` 写法已清理，`pnpm typecheck`、`pnpm lint` 与 `pnpm --filter @stride-os/web build` 通过；浏览器运行态手测仍建议在下轮补完一次交互回归，尤其关注 task/review 表单提交与 quadrants 拖拽。

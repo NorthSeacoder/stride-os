@@ -13,12 +13,12 @@ export function Badge({
 }) {
   const toneClass =
     tone === 'success'
-      ? 'border-[var(--success-border)] bg-[var(--success-bg)] text-[var(--success-text)]'
+      ? 'border-(--success-border) bg-(--success-bg) text-(--success-text)'
       : tone === 'warning'
-        ? 'border-[var(--warning-border)] bg-[var(--warning-bg)] text-[var(--warning-text)]'
+        ? 'border-(--warning-border) bg-(--warning-bg) text-(--warning-text)'
         : tone === 'danger'
-          ? 'border-[var(--danger-border)] bg-[var(--danger-bg)] text-[var(--danger-text)]'
-          : 'border-[var(--border-hairline)] bg-[color:rgba(255,255,255,0.04)] text-[var(--text-secondary)]';
+          ? 'border-(--danger-border) bg-(--danger-bg) text-(--danger-text)'
+          : 'border-(--border-hairline) bg-[color:rgba(255,255,255,0.04)] text-(--text-secondary)';
 
   return (
     <span

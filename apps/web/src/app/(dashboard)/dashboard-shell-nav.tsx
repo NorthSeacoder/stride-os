@@ -26,12 +26,12 @@ export function DashboardShellNav() {
             href={item.href}
             className={`flex items-center justify-between rounded-[14px] border px-3 py-3 transition-[background-color,border-color,color] ${
               active
-                ? 'border-[var(--border-glow)] bg-[color:rgba(180,204,255,0.08)] text-[var(--text-primary)]'
-                : 'border-transparent text-[var(--text-secondary)] hover:border-[var(--border-hairline)] hover:bg-[color:rgba(255,255,255,0.04)] hover:text-[var(--text-primary)]'
+                ? 'border-(--border-glow) bg-[color:rgba(180,204,255,0.08)] text-(--text-primary)'
+                : 'border-transparent text-(--text-secondary) hover:border-(--border-hairline) hover:bg-[color:rgba(255,255,255,0.04)] hover:text-(--text-primary)'
             }`}
           >
             <span className="text-sm font-medium">{item.label}</span>
-            <span className={`text-[11px] uppercase tracking-[0.18em] ${active ? 'text-[var(--accent-ice)]' : 'text-[var(--text-muted)]'}`}>
+            <span className={`text-[11px] uppercase tracking-[0.18em] ${active ? 'text-(--accent-ice)' : 'text-(--text-muted)'}`}>
               {item.code}
             </span>
           </Link>

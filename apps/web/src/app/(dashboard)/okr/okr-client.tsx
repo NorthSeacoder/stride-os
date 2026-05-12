@@ -138,19 +138,19 @@ export function OkrClient({ periods }: { periods: PeriodView[] }) {
                     onClick={() => setActivePeriodId(period.id)}
                     className={`metal-frame block w-full rounded-[16px] border p-4 text-left transition-colors ${
                       active
-                        ? 'border-[var(--border-glow)] bg-[color:rgba(180,204,255,0.08)]'
-                        : 'border-[var(--border-hairline)] bg-[color:rgba(255,255,255,0.03)] hover:border-[var(--border-glow)] hover:bg-[color:rgba(255,255,255,0.05)]'
+                        ? 'border-(--border-glow) bg-[color:rgba(180,204,255,0.08)]'
+                        : 'border-(--border-hairline) bg-[color:rgba(255,255,255,0.03)] hover:border-(--border-glow) hover:bg-[color:rgba(255,255,255,0.05)]'
                     }`}
                   >
                     <div className="flex flex-wrap items-center gap-2">
                       <Badge>{getPeriodTypeLabel(period.type)}</Badge>
                       <Badge>{getPeriodStatusLabel(period.status)}</Badge>
                     </div>
-                    <p className="mt-3 text-lg font-semibold text-[var(--text-primary)]">{period.name}</p>
-                    <p className="mt-2 text-sm text-[var(--text-secondary)]">
+                    <p className="mt-3 text-lg font-semibold text-(--text-primary)">{period.name}</p>
+                    <p className="mt-2 text-sm text-(--text-secondary)">
                       {period.startDate} 至 {period.endDate}
                     </p>
-                    <p className="mt-3 text-xs text-[var(--text-muted)]">
+                    <p className="mt-3 text-xs text-(--text-muted)">
                       {period.objectives.length} 个目标 /{' '}
                       {period.objectives.reduce((count, objective) => count + objective.keyResults.length, 0)} 个 KR
                     </p>
@@ -164,11 +164,11 @@ export function OkrClient({ periods }: { periods: PeriodView[] }) {
             <SurfacePanel className="metal-frame instrument-surface p-5 md:p-6">
               <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                 <div>
-                  <p className="text-[11px] uppercase tracking-[0.22em] text-[var(--text-muted)]">
+                  <p className="text-[11px] uppercase tracking-[0.22em] text-(--text-muted)">
                     {getPeriodTypeLabel(activePeriod.type)} / {getPeriodStatusLabel(activePeriod.status)}
                   </p>
-                  <h2 className="mt-2 text-3xl font-semibold tracking-[-0.02em] text-[var(--text-primary)]">{activePeriod.name}</h2>
-                  <p className="mt-2 text-sm text-[var(--text-secondary)]">
+                  <h2 className="mt-2 text-3xl font-semibold tracking-[-0.02em] text-(--text-primary)">{activePeriod.name}</h2>
+                  <p className="mt-2 text-sm text-(--text-secondary)">
                     {activePeriod.startDate} 至 {activePeriod.endDate}
                   </p>
                 </div>
@@ -200,7 +200,7 @@ export function OkrClient({ periods }: { periods: PeriodView[] }) {
               </div>
 
               {objectivePeriodId === activePeriod.id && (
-                <form action={objectiveAction} className="mt-5 grid gap-4 rounded-[18px] border border-[var(--border-hairline)] bg-[color:rgba(255,255,255,0.03)] p-4">
+                <form action={objectiveAction} className="mt-5 grid gap-4 rounded-[18px] border border-(--border-hairline) bg-[color:rgba(255,255,255,0.03)] p-4">
                   <input type="hidden" name="periodId" value={activePeriod.id} />
                   {objectiveState.error && <ErrorAlert message={objectiveState.error} />}
                   <TextField name="title" label="目标标题" required />
@@ -218,12 +218,12 @@ export function OkrClient({ periods }: { periods: PeriodView[] }) {
                   <Empty text="这个周期下还没有目标。" />
                 ) : (
                   activePeriod.objectives.map((objective) => (
-                    <div key={objective.id} className="metal-frame rounded-[18px] border border-[var(--border-hairline)] bg-[color:rgba(255,255,255,0.03)] p-4">
+                    <div key={objective.id} className="metal-frame rounded-[18px] border border-(--border-hairline) bg-[color:rgba(255,255,255,0.03)] p-4">
                       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                         <div>
-                          <p className="text-[11px] uppercase tracking-[0.22em] text-[var(--text-muted)]">Objective</p>
-                          <h3 className="mt-2 text-xl font-medium text-[var(--text-primary)]">{objective.title}</h3>
-                          {objective.description && <p className="mt-2 text-sm text-[var(--text-secondary)]">{objective.description}</p>}
+                          <p className="text-[11px] uppercase tracking-[0.22em] text-(--text-muted)">Objective</p>
+                          <h3 className="mt-2 text-xl font-medium text-(--text-primary)">{objective.title}</h3>
+                          {objective.description && <p className="mt-2 text-sm text-(--text-secondary)">{objective.description}</p>}
                         </div>
                         <Button
                           type="button"
@@ -235,7 +235,7 @@ export function OkrClient({ periods }: { periods: PeriodView[] }) {
                       </div>
 
                       {krObjectiveId === objective.id && (
-                        <form action={krAction} className="mt-4 grid gap-4 rounded-[16px] border border-[var(--border-hairline)] bg-[color:rgba(255,255,255,0.03)] p-4 md:grid-cols-2">
+                        <form action={krAction} className="mt-4 grid gap-4 rounded-[16px] border border-(--border-hairline) bg-[color:rgba(255,255,255,0.03)] p-4 md:grid-cols-2">
                           <input type="hidden" name="objectiveId" value={objective.id} />
                           {krState.error && <div className="md:col-span-2"><ErrorAlert message={krState.error} /></div>}
                           <div className="md:col-span-2">
@@ -270,9 +270,9 @@ export function OkrClient({ periods }: { periods: PeriodView[] }) {
                             <Link
                               key={keyResult.id}
                               href={`/okr/${keyResult.id}`}
-                              className="metal-frame block rounded-[16px] border border-[var(--border-hairline)] bg-[color:rgba(255,255,255,0.03)] p-4 transition-colors hover:border-[var(--border-glow)] hover:bg-[color:rgba(255,255,255,0.05)]"
+                              className="metal-frame block rounded-[16px] border border-(--border-hairline) bg-[color:rgba(255,255,255,0.03)] p-4 transition-colors hover:border-(--border-glow) hover:bg-[color:rgba(255,255,255,0.05)]"
                             >
-                              <p className="font-medium text-[var(--text-primary)]">{keyResult.title}</p>
+                              <p className="font-medium text-(--text-primary)">{keyResult.title}</p>
                               <div className="mt-3 flex flex-wrap items-center gap-2">
                                 <Badge>{getKeyResultTypeLabel(keyResult.type)}</Badge>
                                 <Badge>{getKeyResultStatusLabel(keyResult.status)}</Badge>
@@ -297,9 +297,9 @@ export function OkrClient({ periods }: { periods: PeriodView[] }) {
 
 function InspectorMetric({ label, value }: { label: string; value: string }) {
   return (
-    <div className="metal-frame rounded-[16px] border border-[var(--border-hairline)] bg-[color:rgba(255,255,255,0.03)] p-4">
-      <p className="text-[11px] uppercase tracking-[0.22em] text-[var(--text-muted)]">{label}</p>
-      <p className="mt-3 text-2xl font-semibold tracking-[-0.02em] text-[var(--text-primary)]">{value}</p>
+    <div className="metal-frame rounded-[16px] border border-(--border-hairline) bg-[color:rgba(255,255,255,0.03)] p-4">
+      <p className="text-[11px] uppercase tracking-[0.22em] text-(--text-muted)">{label}</p>
+      <p className="mt-3 text-2xl font-semibold tracking-[-0.02em] text-(--text-primary)">{value}</p>
     </div>
   );
 }
@@ -363,7 +363,7 @@ function PeriodForm({
   ], []);
 
   return (
-    <form action={action} className="metal-frame instrument-surface space-y-4 rounded-[18px] border border-[var(--border-hairline)] p-5">
+    <form action={action} className="metal-frame instrument-surface space-y-4 rounded-[18px] border border-(--border-hairline) p-5">
       {error && <ErrorAlert message={error} />}
       <div className="grid gap-4 md:grid-cols-2">
         <TextField name="name" label="名称" required />
@@ -420,7 +420,7 @@ function PeriodDateFields({
     const year = new Date().getFullYear();
 
     return (
-      <div className="rounded-[14px] border border-[var(--border-hairline)] bg-[color:rgba(255,255,255,0.03)] px-3 py-2 text-sm text-[var(--text-secondary)]">
+      <div className="rounded-[14px] border border-(--border-hairline) bg-[color:rgba(255,255,255,0.03)] px-3 py-2 text-sm text-(--text-secondary)">
         年度周期默认覆盖当前年，不需要单独选开始/结束日期。
         <input type="hidden" name="startDate" value={`${year}-01-01`} />
         <input type="hidden" name="endDate" value={`${year}-12-31`} />
@@ -446,7 +446,7 @@ function PeriodDateFields({
           onValueChange={(value) => onQuarterChange(value as Quarter)}
           options={options}
         />
-        <div className="rounded-[14px] border border-[var(--border-hairline)] bg-[color:rgba(255,255,255,0.03)] px-3 py-2 text-sm text-[var(--text-secondary)]">
+        <div className="rounded-[14px] border border-(--border-hairline) bg-[color:rgba(255,255,255,0.03)] px-3 py-2 text-sm text-(--text-secondary)">
           当前季度会自动展开成具体起止日期。
           <input type="hidden" name="startDate" value={range.startDate} />
           <input type="hidden" name="endDate" value={range.endDate} />
@@ -471,7 +471,7 @@ function PeriodDateFields({
           onValueChange={onMonthChange}
           options={options}
         />
-        <div className="rounded-[14px] border border-[var(--border-hairline)] bg-[color:rgba(255,255,255,0.03)] px-3 py-2 text-sm text-[var(--text-secondary)]">
+        <div className="rounded-[14px] border border-(--border-hairline) bg-[color:rgba(255,255,255,0.03)] px-3 py-2 text-sm text-(--text-secondary)">
           月度周期会自动展开成具体起止日期。
           <input type="hidden" name="startDate" value={range.startDate} />
           <input type="hidden" name="endDate" value={range.endDate} />
@@ -510,7 +510,7 @@ function PeriodDateFields({
         onValueChange={onCustomEndMonthChange}
         options={monthOptions.filter((option) => Number(option.value) >= startMonth)}
       />
-      <div className="rounded-[14px] border border-[var(--border-hairline)] bg-[color:rgba(255,255,255,0.03)] px-3 py-2 text-sm text-[var(--text-secondary)] md:col-span-2">
+      <div className="rounded-[14px] border border-(--border-hairline) bg-[color:rgba(255,255,255,0.03)] px-3 py-2 text-sm text-(--text-secondary) md:col-span-2">
         自定义周期按月份粒度保存，系统会自动展开为具体日期。
         <input type="hidden" name="startDate" value={startRange.startDate} />
         <input type="hidden" name="endDate" value={endRange.endDate} />

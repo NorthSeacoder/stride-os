@@ -75,6 +75,62 @@ describe('sqlite smoke', () => {
     expect(removed.id).toBe(created.id);
   });
 
+  it('seeds the system Inbox list and supports recurring task definition primitives', async () => {
+    const inbox = await sqliteDb.query.taskLists.findFirst({
+      where: eq(sqliteSchema.taskLists.slug, 'inbox'),
+    });
+
+    expect(inbox).toBeTruthy();
+    expect(inbox?.kind).toBe('system');
+
+    const [period] = await sqliteDb.insert(sqliteSchema.periods).values({
+      name: '2026 Q3',
+      type: 'quarter',
+      startDate: '2026-07-01',
+      endDate: '2026-09-30',
+      status: 'active',
+    }).returning();
+
+    const [objective] = await sqliteDb.insert(sqliteSchema.objectives).values({
+      periodId: period.id,
+      title: 'Stabilize task workspace',
+      status: 'active',
+      sortOrder: 1,
+    }).returning();
+
+    const [keyResult] = await sqliteDb.insert(sqliteSchema.keyResults).values({
+      objectiveId: objective.id,
+      title: 'Recurring task flow online',
+      type: 'milestone',
+      status: 'active',
+      confidence: 'medium',
+    }).returning();
+
+    const [definition] = await sqliteDb.insert(sqliteSchema.taskDefinitions).values({
+      title: 'Daily inbox triage',
+      description: 'Process inbox every morning',
+      listId: inbox!.id,
+      frequency: 'daily',
+      endType: 'never',
+    }).returning();
+
+    await sqliteDb.insert(sqliteSchema.taskDefinitionKrLinks).values({
+      definitionId: definition.id,
+      keyResultId: keyResult.id,
+    });
+
+    const hydrated = await sqliteDb.query.taskDefinitions.findFirst({
+      where: eq(sqliteSchema.taskDefinitions.id, definition.id),
+      with: {
+        list: true,
+        keyResultLinks: true,
+      },
+    });
+
+    expect(hydrated?.list.slug).toBe('inbox');
+    expect(hydrated?.keyResultLinks[0]?.keyResultId).toBe(keyResult.id);
+  });
+
   it('supports the OKR alpha domain model and enforces key task/link constraints', async () => {
     const [period] = await sqliteDb.insert(sqliteSchema.periods).values({
       name: '2026 Q2',
@@ -112,8 +168,8 @@ describe('sqlite smoke', () => {
 
     const [task] = await sqliteDb.insert(sqliteSchema.tasks).values({
       title: 'Write weekly review flow',
-      status: 'today',
-      todayType: 'must',
+      status: 'inbox',
+      dueDate: '2026-05-12',
       important: true,
       urgent: false,
       priority: 'P1',
@@ -173,8 +229,8 @@ describe('sqlite smoke', () => {
 
     await expect(
       sqliteDb.insert(sqliteSchema.tasks).values({
-        title: 'Broken today task',
-        status: 'today',
+        title: 'Broken done task',
+        status: 'done',
         important: false,
         urgent: false,
       }),

@@ -49,7 +49,7 @@ export function TokensClient({
           {createdToken && (
             <SurfacePanel className="metal-frame instrument-surface p-5 md:p-6">
               <FeedbackAlert tone="success" message="令牌已创建，请立即复制。关闭后不会再次显示：" />
-              <code className="mt-4 block rounded-[14px] border border-[var(--border-hairline)] bg-[color:rgba(255,255,255,0.03)] p-3 text-xs break-all text-[var(--text-primary)]">
+              <code className="mt-4 block rounded-[14px] border border-(--border-hairline) bg-[color:rgba(255,255,255,0.03)] p-3 text-xs break-all text-(--text-primary)">
                 {createdToken}
               </code>
             </SurfacePanel>
@@ -88,10 +88,10 @@ export function TokensClient({
                 <Empty text="暂无可用令牌。" />
               ) : (
                 tokens.map((token) => (
-                  <div key={token.id} className="metal-frame flex flex-col gap-3 rounded-[16px] border border-[var(--border-hairline)] bg-[color:rgba(255,255,255,0.03)] p-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div key={token.id} className="metal-frame flex flex-col gap-3 rounded-[16px] border border-(--border-hairline) bg-[color:rgba(255,255,255,0.03)] p-4 sm:flex-row sm:items-center sm:justify-between">
                     <div className="min-w-0">
-                      <p className="break-words text-sm font-medium text-[var(--text-primary)]">{token.name}</p>
-                      <p className="mt-2 text-xs text-[var(--text-secondary)]">
+                      <p className="break-words text-sm font-medium text-(--text-primary)">{token.name}</p>
+                      <p className="mt-2 text-xs text-(--text-secondary)">
                         创建于：{new Date(token.createdAt).toLocaleDateString()}
                         {token.lastUsedAt && ` · 最近使用：${new Date(token.lastUsedAt).toLocaleDateString()}`}
                       </p>

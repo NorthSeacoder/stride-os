@@ -51,9 +51,9 @@ export function SectionHeader({
   return (
     <div className={`flex items-start justify-between gap-4 ${className}`.trim()}>
       <div>
-        {eyebrow && <p className="text-[11px] uppercase tracking-[0.22em] text-[var(--text-muted)]">{eyebrow}</p>}
-        <h2 className="mt-2 text-lg font-semibold text-[var(--text-primary)]">{title}</h2>
-        {description && <p className="mt-1 text-sm text-[var(--text-secondary)]">{description}</p>}
+        {eyebrow && <p className="text-[11px] uppercase tracking-[0.22em] text-(--text-muted)">{eyebrow}</p>}
+        <h2 className="mt-2 text-lg font-semibold text-(--text-primary)">{title}</h2>
+        {description && <p className="mt-1 text-sm text-(--text-secondary)">{description}</p>}
       </div>
       {action ? <div className="shrink-0">{action}</div> : null}
     </div>
@@ -74,9 +74,9 @@ export function PageIntro({
   return (
     <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
       <div>
-        {eyebrow && <p className="text-xs uppercase tracking-[0.24em] text-[var(--text-muted)]">{eyebrow}</p>}
-        <h1 className="mt-2 text-3xl font-semibold tracking-[-0.02em] text-[var(--text-primary)]">{title}</h1>
-        {description && <p className="mt-2 max-w-2xl text-sm text-[var(--text-secondary)]">{description}</p>}
+        {eyebrow && <p className="text-xs uppercase tracking-[0.24em] text-(--text-muted)">{eyebrow}</p>}
+        <h1 className="mt-2 text-3xl font-semibold tracking-[-0.02em] text-(--text-primary)">{title}</h1>
+        {description && <p className="mt-2 max-w-2xl text-sm text-(--text-secondary)">{description}</p>}
       </div>
       {action ? <div className="shrink-0">{action}</div> : null}
     </div>

@@ -36,22 +36,22 @@ function buttonClassName({
   className?: string;
 }) {
   const base =
-    'inline-flex items-center justify-center rounded-[var(--radius-compact)] border text-sm outline-none transition-[background-color,border-color,color,box-shadow,transform] duration-150 focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]/30 disabled:cursor-not-allowed disabled:opacity-50';
+    'inline-flex items-center justify-center rounded-[var(--radius-compact)] border text-sm outline-none transition-[background-color,border-color,color,box-shadow,transform] duration-150 focus-visible:ring-2 focus-visible:ring-(--focus-ring)/30 disabled:cursor-not-allowed disabled:opacity-50';
   const sizes = {
     sm: 'min-h-9 px-3 py-2',
     md: 'min-h-10 px-4 py-2.5',
   };
   const variants = {
     primary:
-      'border-[var(--border-glow)] bg-[var(--bg-surface-3)] font-medium text-[var(--accent-ice-strong)] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] hover:bg-[color:rgba(69,77,91,0.98)] hover:text-white',
+      'border-(--border-glow) bg-(--bg-surface-3) font-medium text-(--accent-ice-strong) shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] hover:bg-[color:rgba(69,77,91,0.98)] hover:text-white',
     secondary:
-      'border-[var(--border-hairline)] bg-[var(--bg-surface-1)] text-[var(--text-secondary)] shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] hover:border-[var(--border-glow)] hover:bg-[var(--bg-surface-2)] hover:text-[var(--text-primary)]',
+      'border-(--border-hairline) bg-(--bg-surface-1) text-(--text-secondary) shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] hover:border-(--border-glow) hover:bg-(--bg-surface-2) hover:text-(--text-primary)',
     ghost:
-      'border-transparent bg-transparent text-[var(--text-secondary)] hover:bg-[color:rgba(255,255,255,0.04)] hover:text-[var(--text-primary)]',
+      'border-transparent bg-transparent text-(--text-secondary) hover:bg-[color:rgba(255,255,255,0.04)] hover:text-(--text-primary)',
     danger:
-      'border-[var(--danger-border)] bg-transparent text-[var(--danger-text)] hover:bg-[var(--danger-bg)]',
+      'border-(--danger-border) bg-transparent text-(--danger-text) hover:bg-(--danger-bg)',
     success:
-      'border-[var(--success-border)] bg-transparent text-[var(--success-text)] hover:bg-[var(--success-bg)]',
+      'border-(--success-border) bg-transparent text-(--success-text) hover:bg-(--success-bg)',
   };
 
   return [

@@ -6,11 +6,6 @@ const taskStatusLabels = {
   canceled: '已取消',
 } as const;
 
-const todayTypeLabels = {
-  must: '必做',
-  focus: '专注',
-} as const;
-
 const energyLabels = {
   low: '低',
   medium: '中',
@@ -62,10 +57,6 @@ function labelFromMap<T extends Record<string, string>>(value: string | null | u
 
 export function getTaskStatusLabel(value: string | null | undefined) {
   return labelFromMap(value, taskStatusLabels);
-}
-
-export function getTodayTypeLabel(value: string | null | undefined) {
-  return labelFromMap(value, todayTypeLabels);
 }
 
 export function getTaskPriorityLabel(value: string | null | undefined) {

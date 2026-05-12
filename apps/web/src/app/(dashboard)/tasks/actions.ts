@@ -4,15 +4,15 @@ import { revalidatePath } from 'next/cache';
 import { db, schema } from '@stride-os/db';
 import { getSessionUser } from '@/lib/auth/session';
 import {
-  cancelTask,
-  completeTask,
+  createTaskDefinition,
+  createTaskList,
   createTask,
-  moveTaskToToday,
-  scheduleTask,
+  ensureRecurringTasksForDate,
+  replaceTaskDefinitionKeyResultLinks,
+  toggleTaskCompletion,
   updateTask,
+  updateTaskDefinition,
   replaceTaskKeyResultLinks,
-  type TodayType,
-  type TaskStatus,
 } from '@/lib/services/task-service';
 
 export type TaskActionState = {
@@ -30,10 +30,6 @@ function getTrimmed(formData: FormData, key: string) {
 function getNullable(formData: FormData, key: string) {
   const value = getTrimmed(formData, key);
   return value || null;
-}
-
-function getBoolean(formData: FormData, key: string) {
-  return formData.get(key) === 'on';
 }
 
 function getKeyResultIds(formData: FormData) {
@@ -55,6 +51,8 @@ async function requireTaskUser() {
 function revalidateTasks() {
   revalidatePath('/tasks');
   revalidatePath('/okr');
+  revalidatePath('/dashboard');
+  revalidatePath('/review');
 }
 
 async function writeTaskAudit(userId: string, action: string, taskId: string) {
@@ -67,16 +65,24 @@ async function writeTaskAudit(userId: string, action: string, taskId: string) {
   });
 }
 
-function normalizeStatus(value: string): TaskStatus {
-  if (value === 'today' || value === 'scheduled' || value === 'done' || value === 'canceled') {
-    return value;
-  }
-
-  return 'inbox';
+async function writeTaskListAudit(userId: string, action: string, listId: string) {
+  await db.insert(schema.auditLogs).values({
+    actorType: 'user',
+    actorId: userId,
+    action,
+    targetType: 'task_list',
+    targetId: listId,
+  });
 }
 
-function normalizeTodayType(value: string): TodayType | null {
-  return value === 'must' || value === 'focus' ? value : null;
+async function writeTaskDefinitionAudit(userId: string, action: string, definitionId: string) {
+  await db.insert(schema.auditLogs).values({
+    actorType: 'user',
+    actorId: userId,
+    action,
+    targetType: 'task_definition',
+    targetId: definitionId,
+  });
 }
 
 export async function createTaskAction(
@@ -94,22 +100,13 @@ export async function createTaskAction(
     return { error: '标题不能为空' };
   }
 
-  const status = normalizeStatus(getTrimmed(formData, 'status'));
-  const todayType = normalizeTodayType(getTrimmed(formData, 'todayType'));
-  const scheduledDate = getNullable(formData, 'scheduledDate');
-
   try {
     const task = await createTask({
       title,
-      notes: getNullable(formData, 'notes'),
-      status,
-      todayType,
-      scheduledDate,
+      description: getNullable(formData, 'description'),
+      notes: getNullable(formData, 'description'),
+      listId: getNullable(formData, 'listId'),
       dueDate: getNullable(formData, 'dueDate'),
-      important: getBoolean(formData, 'important'),
-      urgent: getBoolean(formData, 'urgent'),
-      priority: getNullable(formData, 'priority') as 'P1' | 'P2' | 'P3' | null,
-      energy: getNullable(formData, 'energy') as 'low' | 'medium' | 'high' | null,
     });
 
     const keyResultIds = getKeyResultIds(formData);
@@ -137,7 +134,7 @@ export async function updateTaskAction(
     return { error: '未授权' };
   }
 
-  const taskId = getTrimmed(formData, 'id');
+  const taskId = getTrimmed(formData, 'taskId') || getTrimmed(formData, 'id');
   const title = getTrimmed(formData, 'title');
   if (!taskId || !title) {
     return { error: '任务 ID 和标题不能为空' };
@@ -146,15 +143,10 @@ export async function updateTaskAction(
   try {
     const task = await updateTask(taskId, {
       title,
-      notes: getNullable(formData, 'notes'),
-      status: normalizeStatus(getTrimmed(formData, 'status')),
-      todayType: normalizeTodayType(getTrimmed(formData, 'todayType')),
-      scheduledDate: getNullable(formData, 'scheduledDate'),
+      description: getNullable(formData, 'description'),
+      notes: getNullable(formData, 'description'),
+      listId: getNullable(formData, 'listId'),
       dueDate: getNullable(formData, 'dueDate'),
-      important: getBoolean(formData, 'important'),
-      urgent: getBoolean(formData, 'urgent'),
-      priority: getNullable(formData, 'priority') as 'P1' | 'P2' | 'P3' | null,
-      energy: getNullable(formData, 'energy') as 'low' | 'medium' | 'high' | null,
     });
 
     if (!task) {
@@ -172,62 +164,129 @@ export async function updateTaskAction(
   }
 }
 
-export async function completeTaskAction(taskId: string) {
+export async function createTaskListAction(
+  prevState: TaskActionState = initialState,
+  formData: FormData,
+): Promise<TaskActionState> {
+  void prevState;
   const user = await requireTaskUser();
   if (!user) {
-    return;
+    return { error: '未授权' };
   }
 
-  const task = await completeTask(taskId);
-  if (!task) {
-    return;
+  const name = getTrimmed(formData, 'name');
+  if (!name) {
+    return { error: '清单名称不能为空' };
   }
 
-  await writeTaskAudit(user.id, 'task.complete', taskId);
-  revalidateTasks();
+  try {
+    const list = await createTaskList({
+      name,
+      icon: getNullable(formData, 'icon'),
+    });
+
+    await writeTaskListAudit(user.id, 'task.list.create', list.id);
+    revalidateTasks();
+    return { error: '' };
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : '创建清单失败',
+    };
+  }
 }
 
-export async function cancelTaskAction(taskId: string) {
+export async function createTaskDefinitionAction(
+  prevState: TaskActionState = initialState,
+  formData: FormData,
+): Promise<TaskActionState> {
+  void prevState;
   const user = await requireTaskUser();
   if (!user) {
-    return;
+    return { error: '未授权' };
   }
 
-  const task = await cancelTask(taskId);
-  if (!task) {
-    return;
+  const title = getTrimmed(formData, 'title');
+  const listId = getTrimmed(formData, 'listId');
+  if (!title || !listId) {
+    return { error: '标题和清单不能为空' };
   }
 
-  await writeTaskAudit(user.id, 'task.cancel', taskId);
-  revalidateTasks();
+  try {
+    const definition = await createTaskDefinition({
+      title,
+      description: getNullable(formData, 'description'),
+      listId,
+      frequency: getTrimmed(formData, 'frequency') as 'daily' | 'weekly' | 'monthly' | 'weekdays' | 'weekends',
+      endType: getTrimmed(formData, 'endType') as 'never' | 'until_date' | 'after_count',
+      endDate: getNullable(formData, 'endDate'),
+      occurrenceCount: getNullable(formData, 'occurrenceCount') ? Number(getNullable(formData, 'occurrenceCount')) : null,
+    });
+
+    await replaceTaskDefinitionKeyResultLinks(definition.id, getKeyResultIds(formData));
+    await ensureRecurringTasksForDate(getNullable(formData, 'targetDate') ?? undefined);
+    await writeTaskDefinitionAudit(user.id, 'task.definition.create', definition.id);
+    revalidateTasks();
+    return { error: '' };
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : '创建重复任务失败',
+    };
+  }
 }
 
-export async function moveTaskToTodayAction(taskId: string, todayType: TodayType) {
+export async function updateTaskDefinitionAction(
+  prevState: TaskActionState = initialState,
+  formData: FormData,
+): Promise<TaskActionState> {
+  void prevState;
   const user = await requireTaskUser();
   if (!user) {
-    return;
+    return { error: '未授权' };
   }
 
-  const task = await moveTaskToToday(taskId, todayType);
-  if (!task) {
-    return;
+  const definitionId = getTrimmed(formData, 'definitionId') || getTrimmed(formData, 'id');
+  if (!definitionId) {
+    return { error: '重复定义 ID 不能为空' };
   }
 
-  await writeTaskAudit(user.id, 'task.move_to_today', taskId);
-  revalidateTasks();
+  try {
+    const definition = await updateTaskDefinition(definitionId, {
+      title: getTrimmed(formData, 'title') || undefined,
+      description: getNullable(formData, 'description'),
+      listId: getTrimmed(formData, 'listId') || undefined,
+      frequency: (getTrimmed(formData, 'frequency') || undefined) as 'daily' | 'weekly' | 'monthly' | 'weekdays' | 'weekends' | undefined,
+      endType: (getTrimmed(formData, 'endType') || undefined) as 'never' | 'until_date' | 'after_count' | undefined,
+      endDate: getNullable(formData, 'endDate'),
+      occurrenceCount: getNullable(formData, 'occurrenceCount') ? Number(getNullable(formData, 'occurrenceCount')) : undefined,
+    });
+
+    if (!definition) {
+      return { error: '未找到重复定义' };
+    }
+
+    await replaceTaskDefinitionKeyResultLinks(definitionId, getKeyResultIds(formData));
+    await ensureRecurringTasksForDate(getNullable(formData, 'targetDate') ?? undefined);
+    await writeTaskDefinitionAudit(user.id, 'task.definition.update', definitionId);
+    revalidateTasks();
+    return { error: '' };
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : '更新重复任务失败',
+    };
+  }
 }
 
-export async function scheduleTaskAction(taskId: string, scheduledDate: string) {
+export async function toggleTaskCompletionAction(taskId: string, completed: boolean) {
   const user = await requireTaskUser();
   if (!user) {
     return;
   }
 
-  const task = await scheduleTask(taskId, scheduledDate);
+  const task = await toggleTaskCompletion(taskId, completed);
   if (!task) {
     return;
   }
 
-  await writeTaskAudit(user.id, 'task.schedule', taskId);
+  await writeTaskAudit(user.id, completed ? 'task.complete' : 'task.reopen', taskId);
   revalidateTasks();
 }

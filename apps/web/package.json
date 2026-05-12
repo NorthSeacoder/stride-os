@@ -16,11 +16,13 @@
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
     "@stride-os/db": "workspace:*",
+    "@tanstack/react-form": "^1.32.0",
     "drizzle-orm": "^0.45",
     "next": "^16",
     "react": "^19",
     "react-day-picker": "^9.11.1",
-    "react-dom": "^19"
+    "react-dom": "^19",
+    "recharts": "^3.8.1"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.5",

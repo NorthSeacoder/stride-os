@@ -107,13 +107,13 @@ CREATE TABLE "tasks" (
 	CONSTRAINT "tasks_completed_state_check" CHECK (("tasks"."status" = 'done' and "tasks"."completed_at" is not null) or ("tasks"."status" <> 'done' and "tasks"."completed_at" is null))
 );
 --> statement-breakpoint
-ALTER TABLE "key_results" ADD CONSTRAINT "key_results_objective_id_objectives_id_fk" FOREIGN KEY ("objective_id") REFERENCES "public"."objectives"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "kr_check_ins" ADD CONSTRAINT "kr_check_ins_key_result_id_key_results_id_fk" FOREIGN KEY ("key_result_id") REFERENCES "public"."key_results"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "objectives" ADD CONSTRAINT "objectives_period_id_periods_id_fk" FOREIGN KEY ("period_id") REFERENCES "public"."periods"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "review_kr_snapshots" ADD CONSTRAINT "review_kr_snapshots_review_id_reviews_id_fk" FOREIGN KEY ("review_id") REFERENCES "public"."reviews"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "review_kr_snapshots" ADD CONSTRAINT "review_kr_snapshots_key_result_id_key_results_id_fk" FOREIGN KEY ("key_result_id") REFERENCES "public"."key_results"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "task_kr_links" ADD CONSTRAINT "task_kr_links_task_id_tasks_id_fk" FOREIGN KEY ("task_id") REFERENCES "public"."tasks"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "task_kr_links" ADD CONSTRAINT "task_kr_links_key_result_id_key_results_id_fk" FOREIGN KEY ("key_result_id") REFERENCES "public"."key_results"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "key_results" ADD CONSTRAINT "key_results_objective_id_objectives_id_fk" FOREIGN KEY ("objective_id") REFERENCES "objectives"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "kr_check_ins" ADD CONSTRAINT "kr_check_ins_key_result_id_key_results_id_fk" FOREIGN KEY ("key_result_id") REFERENCES "key_results"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "objectives" ADD CONSTRAINT "objectives_period_id_periods_id_fk" FOREIGN KEY ("period_id") REFERENCES "periods"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "review_kr_snapshots" ADD CONSTRAINT "review_kr_snapshots_review_id_reviews_id_fk" FOREIGN KEY ("review_id") REFERENCES "reviews"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "review_kr_snapshots" ADD CONSTRAINT "review_kr_snapshots_key_result_id_key_results_id_fk" FOREIGN KEY ("key_result_id") REFERENCES "key_results"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "task_kr_links" ADD CONSTRAINT "task_kr_links_task_id_tasks_id_fk" FOREIGN KEY ("task_id") REFERENCES "tasks"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "task_kr_links" ADD CONSTRAINT "task_kr_links_key_result_id_key_results_id_fk" FOREIGN KEY ("key_result_id") REFERENCES "key_results"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 CREATE INDEX "idx_key_results_objective_id" ON "key_results" USING btree ("objective_id");--> statement-breakpoint
 CREATE INDEX "idx_key_results_status" ON "key_results" USING btree ("status");--> statement-breakpoint
 CREATE INDEX "idx_kr_check_ins_key_result_id" ON "kr_check_ins" USING btree ("key_result_id");--> statement-breakpoint

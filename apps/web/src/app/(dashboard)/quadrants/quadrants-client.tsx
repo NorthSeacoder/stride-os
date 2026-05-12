@@ -240,16 +240,16 @@ export function QuadrantsClient({ tasks }: { tasks: TaskItem[] }) {
             </div>
           )}
 
-          <div className="mt-6 rounded-[var(--radius-panel)] border border-[var(--border-hairline)] bg-[color:rgba(255,255,255,0.03)] p-4">
-            <p className="text-[11px] uppercase tracking-[0.22em] text-[var(--text-muted)]">象限规则</p>
+          <div className="mt-6 rounded-[var(--radius-panel)] border border-(--border-hairline) bg-[color:rgba(255,255,255,0.03)] p-4">
+            <p className="text-[11px] uppercase tracking-[0.22em] text-(--text-muted)">象限规则</p>
             <div className="mt-4 space-y-3">
               {(Object.entries(quadrantMeta) as Array<[QuadrantKey, (typeof quadrantMeta)[QuadrantKey]]>).map(([key, meta]) => (
-                <div key={key} className="rounded-[var(--radius-compact)] border border-[var(--border-hairline)] bg-[color:rgba(255,255,255,0.02)] p-3">
+                <div key={key} className="rounded-[var(--radius-compact)] border border-(--border-hairline) bg-[color:rgba(255,255,255,0.02)] p-3">
                   <div className="flex items-center justify-between gap-2">
-                    <p className="text-sm font-medium text-[var(--text-primary)]">{meta.title}</p>
+                    <p className="text-sm font-medium text-(--text-primary)">{meta.title}</p>
                     <Badge>{meta.subtitle}</Badge>
                   </div>
-                  <p className="mt-2 text-sm text-[var(--text-secondary)]">{meta.detail}</p>
+                  <p className="mt-2 text-sm text-(--text-secondary)">{meta.detail}</p>
                 </div>
               ))}
             </div>
@@ -283,15 +283,15 @@ function QuadrantColumn({
   return (
     <section
       ref={setNodeRef}
-      className={`metal-frame min-h-72 rounded-[18px] border p-5 transition-colors ${
+        className={`metal-frame min-h-72 rounded-[18px] border p-5 transition-colors ${
         isOver
-          ? 'border-[var(--border-glow)] bg-[color:rgba(180,204,255,0.07)]'
-          : 'border-[var(--border-hairline)] instrument-surface'
+          ? 'border-(--border-glow) bg-[color:rgba(180,204,255,0.07)]'
+          : 'border-(--border-hairline) instrument-surface'
       }`}
     >
       <div className="mb-4">
-        <p className="text-[11px] uppercase tracking-[0.22em] text-[var(--text-muted)]">{meta.subtitle}</p>
-        <h2 className="mt-2 text-xl font-semibold tracking-[-0.02em] text-[var(--text-primary)]">{meta.title}</h2>
+        <p className="text-[11px] uppercase tracking-[0.22em] text-(--text-muted)">{meta.subtitle}</p>
+        <h2 className="mt-2 text-xl font-semibold tracking-[-0.02em] text-(--text-primary)">{meta.title}</h2>
       </div>
       {tasks.length === 0 ? (
         <Empty text="这个象限里还没有任务。" />
@@ -385,8 +385,8 @@ function TaskCard({
       style={style}
       className={`metal-frame rounded-[14px] border p-4 transition-[opacity,border-color,background-color] ${
         selected
-          ? 'border-[var(--border-glow)] bg-[color:rgba(180,204,255,0.08)]'
-          : 'border-[var(--border-hairline)] bg-[color:rgba(255,255,255,0.04)]'
+          ? 'border-(--border-glow) bg-[color:rgba(180,204,255,0.08)]'
+          : 'border-(--border-hairline) bg-[color:rgba(255,255,255,0.04)]'
       } ${dragging ? 'opacity-70' : ''}`}
     >
       <div className="flex flex-col gap-4">
@@ -404,16 +404,16 @@ function TaskCard({
                 拖动
               </Button>
               <Badge>{getTaskStatusLabel(task.status)}</Badge>
-              {task.dueDate && <span className="text-xs text-[var(--text-muted)]">截止 {task.dueDate}</span>}
+              {task.dueDate && <span className="text-xs text-(--text-muted)">截止 {task.dueDate}</span>}
             </div>
             <button
               type="button"
               onClick={() => onSelectTask?.(task.id)}
               className="mt-3 block text-left"
             >
-              <p className="text-base font-medium text-[var(--text-primary)]">{task.title}</p>
+              <p className="text-base font-medium text-(--text-primary)">{task.title}</p>
             </button>
-            {task.notes && <p className="mt-2 line-clamp-3 text-sm text-[var(--text-secondary)]">{task.notes}</p>}
+            {task.notes && <p className="mt-2 line-clamp-3 text-sm text-(--text-secondary)">{task.notes}</p>}
           </div>
 
           {onMove && (
@@ -440,7 +440,7 @@ function TaskCard({
               <a
                 key={link.keyResult.id}
                 href={`/okr/${link.keyResult.id}`}
-                className="rounded-full border border-[var(--border-hairline)] px-2 py-1 text-xs text-[var(--text-secondary)] transition-colors hover:border-[var(--border-glow)] hover:text-[var(--text-primary)]"
+                className="rounded-full border border-(--border-hairline) px-2 py-1 text-xs text-(--text-secondary) transition-colors hover:border-(--border-glow) hover:text-(--text-primary)"
               >
                 {link.keyResult.title}
               </a>
@@ -457,16 +457,16 @@ function TaskDetailPanel({ task }: { task: TaskItem }) {
 
   return (
     <div className="mt-5 space-y-4">
-      <div className="metal-frame rounded-[16px] border border-[var(--border-hairline)] bg-[color:rgba(255,255,255,0.03)] p-4">
+      <div className="metal-frame rounded-[16px] border border-(--border-hairline) bg-[color:rgba(255,255,255,0.03)] p-4">
         <div className="flex flex-wrap items-center gap-2">
           <Badge>{meta.title}</Badge>
           <Badge>{getTaskStatusLabel(task.status)}</Badge>
         </div>
-        <h3 className="mt-4 text-xl font-semibold tracking-[-0.02em] text-[var(--text-primary)]">{task.title}</h3>
+        <h3 className="mt-4 text-xl font-semibold tracking-[-0.02em] text-(--text-primary)">{task.title}</h3>
         {task.notes ? (
-          <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">{task.notes}</p>
+          <p className="mt-3 text-sm leading-6 text-(--text-secondary)">{task.notes}</p>
         ) : (
-          <p className="mt-3 text-sm text-[var(--text-secondary)]">该任务当前没有备注说明。</p>
+          <p className="mt-3 text-sm text-(--text-secondary)">该任务当前没有备注说明。</p>
         )}
       </div>
 
@@ -475,27 +475,27 @@ function TaskDetailPanel({ task }: { task: TaskItem }) {
         <InspectorMetric label="截止日期" value={task.dueDate ?? '未设置'} />
       </div>
 
-      <div className="metal-frame rounded-[16px] border border-[var(--border-hairline)] bg-[color:rgba(255,255,255,0.03)] p-4">
-        <p className="text-[11px] uppercase tracking-[0.22em] text-[var(--text-muted)]">象限说明</p>
-        <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">{meta.detail}</p>
+      <div className="metal-frame rounded-[16px] border border-(--border-hairline) bg-[color:rgba(255,255,255,0.03)] p-4">
+        <p className="text-[11px] uppercase tracking-[0.22em] text-(--text-muted)">象限说明</p>
+        <p className="mt-3 text-sm leading-6 text-(--text-secondary)">{meta.detail}</p>
       </div>
 
-      <div className="metal-frame rounded-[16px] border border-[var(--border-hairline)] bg-[color:rgba(255,255,255,0.03)] p-4">
-        <p className="text-[11px] uppercase tracking-[0.22em] text-[var(--text-muted)]">关联 KR</p>
+      <div className="metal-frame rounded-[16px] border border-(--border-hairline) bg-[color:rgba(255,255,255,0.03)] p-4">
+        <p className="text-[11px] uppercase tracking-[0.22em] text-(--text-muted)">关联 KR</p>
         {task.keyResultLinks && task.keyResultLinks.length > 0 ? (
           <div className="mt-4 flex flex-wrap gap-2">
             {task.keyResultLinks.map((link) => (
               <a
                 key={link.keyResult.id}
                 href={`/okr/${link.keyResult.id}`}
-                className="rounded-full border border-[var(--border-hairline)] px-3 py-2 text-sm text-[var(--text-secondary)] transition-colors hover:border-[var(--border-glow)] hover:text-[var(--text-primary)]"
+                className="rounded-full border border-(--border-hairline) px-3 py-2 text-sm text-(--text-secondary) transition-colors hover:border-(--border-glow) hover:text-(--text-primary)"
               >
                 {link.keyResult.title}
               </a>
             ))}
           </div>
         ) : (
-          <p className="mt-3 text-sm text-[var(--text-secondary)]">该任务当前未绑定任何 KR。</p>
+          <p className="mt-3 text-sm text-(--text-secondary)">该任务当前未绑定任何 KR。</p>
         )}
       </div>
     </div>
@@ -504,9 +504,9 @@ function TaskDetailPanel({ task }: { task: TaskItem }) {
 
 function InspectorMetric({ label, value }: { label: string; value: string }) {
   return (
-    <div className="metal-frame rounded-[16px] border border-[var(--border-hairline)] bg-[color:rgba(255,255,255,0.03)] p-4">
-      <p className="text-[11px] uppercase tracking-[0.22em] text-[var(--text-muted)]">{label}</p>
-      <p className="mt-3 text-sm font-medium text-[var(--text-primary)]">{value}</p>
+    <div className="metal-frame rounded-[16px] border border-(--border-hairline) bg-[color:rgba(255,255,255,0.03)] p-4">
+      <p className="text-[11px] uppercase tracking-[0.22em] text-(--text-muted)">{label}</p>
+      <p className="mt-3 text-sm font-medium text-(--text-primary)">{value}</p>
     </div>
   );
 }

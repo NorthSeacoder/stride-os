@@ -8,9 +8,10 @@ import {
   listRiskKeyResults,
 } from './okr-service';
 import {
+  ensureTodayRecurringTasks,
   listCompletedTasksBetween,
-  listOpenMustTasks,
-  listTaskStatusCounts,
+  listTaskDashboardCounts,
+  listOpenTodayDueTasks,
   listTodayTaskCounts,
 } from './task-service';
 
@@ -55,15 +56,15 @@ function ensureReviewStatus(status: ReviewStatus) {
 
 function buildReviewBody(input: {
   completedTaskTitles: string[];
-  openMustTitles: string[];
+  openTodayDueTitles: string[];
   keyResultSummaries: string[];
 }) {
   const wins = input.completedTaskTitles.length > 0
     ? input.completedTaskTitles.map((title) => `- ${title}`).join('\n')
     : '- 本周期没有记录到已完成任务';
-  const followUps = input.openMustTitles.length > 0
-    ? input.openMustTitles.map((title) => `- ${title}`).join('\n')
-    : '- 没有未完成的必做任务';
+  const followUps = input.openTodayDueTitles.length > 0
+    ? input.openTodayDueTitles.map((title) => `- ${title}`).join('\n')
+    : '- 没有今日到期但未完成的任务';
   const keyResults = input.keyResultSummaries.length > 0
     ? input.keyResultSummaries.map((line) => `- ${line}`).join('\n')
     : '- 没有记录到 KR check-in';
@@ -72,7 +73,7 @@ function buildReviewBody(input: {
     '## 本期成果',
     wins,
     '',
-    '## 未完成的必做任务',
+    '## 今日到期但未完成',
     followUps,
     '',
     '## KR 进展',
@@ -99,9 +100,11 @@ export async function getReview(reviewId: string) {
 }
 
 export async function buildWeeklyReviewDraft(periodStart: string, periodEnd: string) {
-  const [completedTasks, openMustTasks, checkIns] = await Promise.all([
+  await ensureTodayRecurringTasks();
+
+  const [completedTasks, openTodayDueTasks, checkIns] = await Promise.all([
     listCompletedTasksBetween(periodStart, periodEnd),
-    listOpenMustTasks(),
+    listOpenTodayDueTasks(),
     listCheckInsInRange(periodStart, periodEnd),
   ]);
 
@@ -126,9 +129,9 @@ export async function buildWeeklyReviewDraft(periodStart: string, periodEnd: str
 
   const structuredSummary = {
     completedTaskCount: completedTasks.length,
-    openMustCount: openMustTasks.length,
+    openTodayDueCount: openTodayDueTasks.length,
     completedTaskIds: completedTasks.map((task: { id: string }) => task.id),
-    openMustTaskIds: openMustTasks.map((task: { id: string }) => task.id),
+    openTodayDueTaskIds: openTodayDueTasks.map((task: { id: string }) => task.id),
     keyResultIds,
     keyResultCheckIns: Array.from(latestCheckInsByKr.values()).map((item) => ({
       keyResultId: item.keyResultId,
@@ -143,7 +146,7 @@ export async function buildWeeklyReviewDraft(periodStart: string, periodEnd: str
 
   const body = buildReviewBody({
     completedTaskTitles: completedTasks.map((task: { title: string }) => task.title),
-    openMustTitles: openMustTasks.map((task: { title: string }) => task.title),
+    openTodayDueTitles: openTodayDueTasks.map((task: { title: string }) => task.title),
     keyResultSummaries,
   });
 
@@ -299,10 +302,12 @@ export async function getLatestReview() {
 }
 
 export async function getDashboardSummary() {
-  const [currentPeriodSummary, todayTaskCounts, taskStatusCounts, riskKeyResults, latestReview] = await Promise.all([
+  await ensureTodayRecurringTasks();
+
+  const [currentPeriodSummary, todayTaskCounts, taskDashboardCounts, riskKeyResults, latestReview] = await Promise.all([
     getCurrentPeriodSummary(),
     listTodayTaskCounts(),
-    listTaskStatusCounts(),
+    listTaskDashboardCounts(),
     listRiskKeyResults(),
     getLatestReview(),
   ]);
@@ -311,7 +316,7 @@ export async function getDashboardSummary() {
     currentPeriodSummary,
     todayTaskCounts,
     chartStats: {
-      taskStatusCounts,
+      taskDashboardCounts,
     },
     riskKeyResults,
     latestReview,
@@ -364,15 +369,15 @@ export async function getReviewDraftOrGenerate(periodStart: string, periodEnd: s
 }
 
 export async function summarizeWeeklyInputs(periodStart: string, periodEnd: string) {
-  const [completedTasks, openMustTasks, checkIns] = await Promise.all([
+  const [completedTasks, openTodayDueTasks, checkIns] = await Promise.all([
     listCompletedTasksBetween(periodStart, periodEnd),
-    listOpenMustTasks(),
+    listOpenTodayDueTasks(),
     listCheckInsInRange(periodStart, periodEnd),
   ]);
 
   return {
     completedTasks,
-    openMustTasks,
+    openTodayDueTasks,
     checkIns,
   };
 }

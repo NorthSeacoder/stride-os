@@ -42,7 +42,13 @@ async function runPostgresMigrate() {
   await client.connect();
 
   try {
-    await client.query(`CREATE SCHEMA IF NOT EXISTS "${escapedSchema}"`);
+    const schemaExists = await client.query<{ exists: boolean }>(
+      'SELECT EXISTS (SELECT 1 FROM pg_namespace WHERE nspname = $1) AS exists',
+      [databaseSchema],
+    );
+    if (!schemaExists.rows[0]?.exists) {
+      await client.query(`CREATE SCHEMA "${escapedSchema}"`);
+    }
     await client.query(`SET search_path TO "${escapedSchema}", public`);
     await client.query(`
       CREATE TABLE IF NOT EXISTS "__drizzle_migrations" (
