@@ -107,6 +107,7 @@ export async function createTaskAction(
       notes: getNullable(formData, 'description'),
       listId: getNullable(formData, 'listId'),
       dueDate: getNullable(formData, 'dueDate'),
+      priority: (getNullable(formData, 'priority') as 'P1' | 'P2' | 'P3' | null),
     });
 
     const keyResultIds = getKeyResultIds(formData);
@@ -147,6 +148,7 @@ export async function updateTaskAction(
       notes: getNullable(formData, 'description'),
       listId: getNullable(formData, 'listId'),
       dueDate: getNullable(formData, 'dueDate'),
+      priority: (getNullable(formData, 'priority') as 'P1' | 'P2' | 'P3' | null),
     });
 
     if (!task) {

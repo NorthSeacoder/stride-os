@@ -95,6 +95,7 @@ describe('task actions', () => {
     formData.set('description', 'Keep it short');
     formData.set('listId', 'list_1');
     formData.set('dueDate', '2026-05-12');
+    formData.set('priority', 'P1');
     formData.append('keyResultIds', 'kr_1');
     formData.append('keyResultIds', 'kr_2');
 
@@ -108,6 +109,7 @@ describe('task actions', () => {
         description: 'Keep it short',
         listId: 'list_1',
         dueDate: '2026-05-12',
+        priority: 'P1',
       }),
     );
     expect(replaceTaskKeyResultLinks).toHaveBeenCalledWith('task_1', ['kr_1', 'kr_2']);
@@ -125,6 +127,7 @@ describe('task actions', () => {
     formData.set('description', 'Prepare the launch checklist');
     formData.set('listId', 'list_work');
     formData.set('dueDate', '2026-05-20');
+    formData.set('priority', 'P2');
 
     await expect(createTaskAction({ error: '' }, formData)).resolves.toEqual({
       error: '',
@@ -136,6 +139,7 @@ describe('task actions', () => {
         description: 'Prepare the launch checklist',
         listId: 'list_work',
         dueDate: '2026-05-20',
+        priority: 'P2',
       }),
     );
   });
@@ -217,11 +221,13 @@ describe('task actions', () => {
     formData.set('taskId', 'task_1');
     formData.set('title', 'Refine workspace');
     formData.set('listId', 'list_work');
+    formData.set('priority', 'P3');
 
     await expect(updateTaskAction({ error: '' }, formData)).resolves.toEqual({ error: '' });
 
     expect(updateTask).toHaveBeenCalledWith('task_1', expect.objectContaining({
       title: 'Refine workspace',
+      priority: 'P3',
     }));
   });
 

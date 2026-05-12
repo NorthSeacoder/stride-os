@@ -83,14 +83,21 @@ vi.mock('@stride-os/db', () => ({
 }));
 
 import {
+  buildQuadrantDefaults,
   buildTaskUpdatePatch,
   createTaskDefinition,
   getTaskDetail,
   ensureRecurringTasksForDate,
+  getCalendarDayDelta,
+  getTaskQuadrant,
+  getTaskUrgencyBand,
+  listQuadrantBoard,
   listTaskDashboardCounts,
   listTaskListsWithCounts,
   listTaskSources,
   listTasksForSource,
+  moveTaskToQuadrant,
+  moveTaskToQuadrantList,
   replaceTaskDefinitionKeyResultLinks,
   replaceTaskKeyResultLinks,
   updateTaskDefinition,
@@ -121,6 +128,41 @@ describe('task service rules', () => {
     expect(patch.title).toBe('Refine workspace');
     expect(patch.dueDate).toBe('2026-05-12');
     expect(patch.completedAt).toBeNull();
+  });
+
+  it('computes calendar day delta in date-only semantics', () => {
+    expect(getCalendarDayDelta('2026-05-12', '2026-05-12')).toBe(0);
+    expect(getCalendarDayDelta('2026-05-19', '2026-05-12')).toBe(7);
+    expect(getCalendarDayDelta('2026-05-20', '2026-05-12')).toBe(8);
+    expect(getCalendarDayDelta(null, '2026-05-12')).toBeNull();
+  });
+
+  it('maps urgency band from due date threshold', () => {
+    expect(getTaskUrgencyBand('2026-05-12', '2026-05-12')).toBe('high');
+    expect(getTaskUrgencyBand('2026-05-19', '2026-05-12')).toBe('high');
+    expect(getTaskUrgencyBand('2026-05-20', '2026-05-12')).toBe('low');
+    expect(getTaskUrgencyBand(null, '2026-05-12')).toBeNull();
+  });
+
+  it('maps tasks into quadrants from priority and due date', () => {
+    expect(getTaskQuadrant({ priority: 'P1', dueDate: '2026-05-12' }, '2026-05-12')).toBe('Q1');
+    expect(getTaskQuadrant({ priority: 'P2', dueDate: '2026-05-20' }, '2026-05-12')).toBe('Q2');
+    expect(getTaskQuadrant({ priority: 'P3', dueDate: '2026-05-12' }, '2026-05-12')).toBe('Q3');
+    expect(getTaskQuadrant({ priority: null, dueDate: '2026-06-11' }, '2026-05-12')).toBe('Q4');
+  });
+
+  it('maps tasks without due date directly from priority', () => {
+    expect(getTaskQuadrant({ priority: 'P1', dueDate: null }, '2026-05-12')).toBe('Q1');
+    expect(getTaskQuadrant({ priority: 'P2', dueDate: null }, '2026-05-12')).toBe('Q2');
+    expect(getTaskQuadrant({ priority: 'P3', dueDate: null }, '2026-05-12')).toBe('Q3');
+    expect(getTaskQuadrant({ priority: null, dueDate: null }, '2026-05-12')).toBe('Q4');
+  });
+
+  it('builds the unique default reverse mapping for each quadrant', () => {
+    expect(buildQuadrantDefaults('Q1', '2026-05-12')).toEqual({ priority: 'P1', dueDate: '2026-05-12' });
+    expect(buildQuadrantDefaults('Q2', '2026-05-12')).toEqual({ priority: 'P2', dueDate: '2026-05-20' });
+    expect(buildQuadrantDefaults('Q3', '2026-05-12')).toEqual({ priority: 'P3', dueDate: '2026-05-12' });
+    expect(buildQuadrantDefaults('Q4', '2026-05-12')).toEqual({ priority: null, dueDate: '2026-05-20' });
   });
 
   it('replaces task key result links and reads linked records outside the transaction', async () => {
@@ -215,6 +257,36 @@ describe('task service rules', () => {
     vi.useRealTimers();
   });
 
+  it('builds a quadrant board with open and completed groups', async () => {
+    findManyTasks.mockResolvedValue([
+      {
+        id: 'task_q1',
+        title: 'Hot priority',
+        dueDate: '2026-05-12',
+        priority: 'P1',
+        completedAt: null,
+        status: 'inbox',
+        listId: 'list_work',
+        list: { id: 'list_work', name: '工作任务', icon: 'briefcase' },
+      },
+      {
+        id: 'task_q4_done',
+        title: 'Done later',
+        dueDate: '2026-06-11',
+        priority: null,
+        completedAt: '2026-05-12T10:00:00.000Z',
+        status: 'done',
+        listId: 'list_inbox',
+        list: { id: 'list_inbox', name: '收集箱', icon: 'inbox' },
+      },
+    ]);
+
+    const board = await listQuadrantBoard({ today: '2026-05-12', includeCompleted: true });
+
+    expect(board.quadrants.find((quadrant) => quadrant.key === 'Q1')?.groups[0]?.items[0]?.id).toBe('task_q1');
+    expect(board.quadrants.find((quadrant) => quadrant.key === 'Q4')?.completedGroups[0]?.items[0]?.id).toBe('task_q4_done');
+  });
+
   it('groups tasks for a smart source and always returns completed group', async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-05-12T09:00:00.000Z'));
@@ -248,6 +320,34 @@ describe('task service rules', () => {
       title: 'Write review',
       list: { name: '收集箱' },
       keyResultLinks: [{ keyResult: { id: 'kr_1' } }],
+    });
+  });
+
+  it('moves a task to a quadrant through the default reverse map', async () => {
+    updateReturning.mockResolvedValue([{ id: 'task_1', priority: 'P2', dueDate: '2026-05-20' }]);
+
+    await expect(moveTaskToQuadrant('task_1', 'Q2', '2026-05-12')).resolves.toMatchObject({
+      id: 'task_1',
+      priority: 'P2',
+      dueDate: '2026-05-20',
+    });
+  });
+
+  it('moves a task to another list without changing quadrant fields', async () => {
+    updateReturning.mockResolvedValue([{ id: 'task_1', listId: 'list_2' }]);
+
+    await expect(moveTaskToQuadrantList('task_1', 'list_2')).resolves.toMatchObject({
+      id: 'task_1',
+      listId: 'list_2',
+    });
+  });
+
+  it('moves a task to the unassigned bucket with null listId', async () => {
+    updateReturning.mockResolvedValue([{ id: 'task_1', listId: null }]);
+
+    await expect(moveTaskToQuadrantList('task_1', null)).resolves.toMatchObject({
+      id: 'task_1',
+      listId: null,
     });
   });
 

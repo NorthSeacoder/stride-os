@@ -232,8 +232,6 @@ export const tasks = sqliteTable('tasks', {
   definitionId: text('definition_id')
     .references(() => taskDefinitions.id, { onDelete: 'set null' }),
   occurrenceDate: text('occurrence_date'),
-  important: integer('important', { mode: 'boolean' }).notNull().default(false),
-  urgent: integer('urgent', { mode: 'boolean' }).notNull().default(false),
   priority: text('priority'),
   energy: text('energy'),
   createdAt: timestampColumn('created_at').notNull().$defaultFn(() => new Date()),
@@ -246,7 +244,6 @@ export const tasks = sqliteTable('tasks', {
   index('idx_tasks_definition_id').on(table.definitionId),
   index('idx_tasks_definition_occurrence').on(table.definitionId, table.occurrenceDate),
   index('idx_tasks_priority').on(table.priority),
-  index('idx_tasks_importance_urgency').on(table.important, table.urgent),
   check('tasks_status_check', sql`${table.status} in ('inbox', 'done')`),
   check('tasks_priority_check', sql`${table.priority} is null or ${table.priority} in ('P1', 'P2', 'P3')`),
   check('tasks_energy_check', sql`${table.energy} is null or ${table.energy} in ('low', 'medium', 'high')`),

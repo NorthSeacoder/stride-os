@@ -1,7 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const getSessionUser = vi.fn();
-const updateTaskQuadrant = vi.fn();
+const moveTaskToQuadrant = vi.fn();
+const moveTaskToQuadrantList = vi.fn();
+const toggleTaskCompletion = vi.fn();
 const revalidatePath = vi.fn();
 const auditValues = vi.fn();
 
@@ -14,7 +16,9 @@ vi.mock('@/lib/auth/session', () => ({
 }));
 
 vi.mock('@/lib/services/task-service', () => ({
-  updateTaskQuadrant: (...args: unknown[]) => updateTaskQuadrant(...args),
+  moveTaskToQuadrant: (...args: unknown[]) => moveTaskToQuadrant(...args),
+  moveTaskToQuadrantList: (...args: unknown[]) => moveTaskToQuadrantList(...args),
+  toggleTaskCompletion: (...args: unknown[]) => toggleTaskCompletion(...args),
 }));
 
 vi.mock('@stride-os/db', () => ({
@@ -28,7 +32,11 @@ vi.mock('@stride-os/db', () => ({
   },
 }));
 
-import { updateTaskQuadrantAction } from '@/app/(dashboard)/quadrants/actions';
+import {
+  moveTaskToQuadrantAction,
+  moveTaskToQuadrantListAction,
+  toggleQuadrantTaskCompletionAction,
+} from '@/app/(dashboard)/quadrants/actions';
 
 describe('quadrants action', () => {
   beforeEach(() => {
@@ -38,39 +46,61 @@ describe('quadrants action', () => {
   it('does nothing when user is missing', async () => {
     getSessionUser.mockResolvedValue(null);
 
-    await expect(updateTaskQuadrantAction('task_1', { important: true, urgent: false })).resolves.toEqual({
+    await expect(moveTaskToQuadrantAction('task_1', 'Q1')).resolves.toEqual({
       error: '未授权',
     });
 
-    expect(updateTaskQuadrant).not.toHaveBeenCalled();
+    expect(moveTaskToQuadrant).not.toHaveBeenCalled();
   });
 
-  it('updates only important and urgent flags through task service', async () => {
+  it('moves a task to a target quadrant through the new service', async () => {
     getSessionUser.mockResolvedValue({ id: 'user_1' });
-    updateTaskQuadrant.mockResolvedValue({ id: 'task_1' });
+    moveTaskToQuadrant.mockResolvedValue({ id: 'task_1' });
     auditValues.mockResolvedValue(undefined);
 
-    await expect(updateTaskQuadrantAction('task_1', { important: true, urgent: false })).resolves.toEqual({
-      error: '',
-    });
+    await expect(moveTaskToQuadrantAction('task_1', 'Q2')).resolves.toEqual({ error: '' });
 
-    expect(updateTaskQuadrant).toHaveBeenCalledWith('task_1', {
-      important: true,
-      urgent: false,
-    });
+    expect(moveTaskToQuadrant).toHaveBeenCalledWith('task_1', 'Q2');
     expect(revalidatePath).toHaveBeenCalledWith('/quadrants');
-    expect(revalidatePath).toHaveBeenCalledWith('/dashboard');
+    expect(revalidatePath).toHaveBeenCalledWith('/tasks');
   });
 
-  it('returns not found when task service returns null', async () => {
+  it('moves a task to another list inside a quadrant', async () => {
     getSessionUser.mockResolvedValue({ id: 'user_1' });
-    updateTaskQuadrant.mockResolvedValue(null);
+    moveTaskToQuadrantList.mockResolvedValue({ id: 'task_1' });
+    auditValues.mockResolvedValue(undefined);
 
-    await expect(updateTaskQuadrantAction('task_1', { important: true, urgent: false })).resolves.toEqual({
+    await expect(moveTaskToQuadrantListAction('task_1', 'list_2')).resolves.toEqual({ error: '' });
+
+    expect(moveTaskToQuadrantList).toHaveBeenCalledWith('task_1', 'list_2');
+  });
+
+  it('moves a task to the unassigned bucket with null listId', async () => {
+    getSessionUser.mockResolvedValue({ id: 'user_1' });
+    moveTaskToQuadrantList.mockResolvedValue({ id: 'task_1' });
+    auditValues.mockResolvedValue(undefined);
+
+    await expect(moveTaskToQuadrantListAction('task_1', null)).resolves.toEqual({ error: '' });
+
+    expect(moveTaskToQuadrantList).toHaveBeenCalledWith('task_1', null);
+  });
+
+  it('toggles completion from the quadrant page', async () => {
+    getSessionUser.mockResolvedValue({ id: 'user_1' });
+    toggleTaskCompletion.mockResolvedValue({ id: 'task_1' });
+    auditValues.mockResolvedValue(undefined);
+
+    await expect(toggleQuadrantTaskCompletionAction('task_1', true)).resolves.toEqual({ error: '' });
+
+    expect(toggleTaskCompletion).toHaveBeenCalledWith('task_1', true);
+  });
+
+  it('returns not found when the move service returns null', async () => {
+    getSessionUser.mockResolvedValue({ id: 'user_1' });
+    moveTaskToQuadrant.mockResolvedValue(null);
+
+    await expect(moveTaskToQuadrantAction('task_1', 'Q3')).resolves.toEqual({
       error: '未找到任务',
     });
-
-    expect(auditValues).not.toHaveBeenCalled();
-    expect(revalidatePath).not.toHaveBeenCalled();
   });
 });

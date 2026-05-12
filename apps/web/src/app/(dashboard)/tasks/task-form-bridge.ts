@@ -17,6 +17,7 @@ type TaskItem = {
   notes: string | null;
   description?: string | null;
   dueDate: string | null;
+  priority?: string | null;
   listId?: string | null;
   definition?: LinkedDefinition | null;
   keyResultLinks?: Array<{
@@ -31,6 +32,7 @@ export type TaskFormValues = {
   title: string;
   description: string;
   dueDate: string;
+  priority: string;
   listId: string;
   isRecurring: boolean;
   frequency: string;
@@ -40,7 +42,12 @@ export type TaskFormValues = {
   keyResultIds: string[];
 };
 
-export function getTaskFormValues(task?: TaskItem, defaultListId?: string | null, defaultDueDate?: string | null): TaskFormValues {
+export function getTaskFormValues(
+  task?: TaskItem,
+  defaultListId?: string | null,
+  defaultDueDate?: string | null,
+  defaultPriority?: string | null,
+): TaskFormValues {
   return {
     id: task?.definition?.id ?? task?.id ?? '',
     taskId: task?.id ?? '',
@@ -48,6 +55,7 @@ export function getTaskFormValues(task?: TaskItem, defaultListId?: string | null
     title: task?.title ?? '',
     description: task?.description ?? task?.notes ?? '',
     dueDate: task?.dueDate ?? defaultDueDate ?? '',
+    priority: task?.priority ?? defaultPriority ?? '',
     listId: task?.listId ?? defaultListId ?? '',
     isRecurring: Boolean(task?.definition),
     frequency: task?.definition?.frequency ?? 'daily',
@@ -73,6 +81,7 @@ export function buildTaskFormData(values: TaskFormValues) {
   formData.set('title', values.title);
   formData.set('description', values.description);
   formData.set('dueDate', values.dueDate);
+  formData.set('priority', values.priority);
   formData.set('targetDate', values.dueDate);
   formData.set('listId', values.listId);
   formData.set('isRecurring', values.isRecurring ? 'on' : '');

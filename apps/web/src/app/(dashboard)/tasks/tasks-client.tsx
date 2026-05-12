@@ -41,8 +41,6 @@ type TaskItem = {
   description?: string | null;
   status: string;
   dueDate: string | null;
-  important: boolean;
-  urgent: boolean;
   priority: string | null;
   energy: string | null;
   completedAt: Date | string | null;

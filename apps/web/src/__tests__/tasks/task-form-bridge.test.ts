@@ -9,6 +9,7 @@ describe('task form bridge', () => {
       notes: 'Keep it short',
       description: 'Keep it short',
       dueDate: '2026-05-13',
+      priority: 'P2',
       listId: 'list_1',
       definition: {
         id: 'def_1',
@@ -25,6 +26,7 @@ describe('task form bridge', () => {
       title: 'Write review',
       description: 'Keep it short',
       dueDate: '2026-05-13',
+      priority: 'P2',
       listId: 'list_1',
       isRecurring: true,
       frequency: 'daily',
@@ -43,6 +45,7 @@ describe('task form bridge', () => {
       title: 'Write review',
       description: 'Bridge test',
       dueDate: '2026-05-20',
+      priority: 'P1',
       listId: 'list_1',
       isRecurring: true,
       frequency: 'weekly',
@@ -58,6 +61,7 @@ describe('task form bridge', () => {
     expect(formData.get('title')).toBe('Write review');
     expect(formData.get('description')).toBe('Bridge test');
     expect(formData.get('dueDate')).toBe('2026-05-20');
+    expect(formData.get('priority')).toBe('P1');
     expect(formData.get('listId')).toBe('list_1');
     expect(formData.get('isRecurring')).toBe('on');
     expect(formData.get('frequency')).toBe('weekly');

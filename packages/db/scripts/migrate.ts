@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
-import { spawnSync } from 'node:child_process';
 import { Client } from 'pg';
+import Database from 'better-sqlite3';
 import { defaultSqliteUrl, env, resolveSqliteDatabasePath, workspaceRoot } from '../src/env';
 
 type JournalEntry = {
@@ -17,14 +17,50 @@ function runSqliteMigrate() {
   const databaseUrl = env.databaseUrl || defaultSqliteUrl();
   const absolutePath = resolveSqliteDatabasePath(databaseUrl);
   fs.mkdirSync(path.dirname(absolutePath), { recursive: true });
+  const migrationsDir = path.join(workspaceRoot(), 'packages/db/drizzle/sqlite');
+  const journalPath = path.join(migrationsDir, 'meta/_journal.json');
+  const journal = JSON.parse(fs.readFileSync(journalPath, 'utf8')) as JournalFile;
+  const sqlite = new Database(absolutePath);
 
-  const result = spawnSync(
-    'drizzle-kit',
-    ['migrate', '--config', path.join(process.cwd(), 'drizzle.sqlite.config.ts')],
-    { stdio: 'inherit', shell: true, env: { ...process.env } },
-  );
+  try {
+    sqlite.exec(`
+      CREATE TABLE IF NOT EXISTS "__drizzle_migrations" (
+        id integer PRIMARY KEY AUTOINCREMENT,
+        hash text NOT NULL UNIQUE,
+        created_at integer NOT NULL
+      )
+    `);
 
-  process.exit(result.status ?? 1);
+    const appliedRows = sqlite.prepare('SELECT hash FROM "__drizzle_migrations"').all() as Array<{ hash: string }>;
+    const appliedHashes = new Set(appliedRows.map((row) => row.hash));
+
+    for (const entry of journal.entries) {
+      if (appliedHashes.has(entry.tag)) {
+        continue;
+      }
+
+      const sqlPath = path.join(migrationsDir, `${entry.tag}.sql`);
+      const rawSql = fs.readFileSync(sqlPath, 'utf8');
+      const statements = rawSql
+        .split('--> statement-breakpoint')
+        .map((chunk) => chunk.trim())
+        .filter(Boolean);
+
+      const transaction = sqlite.transaction(() => {
+        for (const statement of statements) {
+          sqlite.exec(statement);
+        }
+
+        sqlite.prepare(
+          'INSERT INTO "__drizzle_migrations" ("hash", "created_at") VALUES (?, ?)',
+        ).run(entry.tag, Date.now());
+      });
+
+      transaction();
+    }
+  } finally {
+    sqlite.close();
+  }
 }
 
 async function runPostgresMigrate() {

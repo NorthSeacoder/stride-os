@@ -93,8 +93,6 @@ CREATE TABLE "tasks" (
 	"scheduled_date" date,
 	"due_date" date,
 	"completed_at" timestamp with time zone,
-	"important" boolean DEFAULT false NOT NULL,
-	"urgent" boolean DEFAULT false NOT NULL,
 	"priority" varchar(8),
 	"energy" varchar(16),
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
@@ -133,4 +131,3 @@ CREATE INDEX "idx_tasks_today_type" ON "tasks" USING btree ("today_type");--> st
 CREATE INDEX "idx_tasks_scheduled_date" ON "tasks" USING btree ("scheduled_date");--> statement-breakpoint
 CREATE INDEX "idx_tasks_due_date" ON "tasks" USING btree ("due_date");--> statement-breakpoint
 CREATE INDEX "idx_tasks_priority" ON "tasks" USING btree ("priority");--> statement-breakpoint
-CREATE INDEX "idx_tasks_importance_urgency" ON "tasks" USING btree ("important","urgent");

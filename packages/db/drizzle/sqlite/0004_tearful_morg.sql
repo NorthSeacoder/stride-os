@@ -10,8 +10,6 @@ CREATE TABLE `__new_tasks` (
 	`completed_at` integer,
 	`definition_id` text,
 	`occurrence_date` text,
-	`important` integer DEFAULT false NOT NULL,
-	`urgent` integer DEFAULT false NOT NULL,
 	`priority` text,
 	`energy` text,
 	`created_at` integer NOT NULL,
@@ -24,7 +22,7 @@ CREATE TABLE `__new_tasks` (
 	CONSTRAINT "tasks_completed_state_check" CHECK(("__new_tasks"."status" = 'done' and "__new_tasks"."completed_at" is not null) or ("__new_tasks"."status" <> 'done' and "__new_tasks"."completed_at" is null))
 );
 --> statement-breakpoint
-INSERT INTO `__new_tasks`("id", "title", "notes", "description", "status", "list_id", "due_date", "completed_at", "definition_id", "occurrence_date", "important", "urgent", "priority", "energy", "created_at", "updated_at") SELECT "id", "title", "notes", "description", "status", "list_id", "due_date", "completed_at", "definition_id", "occurrence_date", "important", "urgent", "priority", "energy", "created_at", "updated_at" FROM `tasks`;--> statement-breakpoint
+INSERT INTO `__new_tasks`("id", "title", "notes", "description", "status", "list_id", "due_date", "completed_at", "definition_id", "occurrence_date", "priority", "energy", "created_at", "updated_at") SELECT "id", "title", "notes", "description", "status", "list_id", "due_date", "completed_at", "definition_id", "occurrence_date", "priority", "energy", "created_at", "updated_at" FROM `tasks`;--> statement-breakpoint
 DROP TABLE `tasks`;--> statement-breakpoint
 ALTER TABLE `__new_tasks` RENAME TO `tasks`;--> statement-breakpoint
 PRAGMA foreign_keys=ON;--> statement-breakpoint
@@ -35,4 +33,3 @@ CREATE INDEX `idx_tasks_completed_at` ON `tasks` (`completed_at`);--> statement-
 CREATE INDEX `idx_tasks_definition_id` ON `tasks` (`definition_id`);--> statement-breakpoint
 CREATE INDEX `idx_tasks_definition_occurrence` ON `tasks` (`definition_id`,`occurrence_date`);--> statement-breakpoint
 CREATE INDEX `idx_tasks_priority` ON `tasks` (`priority`);--> statement-breakpoint
-CREATE INDEX `idx_tasks_importance_urgency` ON `tasks` (`important`,`urgent`);

@@ -13,3 +13,7 @@ const databaseUrl = process.env.DATABASE_URL ?? defaultSqliteUrl();
 const absolutePath = resolveSqliteDatabasePath(databaseUrl);
 
 fs.mkdirSync(path.dirname(absolutePath), { recursive: true });
+
+for (const suffix of ['', '-shm', '-wal']) {
+  fs.rmSync(`${absolutePath}${suffix}`, { force: true });
+}

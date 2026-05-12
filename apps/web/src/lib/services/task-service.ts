@@ -29,12 +29,15 @@ export type TaskWriteInput = {
   description?: string | null;
   listId?: string | null;
   dueDate?: string | null;
-  important?: boolean;
-  urgent?: boolean;
   priority?: TaskPriority | null;
   energy?: TaskEnergy | null;
   completedAt?: Date | null;
 };
+
+export const QUADRANT_KEYS = ['Q1', 'Q2', 'Q3', 'Q4'] as const;
+export type TaskQuadrantKey = typeof QUADRANT_KEYS[number];
+export type TaskUrgencyBand = 'high' | 'low';
+export type TaskImportanceBand = 'high' | 'low';
 
 export const TASK_SMART_SOURCE_IDS = ['all', 'today', 'tomorrow', 'inbox', 'next-7-days'] as const;
 export type TaskSmartSourceId = typeof TASK_SMART_SOURCE_IDS[number];
@@ -82,6 +85,23 @@ export type TaskDefinitionWriteInput = {
   occurrenceCount?: number | null;
 };
 
+export type QuadrantListGroup = {
+  listId: string;
+  listName: string;
+  listIcon: string | null;
+  items: TaskWorkspaceTask[];
+};
+
+export type QuadrantSection = {
+  key: TaskQuadrantKey;
+  title: string;
+  groups: QuadrantListGroup[];
+  completedGroups: QuadrantListGroup[];
+  totalCount: number;
+  openCount: number;
+  completedCount: number;
+};
+
 const TASK_GROUP_ORDER: TaskGroupKey[] = ['overdue', 'today', 'tomorrow', 'upcoming', 'no-date', 'completed'];
 const TASK_GROUP_TITLES: Record<TaskGroupKey, string> = {
   overdue: '已过期',
@@ -97,6 +117,12 @@ const TASK_SOURCE_ICONS: Record<TaskSmartSourceId, string> = {
   tomorrow: 'calendar-plus',
   inbox: 'inbox',
   'next-7-days': 'calendar-range',
+};
+const QUADRANT_TITLES: Record<TaskQuadrantKey, string> = {
+  Q1: '重要且紧急',
+  Q2: '重要不紧急',
+  Q3: '不重要但紧急',
+  Q4: '不重要不紧急',
 };
 
 function formatDateOnly(date: Date) {
@@ -124,6 +150,79 @@ function normalizeDateValue(value: Date | string | null | undefined) {
   }
 
   return typeof value === 'string' ? value : formatDateOnly(value);
+}
+
+export function getCalendarDayDelta(
+  dueDate: Date | string | null | undefined,
+  today: Date | string = new Date(),
+) {
+  const normalizedDueDate = normalizeDateValue(dueDate);
+  if (!normalizedDueDate) {
+    return null;
+  }
+
+  const due = toDateOnlyDate(normalizedDueDate);
+  const current = toDateOnlyDate(typeof today === 'string' ? today : formatDateOnly(today));
+  return Math.round((due.getTime() - current.getTime()) / (24 * 60 * 60 * 1000));
+}
+
+export function getTaskUrgencyBand(
+  dueDate: Date | string | null | undefined,
+  today: Date | string = new Date(),
+): TaskUrgencyBand | null {
+  const delta = getCalendarDayDelta(dueDate, today);
+  if (delta === null) {
+    return null;
+  }
+
+  return delta <= 7 ? 'high' : 'low';
+}
+
+export function getTaskImportanceBand(priority: TaskPriority | null | undefined): TaskImportanceBand {
+  return priority === 'P1' || priority === 'P2' ? 'high' : 'low';
+}
+
+export function getTaskQuadrant(
+  input: { priority?: TaskPriority | null; dueDate?: Date | string | null },
+  today: Date | string = new Date(),
+): TaskQuadrantKey {
+  const priority = input.priority ?? null;
+  const urgency = getTaskUrgencyBand(input.dueDate, today);
+
+  if (urgency === null) {
+    if (priority === 'P1') return 'Q1';
+    if (priority === 'P2') return 'Q2';
+    if (priority === 'P3') return 'Q3';
+    return 'Q4';
+  }
+
+  const importance = getTaskImportanceBand(priority);
+  if (importance === 'high' && urgency === 'high') return 'Q1';
+  if (importance === 'high' && urgency === 'low') return 'Q2';
+  if (importance === 'low' && urgency === 'high') return 'Q3';
+  return 'Q4';
+}
+
+export function buildQuadrantDefaults(
+  quadrant: TaskQuadrantKey,
+  today: Date | string = new Date(),
+) {
+  const anchor = typeof today === 'string' ? today : formatDateOnly(today);
+  const lowUrgencyDate = formatDateOnly(addDays(toDateOnlyDate(anchor), 8));
+
+  if (quadrant === 'Q1') {
+    return { priority: 'P1' as TaskPriority, dueDate: anchor };
+  }
+
+  if (quadrant === 'Q2') {
+    return { priority: 'P2' as TaskPriority, dueDate: lowUrgencyDate };
+  }
+
+  if (quadrant === 'Q3') {
+    return { priority: 'P3' as TaskPriority, dueDate: anchor };
+  }
+
+  return { priority: null, dueDate: lowUrgencyDate };
 }
 
 function buildTaskListSourceId(listId: string): TaskSourceId {
@@ -310,8 +409,6 @@ function normalizeTaskState(input: TaskWriteInput) {
     listId: input.listId ?? null,
     dueDate: input.dueDate ?? null,
     completedAt: input.completedAt ?? null,
-    important: input.important ?? false,
-    urgent: input.urgent ?? false,
     priority,
     energy,
   };
@@ -351,8 +448,6 @@ export function buildTaskUpdatePatch(input: Partial<TaskWriteInput>) {
     listId?: string | null;
     dueDate?: string | null;
     completedAt?: Date | null;
-    important?: boolean;
-    urgent?: boolean;
     priority?: TaskPriority | null;
     energy?: TaskEnergy | null;
     updatedAt: Date;
@@ -368,8 +463,6 @@ export function buildTaskUpdatePatch(input: Partial<TaskWriteInput>) {
   if (input.completedAt !== undefined) {
     patch.completedAt = input.completedAt ?? null;
   }
-  if (input.important !== undefined) patch.important = input.important;
-  if (input.urgent !== undefined) patch.urgent = input.urgent;
   if (rawPriority !== undefined) patch.priority = rawPriority;
   if (rawEnergy !== undefined) patch.energy = rawEnergy;
 
@@ -383,7 +476,7 @@ export async function listQuadrantTasks(options?: { includeCompleted?: boolean }
 
   return db.query.tasks.findMany({
     where,
-    orderBy: [desc(schema.tasks.important), desc(schema.tasks.urgent), asc(schema.tasks.createdAt)],
+    orderBy: [asc(schema.tasks.dueDate), asc(schema.tasks.createdAt)],
     with: {
       keyResultLinks: {
         with: {
@@ -392,6 +485,95 @@ export async function listQuadrantTasks(options?: { includeCompleted?: boolean }
       },
     },
   });
+}
+
+function getQuadrantGroupListInfo(task: TaskWorkspaceTask & { list?: { id?: string; name?: string; icon?: string | null } | null }) {
+  if (task.list?.id && task.list?.name) {
+    return {
+      listId: task.list.id,
+      listName: task.list.name,
+      listIcon: task.list.icon ?? null,
+    };
+  }
+
+  return {
+    listId: task.listId ?? 'unassigned',
+    listName: '未分组',
+    listIcon: null,
+  };
+}
+
+function buildQuadrantGroups(tasks: Array<TaskWorkspaceTask & { list?: { id?: string; name?: string; icon?: string | null } | null }>) {
+  const groups = new Map<string, QuadrantListGroup>();
+
+  for (const task of tasks) {
+    const listInfo = getQuadrantGroupListInfo(task);
+    const existing = groups.get(listInfo.listId);
+    if (existing) {
+      existing.items.push(task);
+      continue;
+    }
+
+    groups.set(listInfo.listId, {
+      ...listInfo,
+      items: [task],
+    });
+  }
+
+  return Array.from(groups.values()).sort((a, b) => a.listName.localeCompare(b.listName, 'zh-CN'));
+}
+
+export async function listQuadrantBoard(options?: { includeCompleted?: boolean; today?: string }) {
+  const today = options?.today ?? formatDateOnly(new Date());
+  const items = await db.query.tasks.findMany({
+    orderBy: [asc(schema.tasks.dueDate), asc(schema.tasks.createdAt)],
+    with: {
+      list: true,
+      keyResultLinks: {
+        with: {
+          keyResult: true,
+        },
+      },
+    },
+  }) as Array<TaskWorkspaceTask & { list?: { id?: string; name?: string; icon?: string | null } | null }>;
+
+  const openByQuadrant = new Map<TaskQuadrantKey, Array<TaskWorkspaceTask & { list?: { id?: string; name?: string; icon?: string | null } | null }>>();
+  const completedByQuadrant = new Map<TaskQuadrantKey, Array<TaskWorkspaceTask & { list?: { id?: string; name?: string; icon?: string | null } | null }>>();
+
+  for (const quadrant of QUADRANT_KEYS) {
+    openByQuadrant.set(quadrant, []);
+    completedByQuadrant.set(quadrant, []);
+  }
+
+  for (const task of items) {
+    const quadrant = getTaskQuadrant(task, today);
+    if (isCompletedTask(task)) {
+      completedByQuadrant.get(quadrant)?.push(task);
+      continue;
+    }
+
+    openByQuadrant.get(quadrant)?.push(task);
+  }
+
+  const quadrants: QuadrantSection[] = QUADRANT_KEYS.map((quadrant) => {
+    const openItems = openByQuadrant.get(quadrant) ?? [];
+    const completedItems = completedByQuadrant.get(quadrant) ?? [];
+
+    return {
+      key: quadrant,
+      title: QUADRANT_TITLES[quadrant],
+      groups: buildQuadrantGroups(openItems),
+      completedGroups: options?.includeCompleted === false ? [] : buildQuadrantGroups(completedItems),
+      totalCount: openItems.length + completedItems.length,
+      openCount: openItems.length,
+      completedCount: completedItems.length,
+    };
+  });
+
+  return {
+    today,
+    quadrants,
+  };
 }
 
 export async function getTask(taskId: string) {
@@ -461,21 +643,18 @@ export async function completeTask(taskId: string) {
   });
 }
 
-export async function updateTaskQuadrant(
-  taskId: string,
-  input: { important: boolean; urgent: boolean },
-) {
-  const [task] = await db
-    .update(schema.tasks)
-    .set({
-      important: input.important,
-      urgent: input.urgent,
-      updatedAt: new Date(),
-    })
-    .where(eq(schema.tasks.id, taskId))
-    .returning();
+export async function moveTaskToQuadrant(taskId: string, quadrant: TaskQuadrantKey, today?: string) {
+  const defaults = buildQuadrantDefaults(quadrant, today ?? formatDateOnly(new Date()));
+  return updateTask(taskId, {
+    priority: defaults.priority,
+    dueDate: defaults.dueDate,
+  });
+}
 
-  return task ?? null;
+export async function moveTaskToQuadrantList(taskId: string, listId: string | null) {
+  return updateTask(taskId, {
+    listId,
+  });
 }
 
 export async function listTasksForKeyResult(keyResultId: string) {
@@ -553,7 +732,7 @@ export async function listOpenTodayDueTasks() {
       eq(schema.tasks.dueDate, today),
       ne(schema.tasks.status, 'done'),
     ),
-    orderBy: [desc(schema.tasks.important), desc(schema.tasks.urgent), asc(schema.tasks.createdAt)],
+    orderBy: [asc(schema.tasks.createdAt)],
   });
 }
 
@@ -603,7 +782,7 @@ export async function listTasksCompletedForKeyResults(keyResultIds: string[]) {
 export async function listTasksDueSoon(fromDate: string, toDate: string) {
   return db.query.tasks.findMany({
     where: and(isNotNull(schema.tasks.dueDate), ne(schema.tasks.status, 'done')),
-    orderBy: [asc(schema.tasks.dueDate), desc(schema.tasks.important)],
+    orderBy: [asc(schema.tasks.dueDate), asc(schema.tasks.createdAt)],
   }).then((items: Array<{ dueDate: string | null }>) =>
     items.filter((item: { dueDate: string | null }) => item.dueDate !== null && item.dueDate >= fromDate && item.dueDate <= toDate),
   );

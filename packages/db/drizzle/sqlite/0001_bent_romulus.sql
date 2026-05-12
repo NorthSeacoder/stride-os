@@ -114,8 +114,6 @@ CREATE TABLE `tasks` (
 	`scheduled_date` text,
 	`due_date` text,
 	`completed_at` integer,
-	`important` integer DEFAULT false NOT NULL,
-	`urgent` integer DEFAULT false NOT NULL,
 	`priority` text,
 	`energy` text,
 	`created_at` integer NOT NULL,
@@ -133,4 +131,3 @@ CREATE INDEX `idx_tasks_today_type` ON `tasks` (`today_type`);--> statement-brea
 CREATE INDEX `idx_tasks_scheduled_date` ON `tasks` (`scheduled_date`);--> statement-breakpoint
 CREATE INDEX `idx_tasks_due_date` ON `tasks` (`due_date`);--> statement-breakpoint
 CREATE INDEX `idx_tasks_priority` ON `tasks` (`priority`);--> statement-breakpoint
-CREATE INDEX `idx_tasks_importance_urgency` ON `tasks` (`important`,`urgent`);

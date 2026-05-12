@@ -1,11 +1,11 @@
 'use client';
 
-import { useEffect, useMemo, useState, useTransition } from 'react';
-import type { ButtonHTMLAttributes, CSSProperties, Ref } from 'react';
+import { Popover } from '@base-ui/react/popover';
+import { useRouter } from 'next/navigation';
+import { useActionState, useEffect, useMemo, useState, useTransition, type CSSProperties } from 'react';
 import {
   DndContext,
   DragOverlay,
-  KeyboardSensor,
   PointerSensor,
   closestCenter,
   useDraggable,
@@ -16,26 +16,42 @@ import {
   type DragStartEvent,
 } from '@dnd-kit/core';
 import {
-  Badge,
   Button,
+  DatePickerField,
   Empty,
+  ErrorAlert,
   FeedbackAlert,
-  PageIntro,
-  SectionHeader,
+  Modal,
   SelectField,
-  SurfacePanel,
+  TextareaField,
+  TextField,
 } from '@/components/ui';
-import { getTaskStatusLabel } from '@/lib/presentation/labels';
-import { updateTaskQuadrantAction } from './actions';
+import type { TaskActionState } from '@/app/(dashboard)/tasks/actions';
+import { createTaskAction, updateTaskAction } from '@/app/(dashboard)/tasks/actions';
+import { buildTaskFormData, getTaskFormValues, type TaskFormValues } from '@/app/(dashboard)/tasks/task-form-bridge';
+import {
+  moveTaskToQuadrantAction,
+  moveTaskToQuadrantListAction,
+  toggleQuadrantTaskCompletionAction,
+} from './actions';
+
+type QuadrantKey = 'Q1' | 'Q2' | 'Q3' | 'Q4';
 
 type TaskItem = {
   id: string;
   title: string;
   notes: string | null;
+  description?: string | null;
   status: string;
-  important: boolean;
-  urgent: boolean;
   dueDate: string | null;
+  priority?: string | null;
+  completedAt?: Date | string | null;
+  listId?: string | null;
+  list?: {
+    id?: string;
+    name?: string;
+    icon?: string | null;
+  } | null;
   keyResultLinks?: Array<{
     keyResult: {
       id: string;
@@ -44,469 +60,941 @@ type TaskItem = {
   }>;
 };
 
-type QuadrantKey = 'do' | 'decide' | 'delegate' | 'delete';
-
-function getQuadrant(task: TaskItem): QuadrantKey {
-  if (task.important && task.urgent) return 'do';
-  if (task.important) return 'decide';
-  if (task.urgent) return 'delegate';
-  return 'delete';
-}
-
-const quadrantMeta: Record<
-  QuadrantKey,
-  {
-    title: string;
-    subtitle: string;
-    important: boolean;
-    urgent: boolean;
-    detail: string;
-  }
-> = {
-  do: {
-    title: '重要且紧急',
-    subtitle: '立刻处理',
-    important: true,
-    urgent: true,
-    detail: '需要立即投入的事项，应保持最短响应路径。',
-  },
-  decide: {
-    title: '重要但不紧急',
-    subtitle: '安排并保护时间',
-    important: true,
-    urgent: false,
-    detail: '这类任务定义中长期进展，需要持续保护时间块。',
-  },
-  delegate: {
-    title: '紧急但不重要',
-    subtitle: '减少干扰',
-    important: false,
-    urgent: true,
-    detail: '这些任务会制造噪声，应快速清理、缩短暴露时间。',
-  },
-  delete: {
-    title: '不重要也不紧急',
-    subtitle: '质疑它是否值得存在',
-    important: false,
-    urgent: false,
-    detail: '默认应削减或删除，避免系统被低价值项侵占。',
-  },
+type QuadrantGroup = {
+  listId: string;
+  listName: string;
+  listIcon: string | null;
+  items: TaskItem[];
 };
 
-export function QuadrantsClient({ tasks }: { tasks: TaskItem[] }) {
-  const [items, setItems] = useState(tasks);
-  const [activeTask, setActiveTask] = useState<TaskItem | null>(null);
-  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(tasks[0]?.id ?? null);
-  const [error, setError] = useState('');
-  const [, startTransition] = useTransition();
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
-    useSensor(KeyboardSensor),
-  );
+type QuadrantSection = {
+  key: QuadrantKey;
+  title: string;
+  groups: QuadrantGroup[];
+  completedGroups: QuadrantGroup[];
+  totalCount: number;
+  openCount: number;
+  completedCount: number;
+};
 
-  useEffect(() => {
-    setItems(tasks);
-    setSelectedTaskId((current) => {
-      if (!tasks.length) return null;
-      if (current && tasks.some((task) => task.id === current)) return current;
-      return tasks[0]?.id ?? null;
-    });
-  }, [tasks]);
+type QuadrantBoard = {
+  today: string;
+  quadrants: QuadrantSection[];
+};
 
-  const grouped = useMemo(
-    () => ({
-      do: items.filter((task) => getQuadrant(task) === 'do'),
-      decide: items.filter((task) => getQuadrant(task) === 'decide'),
-      delegate: items.filter((task) => getQuadrant(task) === 'delegate'),
-      delete: items.filter((task) => getQuadrant(task) === 'delete'),
-    }),
-    [items],
-  );
+type TaskListOption = {
+  id: string;
+  name: string;
+  icon: string | null;
+};
 
-  const selectedTask =
-    items.find((task) => task.id === activeTask?.id) ??
-    items.find((task) => task.id === selectedTaskId) ??
-    activeTask ??
-    null;
+type TaskModalState =
+  | { mode: 'create'; quadrant: QuadrantKey }
+  | { mode: 'edit'; task: TaskItem }
+  | null;
 
-  function moveTask(taskId: string, target: QuadrantKey) {
-    const meta = quadrantMeta[target];
-    setItems((current) =>
-      current.map((task) =>
-        task.id === taskId
-          ? {
-              ...task,
-              important: meta.important,
-              urgent: meta.urgent,
-            }
-          : task,
-      ),
-    );
+const initialActionState: TaskActionState = { error: '' };
+
+const QUADRANT_ORDER: QuadrantKey[] = ['Q1', 'Q2', 'Q3', 'Q4'];
+const QUADRANT_LAYOUT: QuadrantKey[] = ['Q1', 'Q2', 'Q3', 'Q4'];
+const QUADRANT_ACCENTS: Record<QuadrantKey, string> = {
+  Q1: 'text-rose-300',
+  Q2: 'text-amber-300',
+  Q3: 'text-sky-300',
+  Q4: 'text-emerald-300',
+};
+const PRIORITY_OPTIONS = [
+  { value: '', label: '无优先级' },
+  { value: 'P1', label: 'P1' },
+  { value: 'P2', label: 'P2' },
+  { value: 'P3', label: 'P3' },
+];
+
+function formatDateOnly(date: Date) {
+  return date.toISOString().slice(0, 10);
+}
+
+function addDays(base: Date | string, days: number) {
+  const source = typeof base === 'string' ? parseDateOnly(base) : new Date(base);
+  const next = new Date(source);
+  next.setDate(next.getDate() + days);
+  return next;
+}
+
+function parseDateOnly(value: string) {
+  const [year, month, day] = value.split('-').map(Number);
+  return new Date(year, (month || 1) - 1, day || 1, 12, 0, 0, 0);
+}
+
+function getCalendarDayDelta(dueDate: string | null | undefined, today: string) {
+  if (!dueDate) return null;
+  const due = parseDateOnly(dueDate);
+  const current = parseDateOnly(today);
+  return Math.round((due.getTime() - current.getTime()) / (24 * 60 * 60 * 1000));
+}
+
+function getTaskQuadrant(task: Pick<TaskItem, 'priority' | 'dueDate'>, today: string): QuadrantKey {
+  if (!task.dueDate) {
+    if (task.priority === 'P1') return 'Q1';
+    if (task.priority === 'P2') return 'Q2';
+    if (task.priority === 'P3') return 'Q3';
+    return 'Q4';
   }
 
-  function persistMove(task: TaskItem, target: QuadrantKey) {
-    const previous = getQuadrant(task);
-    if (previous === target) return;
+  const delta = getCalendarDayDelta(task.dueDate, today);
+  const urgency = delta !== null && delta <= 7 ? 'high' : 'low';
+  const importance = task.priority === 'P1' || task.priority === 'P2' ? 'high' : 'low';
 
-    const meta = quadrantMeta[target];
-    setError('');
-    moveTask(task.id, target);
-    setSelectedTaskId(task.id);
+  if (importance === 'high' && urgency === 'high') return 'Q1';
+  if (importance === 'high' && urgency === 'low') return 'Q2';
+  if (importance === 'low' && urgency === 'high') return 'Q3';
+  return 'Q4';
+}
 
-    startTransition(async () => {
-      const result = await updateTaskQuadrantAction(task.id, {
-        important: meta.important,
-        urgent: meta.urgent,
-      });
-      if (result?.error) {
-        moveTask(task.id, previous);
-        setError(result.error);
+function getQuadrantDefaults(quadrant: QuadrantKey, today: string) {
+  const lowUrgencyDate = formatDateOnly(addDays(today, 8));
+  if (quadrant === 'Q1') return { priority: 'P1', dueDate: today };
+  if (quadrant === 'Q2') return { priority: 'P2', dueDate: lowUrgencyDate };
+  if (quadrant === 'Q3') return { priority: 'P3', dueDate: today };
+  return { priority: '', dueDate: lowUrgencyDate };
+}
+
+function isCompleted(task: Pick<TaskItem, 'completedAt' | 'status'>) {
+  return Boolean(task.completedAt) || task.status === 'done';
+}
+
+function getTaskListInfo(task: TaskItem) {
+  if (task.list?.id && task.list?.name) {
+    return {
+      listId: task.list.id,
+      listName: task.list.name,
+      listIcon: task.list.icon ?? null,
+    };
+  }
+
+  return {
+    listId: task.listId ?? 'unassigned',
+    listName: '未分组',
+    listIcon: null,
+  };
+}
+
+function extractItems(board: QuadrantBoard) {
+  const seen = new Set<string>();
+  const items: TaskItem[] = [];
+
+  for (const quadrant of board.quadrants) {
+    for (const group of [...quadrant.groups, ...quadrant.completedGroups]) {
+      for (const item of group.items) {
+        if (seen.has(item.id)) continue;
+        seen.add(item.id);
+        items.push(item);
       }
-    });
-  }
-
-  function handleDragStart(event: DragStartEvent) {
-    const task = items.find((item) => item.id === event.active.id);
-    setActiveTask(task ?? null);
-    if (task) {
-      setSelectedTaskId(task.id);
     }
   }
 
-  function handleDragEnd(event: DragEndEvent) {
-    const task = items.find((item) => item.id === event.active.id);
-    const target = event.over?.id;
-    setActiveTask(null);
+  return items;
+}
 
-    if (!task || !isQuadrantKey(target)) return;
-    persistMove(task, target);
+function buildGroups(items: TaskItem[]) {
+  const groups = new Map<string, QuadrantGroup>();
+
+  for (const item of items) {
+    const listInfo = getTaskListInfo(item);
+    const current = groups.get(listInfo.listId);
+    if (current) {
+      current.items.push(item);
+      continue;
+    }
+
+    groups.set(listInfo.listId, {
+      ...listInfo,
+      items: [item],
+    });
+  }
+
+  return Array.from(groups.values()).sort((a, b) => a.listName.localeCompare(b.listName, 'zh-CN'));
+}
+
+function buildQuadrantSections(
+  items: TaskItem[],
+  lists: TaskListOption[],
+  today: string,
+  showCompleted: boolean,
+  activeTask: TaskItem | null,
+) {
+  const quadrantMap = new Map<QuadrantKey, { open: TaskItem[]; completed: TaskItem[] }>();
+  for (const quadrant of QUADRANT_ORDER) {
+    quadrantMap.set(quadrant, { open: [], completed: [] });
+  }
+
+  for (const item of items) {
+    const quadrant = getTaskQuadrant(item, today);
+    const bucket = quadrantMap.get(quadrant);
+    if (!bucket) continue;
+    if (isCompleted(item)) {
+      bucket.completed.push(item);
+    } else {
+      bucket.open.push(item);
+    }
+  }
+
+  return QUADRANT_ORDER.map((quadrant) => {
+    const bucket = quadrantMap.get(quadrant)!;
+    let groups = buildGroups(bucket.open);
+
+    if (activeTask && getTaskQuadrant(activeTask, today) === quadrant) {
+      const existingIds = new Set(groups.map((group) => group.listId));
+      const extraGroups = lists
+        .filter((list) => !existingIds.has(list.id))
+        .map((list) => ({
+          listId: list.id,
+          listName: list.name,
+          listIcon: list.icon,
+          items: [],
+        }));
+      groups = [...groups, ...extraGroups];
+    }
+
+    return {
+      key: quadrant,
+      title: boardTitle(quadrant),
+      groups,
+      completedGroups: showCompleted ? buildGroups(bucket.completed) : [],
+      totalCount: bucket.open.length + bucket.completed.length,
+      openCount: bucket.open.length,
+      completedCount: bucket.completed.length,
+    };
+  });
+}
+
+function boardTitle(quadrant: QuadrantKey) {
+  if (quadrant === 'Q1') return '重要且紧急';
+  if (quadrant === 'Q2') return '重要不紧急';
+  if (quadrant === 'Q3') return '不重要但紧急';
+  return '不重要不紧急';
+}
+
+function formatTaskDateLabel(dueDate: string | null, today: string) {
+  if (!dueDate) return '无日期';
+  const delta = getCalendarDayDelta(dueDate, today);
+  if (delta === 0) return '今天';
+  if (delta === 1) return '明天';
+  if (delta === -1) return '昨天';
+  if (delta !== null && delta < 0) return `逾期 ${Math.abs(delta)} 天`;
+  return dueDate;
+}
+
+function getListName(listId: string | null | undefined, lists: TaskListOption[]) {
+  if (!listId) return '';
+  return lists.find((list) => list.id === listId)?.name ?? '';
+}
+
+function isQuadrantDropId(value: string | undefined): value is `quadrant:${QuadrantKey}` {
+  return Boolean(value && value.startsWith('quadrant:'));
+}
+
+function isListDropId(value: string | undefined): value is `list:${QuadrantKey}:${string}` {
+  return Boolean(value && value.startsWith('list:'));
+}
+
+function parseQuadrantDropId(value: `quadrant:${QuadrantKey}`) {
+  return value.replace('quadrant:', '') as QuadrantKey;
+}
+
+function parseListDropId(value: `list:${QuadrantKey}:${string}`) {
+  const [, quadrant, ...rest] = value.split(':');
+  return {
+    quadrant: quadrant as QuadrantKey,
+    listId: rest.join(':'),
+  };
+}
+
+function normalizeDropListId(listId: string) {
+  return listId === 'unassigned' ? null : listId;
+}
+
+export function QuadrantsClient({
+  board,
+  lists,
+}: {
+  board: QuadrantBoard;
+  lists: TaskListOption[];
+}) {
+  const router = useRouter();
+  const [items, setItems] = useState<TaskItem[]>(() => extractItems(board));
+  const [showCompleted, setShowCompleted] = useState(false);
+  const [error, setError] = useState('');
+  const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
+  const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
+  const [taskModal, setTaskModal] = useState<TaskModalState>(null);
+  const [hasSubmittedCreate, setHasSubmittedCreate] = useState(false);
+  const [hasSubmittedUpdate, setHasSubmittedUpdate] = useState(false);
+  const [createState, createAction, createPending] = useActionState(createTaskAction, initialActionState);
+  const [updateState, updateAction, updatePending] = useActionState(updateTaskAction, initialActionState);
+  const [, startTransition] = useTransition();
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
+
+  useEffect(() => {
+    setItems(extractItems(board));
+  }, [board]);
+
+  useEffect(() => {
+    if (hasSubmittedCreate && !createPending && !createState.error) {
+      setTaskModal(null);
+      setHasSubmittedCreate(false);
+      router.refresh();
+    }
+  }, [createPending, createState.error, hasSubmittedCreate, router]);
+
+  useEffect(() => {
+    if (hasSubmittedUpdate && !updatePending && !updateState.error) {
+      setTaskModal(null);
+      setHasSubmittedUpdate(false);
+      router.refresh();
+    }
+  }, [hasSubmittedUpdate, router, updatePending, updateState.error]);
+
+  const activeTask = items.find((item) => item.id === activeTaskId) ?? null;
+  const sections = useMemo(
+    () => buildQuadrantSections(items, lists, board.today, showCompleted, activeTask),
+    [activeTask, board.today, items, lists, showCompleted],
+  );
+
+  function toggleGroup(key: string) {
+    setCollapsedGroups((current) => ({
+      ...current,
+      [key]: !current[key],
+    }));
+  }
+
+  function updateItem(taskId: string, updater: (task: TaskItem) => TaskItem) {
+    setItems((current) => current.map((task) => (task.id === taskId ? updater(task) : task)));
+  }
+
+  function handleDragStart(event: DragStartEvent) {
+    setActiveTaskId(String(event.active.id));
+  }
+
+  function handleDragEnd(event: DragEndEvent) {
+    const draggedTask = items.find((item) => item.id === String(event.active.id));
+    const targetId = event.over?.id ? String(event.over.id) : undefined;
+    setActiveTaskId(null);
+
+    if (!draggedTask || !targetId) {
+      return;
+    }
+
+    const currentQuadrant = getTaskQuadrant(draggedTask, board.today);
+    setError('');
+
+    if (isListDropId(targetId)) {
+      const { quadrant, listId } = parseListDropId(targetId);
+      const normalizedListId = normalizeDropListId(listId);
+      if (quadrant === currentQuadrant && normalizedListId !== (draggedTask.listId ?? null)) {
+        const previousListId = draggedTask.listId ?? null;
+        updateItem(draggedTask.id, (task) => ({
+          ...task,
+          listId: normalizedListId,
+          list: normalizedListId
+            ? {
+                id: normalizedListId,
+                name: getListName(normalizedListId, lists),
+                icon: lists.find((list) => list.id === normalizedListId)?.icon ?? null,
+              }
+            : null,
+        }));
+
+        startTransition(async () => {
+          const result = await moveTaskToQuadrantListAction(draggedTask.id, normalizedListId);
+          if (result.error) {
+            updateItem(draggedTask.id, (task) => ({
+              ...task,
+              listId: previousListId,
+              list: previousListId ? { id: previousListId, name: getListName(previousListId, lists), icon: lists.find((list) => list.id === previousListId)?.icon ?? null } : null,
+            }));
+            setError(result.error);
+          }
+        });
+        return;
+      }
+
+      if (quadrant !== currentQuadrant) {
+        const previous = { priority: draggedTask.priority ?? '', dueDate: draggedTask.dueDate ?? '' };
+        const defaults = getQuadrantDefaults(quadrant, board.today);
+        updateItem(draggedTask.id, (task) => ({
+          ...task,
+          priority: defaults.priority || null,
+          dueDate: defaults.dueDate,
+        }));
+
+        startTransition(async () => {
+          const result = await moveTaskToQuadrantAction(draggedTask.id, quadrant);
+          if (result.error) {
+            updateItem(draggedTask.id, (task) => ({
+              ...task,
+              priority: previous.priority || null,
+              dueDate: previous.dueDate || null,
+            }));
+            setError(result.error);
+          }
+        });
+      }
+
+      return;
+    }
+
+    if (isQuadrantDropId(targetId)) {
+      const quadrant = parseQuadrantDropId(targetId);
+      if (quadrant === currentQuadrant) {
+        return;
+      }
+
+      const previous = { priority: draggedTask.priority ?? '', dueDate: draggedTask.dueDate ?? '' };
+      const defaults = getQuadrantDefaults(quadrant, board.today);
+      updateItem(draggedTask.id, (task) => ({
+        ...task,
+        priority: defaults.priority || null,
+        dueDate: defaults.dueDate,
+      }));
+
+      startTransition(async () => {
+        const result = await moveTaskToQuadrantAction(draggedTask.id, quadrant);
+        if (result.error) {
+          updateItem(draggedTask.id, (task) => ({
+            ...task,
+            priority: previous.priority || null,
+            dueDate: previous.dueDate || null,
+          }));
+          setError(result.error);
+        }
+      });
+    }
   }
 
   return (
-    <div className="space-y-6">
-      <PageIntro
-        eyebrow="优先级视图"
-        title="四象限"
-        description="这是任务的四象限投影。切换象限只会更新 important 和 urgent，不会改变任务流程状态。"
-      />
+    <div className="flex h-full min-h-0 flex-1 flex-col gap-2">
+      <div className="flex items-center justify-between gap-3">
+        <h1 className="text-xl font-semibold tracking-[-0.02em] text-(--text-primary)">四象限</h1>
+        <Popover.Root>
+          <Popover.Trigger
+            render={
+              <Button type="button" variant="ghost" size="sm" className="h-8 min-h-8 rounded-[6px] px-2.5 text-sm">
+                ...
+              </Button>
+            }
+          />
+          <Popover.Portal>
+            <Popover.Positioner className="z-50">
+              <Popover.Popup className="metal-frame rounded-[10px] border border-(--border-hairline) bg-(--bg-surface-2) p-3 shadow-xl">
+                <label className="flex cursor-pointer items-center gap-3 text-sm text-(--text-secondary)">
+                  <input
+                    type="checkbox"
+                    checked={showCompleted}
+                    onChange={(event) => setShowCompleted(event.target.checked)}
+                  />
+                  <span>显示已完成</span>
+                </label>
+              </Popover.Popup>
+            </Popover.Positioner>
+          </Popover.Portal>
+        </Popover.Root>
+      </div>
 
       {error && <FeedbackAlert tone="error" message={error} />}
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.5fr)_360px]">
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragStart={handleDragStart}
-          onDragEnd={handleDragEnd}
-          onDragCancel={() => setActiveTask(null)}
-        >
-          <SurfacePanel emphasis="strong" className="metal-frame instrument-surface p-4 md:p-5">
-            <SectionHeader
-              eyebrow="Planning Board"
-              title="象限工作盘"
-              description="中央区域是优先级主舞台，右侧详情区用于查看当前任务上下文。"
-            />
-            <div className="mt-5 grid gap-4 lg:grid-cols-2">
-              {(Object.keys(quadrantMeta) as QuadrantKey[]).map((key) => (
-                <QuadrantColumn
-                  key={key}
-                  quadrantKey={key}
-                  tasks={grouped[key]}
-                  selectedTaskId={selectedTaskId}
-                  onMove={persistMove}
-                  onSelectTask={setSelectedTaskId}
-                />
-              ))}
-            </div>
-          </SurfacePanel>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+        onDragCancel={() => setActiveTaskId(null)}
+      >
+        <div className="grid min-h-0 flex-1 auto-rows-fr gap-2 lg:grid-cols-2 lg:grid-rows-2">
+          {QUADRANT_LAYOUT.map((quadrant) => {
+            const section = sections.find((item) => item.key === quadrant)!;
+            return (
+              <QuadrantCell
+                key={quadrant}
+                section={section}
+                today={board.today}
+                activeTask={activeTask}
+                collapsedGroups={collapsedGroups}
+                showCompleted={showCompleted}
+                onToggleGroup={toggleGroup}
+                onToggleCompletion={(task, completed) => {
+                  const previousCompletedAt = task.completedAt ?? null;
+                  updateItem(task.id, (current) => ({
+                    ...current,
+                    status: completed ? 'done' : 'inbox',
+                    completedAt: completed ? new Date().toISOString() : null,
+                  }));
 
-          <DragOverlay>
-            {activeTask && <TaskCard task={activeTask} currentQuadrant={getQuadrant(activeTask)} dragging />}
-          </DragOverlay>
-        </DndContext>
+                  startTransition(async () => {
+                    const result = await toggleQuadrantTaskCompletionAction(task.id, completed);
+                    if (result.error) {
+                      updateItem(task.id, (current) => ({
+                        ...current,
+                        status: previousCompletedAt ? 'done' : 'inbox',
+                        completedAt: previousCompletedAt,
+                      }));
+                      setError(result.error);
+                    }
+                  });
+                }}
+                onCreate={() => setTaskModal({ mode: 'create', quadrant })}
+                onEdit={(task) => setTaskModal({ mode: 'edit', task })}
+              />
+            );
+          })}
+        </div>
 
-        <SurfacePanel className="metal-frame instrument-surface p-5 md:p-6">
-          <SectionHeader
-            eyebrow="Task Inspector"
-            title={selectedTask ? '当前任务详情' : '等待选择任务'}
-            description={selectedTask ? '点击任务或拖拽中的任务会在这里显示摘要。' : '从左侧象限盘中选择一个任务查看细节。'}
-          />
+        <DragOverlay>
+          {activeTask ? <TaskRow task={activeTask} today={board.today} dragging /> : null}
+        </DragOverlay>
+      </DndContext>
 
-          {selectedTask ? (
-            <TaskDetailPanel task={selectedTask} />
-          ) : (
-            <div className="mt-5">
-              <Empty text="四个象限里还没有任务，或者尚未选择要查看的任务。" />
-            </div>
-          )}
-
-          <div className="mt-6 rounded-[var(--radius-panel)] border border-(--border-hairline) bg-[color:rgba(255,255,255,0.03)] p-4">
-            <p className="text-[11px] uppercase tracking-[0.22em] text-(--text-muted)">象限规则</p>
-            <div className="mt-4 space-y-3">
-              {(Object.entries(quadrantMeta) as Array<[QuadrantKey, (typeof quadrantMeta)[QuadrantKey]]>).map(([key, meta]) => (
-                <div key={key} className="rounded-[var(--radius-compact)] border border-(--border-hairline) bg-[color:rgba(255,255,255,0.02)] p-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="text-sm font-medium text-(--text-primary)">{meta.title}</p>
-                    <Badge>{meta.subtitle}</Badge>
-                  </div>
-                  <p className="mt-2 text-sm text-(--text-secondary)">{meta.detail}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </SurfacePanel>
-      </div>
+      <QuadrantTaskModal
+        lists={lists}
+        today={board.today}
+        state={taskModal}
+        createState={createState}
+        updateState={updateState}
+        createPending={createPending}
+        updatePending={updatePending}
+        onClose={() => {
+          setTaskModal(null);
+          setHasSubmittedCreate(false);
+          setHasSubmittedUpdate(false);
+        }}
+        onCreateSubmit={(values) => {
+          setHasSubmittedCreate(true);
+          startTransition(() => {
+            createAction(buildTaskFormData(values));
+          });
+        }}
+        onUpdateSubmit={(values) => {
+          setHasSubmittedUpdate(true);
+          startTransition(() => {
+            updateAction(buildTaskFormData(values));
+          });
+        }}
+      />
     </div>
   );
 }
 
-function isQuadrantKey(value: unknown): value is QuadrantKey {
-  return value === 'do' || value === 'decide' || value === 'delegate' || value === 'delete';
-}
-
-function QuadrantColumn({
-  quadrantKey,
-  tasks,
-  selectedTaskId,
-  onMove,
-  onSelectTask,
+function QuadrantCell({
+  section,
+  today,
+  activeTask,
+  collapsedGroups,
+  showCompleted,
+  onToggleGroup,
+  onToggleCompletion,
+  onCreate,
+  onEdit,
 }: {
-  quadrantKey: QuadrantKey;
-  tasks: TaskItem[];
-  selectedTaskId: string | null;
-  onMove: (task: TaskItem, target: QuadrantKey) => void;
-  onSelectTask: (taskId: string) => void;
+  section: QuadrantSection;
+  today: string;
+  activeTask: TaskItem | null;
+  collapsedGroups: Record<string, boolean>;
+  showCompleted: boolean;
+  onToggleGroup: (key: string) => void;
+  onToggleCompletion: (task: TaskItem, completed: boolean) => void;
+  onCreate: () => void;
+  onEdit: (task: TaskItem) => void;
 }) {
-  const { isOver, setNodeRef } = useDroppable({ id: quadrantKey });
-  const meta = quadrantMeta[quadrantKey];
+  const { isOver, setNodeRef } = useDroppable({ id: `quadrant:${section.key}` });
+  const showGroupDropTargets = activeTask ? getTaskQuadrant(activeTask, today) === section.key : false;
 
   return (
     <section
       ref={setNodeRef}
-        className={`metal-frame min-h-72 rounded-[18px] border p-5 transition-colors ${
-        isOver
-          ? 'border-(--border-glow) bg-[color:rgba(180,204,255,0.07)]'
-          : 'border-(--border-hairline) instrument-surface'
+      className={`min-h-0 h-full rounded-[10px] border bg-[linear-gradient(180deg,rgba(255,255,255,0.045),rgba(255,255,255,0.02))] shadow-[0_14px_40px_rgba(3,8,18,0.12)] ${
+        isOver ? 'border-(--border-glow) bg-[linear-gradient(180deg,rgba(180,204,255,0.12),rgba(180,204,255,0.05))]' : 'border-(--border-hairline)'
       }`}
     >
-      <div className="mb-4">
-        <p className="text-[11px] uppercase tracking-[0.22em] text-(--text-muted)">{meta.subtitle}</p>
-        <h2 className="mt-2 text-xl font-semibold tracking-[-0.02em] text-(--text-primary)">{meta.title}</h2>
-      </div>
-      {tasks.length === 0 ? (
-        <Empty text="这个象限里还没有任务。" />
-      ) : (
-        <div className="space-y-3">
-          {tasks.map((task) => (
-            <DraggableTaskCard
-              key={task.id}
-              task={task}
-              currentQuadrant={quadrantKey}
-              selected={selectedTaskId === task.id}
-              onMove={onMove}
-              onSelectTask={onSelectTask}
-            />
-          ))}
+      <div className="flex h-full min-h-0 flex-col">
+        <div className="flex items-center justify-between gap-2 border-b app-shell-divider px-3 py-2">
+          <div className="flex items-center gap-3">
+            <span className={`text-[11px] font-semibold tracking-[0.16em] ${QUADRANT_ACCENTS[section.key]}`}>{romanLabel(section.key)}</span>
+            <div>
+              <h2 className={`text-[14px] font-semibold tracking-[-0.02em] ${QUADRANT_ACCENTS[section.key]}`}>{section.title}</h2>
+            </div>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs text-(--text-muted)">{section.openCount}</span>
+            <Button type="button" variant="ghost" size="sm" className="h-8 min-h-8 rounded-[6px] px-2 text-sm" onClick={onCreate}>
+              ＋
+            </Button>
+          </div>
         </div>
-      )}
+
+        <div className="min-h-0 flex-1 overflow-y-auto px-2.5 py-2.5">
+          {section.openCount === 0 && (!showCompleted || section.completedCount === 0) ? (
+            <div className="flex h-full min-h-[180px] items-center justify-center">
+              <Empty text="没有任务" />
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {section.groups
+                .filter((group) => showGroupDropTargets || group.items.length > 0)
+                .map((group) => (
+                  <ListGroup
+                    key={`open:${section.key}:${group.listId}`}
+                    group={group}
+                    dropId={`list:${section.key}:${group.listId}`}
+                    today={today}
+                    collapsed={Boolean(collapsedGroups[`open:${section.key}:${group.listId}`])}
+                    onToggle={() => onToggleGroup(`open:${section.key}:${group.listId}`)}
+                    onToggleCompletion={onToggleCompletion}
+                    onEdit={onEdit}
+                    showEmptyDropZone={showGroupDropTargets && group.items.length === 0}
+                  />
+                ))}
+
+              {showCompleted && section.completedGroups.length > 0 ? (
+                <div className="space-y-2 border-t app-shell-divider pt-2.5">
+                  <p className="text-xs uppercase tracking-[0.18em] text-(--text-muted)">已完成</p>
+                  {section.completedGroups.map((group) => (
+                    <ListGroup
+                      key={`done:${section.key}:${group.listId}`}
+                      group={group}
+                      dropId={`completed:${section.key}:${group.listId}`}
+                      today={today}
+                      collapsed={Boolean(collapsedGroups[`done:${section.key}:${group.listId}`])}
+                      onToggle={() => onToggleGroup(`done:${section.key}:${group.listId}`)}
+                      onToggleCompletion={onToggleCompletion}
+                      onEdit={onEdit}
+                      droppable={false}
+                    />
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          )}
+        </div>
+      </div>
     </section>
   );
 }
 
-function DraggableTaskCard({
-  task,
-  currentQuadrant,
-  selected,
-  onMove,
-  onSelectTask,
+function ListGroup({
+  group,
+  dropId,
+  today,
+  collapsed,
+  onToggle,
+  onToggleCompletion,
+  onEdit,
+  showEmptyDropZone = false,
+  droppable = true,
 }: {
-  task: TaskItem;
-  currentQuadrant: QuadrantKey;
-  selected: boolean;
-  onMove: (task: TaskItem, target: QuadrantKey) => void;
-  onSelectTask: (taskId: string) => void;
+  group: QuadrantGroup;
+  dropId: string;
+  today: string;
+  collapsed: boolean;
+  onToggle: () => void;
+  onToggleCompletion: (task: TaskItem, completed: boolean) => void;
+  onEdit: (task: TaskItem) => void;
+  showEmptyDropZone?: boolean;
+  droppable?: boolean;
 }) {
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: task.id });
-  const style = transform
-    ? {
-        transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
-      }
-    : undefined;
+  const { isOver, setNodeRef } = useDroppable({ id: dropId, disabled: droppable === false });
 
   return (
-    <TaskCard
+    <div
       ref={setNodeRef}
-      task={task}
-      currentQuadrant={currentQuadrant}
-      selected={selected}
-      onMove={onMove}
-      onSelectTask={onSelectTask}
-      dragging={isDragging}
-      dragAttributes={attributes}
-      dragListeners={listeners}
-      style={style}
-    />
+      className={droppable !== false && isOver ? 'rounded-[6px] bg-[color:rgba(180,204,255,0.06)]' : 'rounded-[6px]'}
+    >
+      <button
+        type="button"
+        onClick={onToggle}
+        className="flex w-full items-center justify-between gap-3 px-1 py-1.5 text-left"
+      >
+        <span className="flex items-center gap-2 text-[13px] font-medium text-(--text-primary)">
+          <span className="text-(--text-muted)">{collapsed ? '▸' : '▾'}</span>
+          <span>{group.listIcon ? `${group.listIcon} ` : ''}{group.listName}</span>
+          <span className="text-(--text-muted)">{group.items.length}</span>
+        </span>
+      </button>
+
+      {!collapsed ? (
+        group.items.length > 0 ? (
+          <div className="space-y-1 px-0 pb-1">
+            {group.items.map((task) => (
+              <DraggableTaskRow
+                key={task.id}
+                task={task}
+                today={today}
+                onToggleCompletion={onToggleCompletion}
+                onEdit={onEdit}
+              />
+            ))}
+          </div>
+        ) : showEmptyDropZone ? (
+          <div className="px-1 pb-2">
+            <div className="rounded-[6px] border border-dashed border-(--border-hairline) px-3 py-4 text-center text-sm text-(--text-muted)">
+              拖到这里以移动到该清单
+            </div>
+          </div>
+        ) : null
+      ) : null}
+    </div>
   );
 }
 
-function TaskCard({
+function DraggableTaskRow({
   task,
-  currentQuadrant,
-  selected = false,
-  onMove,
-  onSelectTask,
+  today,
+  onToggleCompletion,
+  onEdit,
+}: {
+  task: TaskItem;
+  today: string;
+  onToggleCompletion: (task: TaskItem, completed: boolean) => void;
+  onEdit: (task: TaskItem) => void;
+}) {
+  const [dragReady, setDragReady] = useState(false);
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: task.id });
+  const style = transform
+    ? ({ transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` } as CSSProperties)
+    : undefined;
+
+  useEffect(() => {
+    setDragReady(true);
+  }, []);
+
+  return (
+    <div ref={setNodeRef}>
+      <TaskRow
+        task={task}
+        today={today}
+        dragging={isDragging}
+        dragAttributes={dragReady ? attributes : undefined}
+        dragListeners={dragReady ? listeners : undefined}
+        style={dragReady ? style : undefined}
+        onToggleCompletion={onToggleCompletion}
+        onEdit={onEdit}
+      />
+    </div>
+  );
+}
+
+function TaskRow({
+  task,
+  today,
   dragging = false,
   dragAttributes,
   dragListeners,
   style,
-  ref,
+  onToggleCompletion,
+  onEdit,
 }: {
   task: TaskItem;
-  currentQuadrant: QuadrantKey;
-  selected?: boolean;
-  onMove?: (task: TaskItem, target: QuadrantKey) => void;
-  onSelectTask?: (taskId: string) => void;
+  today: string;
   dragging?: boolean;
-  dragAttributes?: ButtonHTMLAttributes<HTMLButtonElement>;
-  dragListeners?: ButtonHTMLAttributes<HTMLButtonElement>;
+  dragAttributes?: object;
+  dragListeners?: object;
   style?: CSSProperties;
-  ref?: Ref<HTMLElement>;
+  onToggleCompletion?: (task: TaskItem, completed: boolean) => void;
+  onEdit?: (task: TaskItem) => void;
 }) {
-  const quadrantOptions = (Object.entries(quadrantMeta) as Array<[QuadrantKey, (typeof quadrantMeta)[QuadrantKey]]>).map(
-    ([key, meta]) => ({
-      value: key,
-      label: meta.title,
-    }),
-  );
+  const completed = isCompleted(task);
+  const delta = getCalendarDayDelta(task.dueDate, today);
 
   return (
     <article
-      ref={ref}
       style={style}
-      className={`metal-frame rounded-[14px] border p-4 transition-[opacity,border-color,background-color] ${
-        selected
-          ? 'border-(--border-glow) bg-[color:rgba(180,204,255,0.08)]'
-          : 'border-(--border-hairline) bg-[color:rgba(255,255,255,0.04)]'
-      } ${dragging ? 'opacity-70' : ''}`}
+      {...dragAttributes}
+      {...dragListeners}
+      className={`rounded-[6px] border px-3 py-2.5 transition ${
+        dragging
+          ? 'border-(--border-glow) bg-[color:rgba(180,204,255,0.08)] opacity-80 shadow-lg'
+          : 'border-transparent hover:border-(--border-hairline) hover:bg-[color:rgba(255,255,255,0.03)]'
+      }`}
     >
-      <div className="flex flex-col gap-4">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                className="cursor-grab px-2 py-1 text-xs active:cursor-grabbing"
-                {...dragAttributes}
-                {...dragListeners}
-              >
-                拖动
-              </Button>
-              <Badge>{getTaskStatusLabel(task.status)}</Badge>
-              {task.dueDate && <span className="text-xs text-(--text-muted)">截止 {task.dueDate}</span>}
-            </div>
-            <button
-              type="button"
-              onClick={() => onSelectTask?.(task.id)}
-              className="mt-3 block text-left"
-            >
-              <p className="text-base font-medium text-(--text-primary)">{task.title}</p>
-            </button>
-            {task.notes && <p className="mt-2 line-clamp-3 text-sm text-(--text-secondary)">{task.notes}</p>}
-          </div>
+      <div className="flex items-start gap-3">
+        <button
+          type="button"
+          aria-label={completed ? '标记为未完成' : '标记为已完成'}
+          onClick={(event) => {
+            event.stopPropagation();
+            onToggleCompletion?.(task, !completed);
+          }}
+          className={`mt-0.5 flex h-4.5 w-4.5 shrink-0 items-center justify-center rounded-[3px] border text-[9px] ${
+            completed
+              ? 'border-(--border-glow) bg-[color:rgba(180,204,255,0.14)] text-(--text-primary)'
+              : 'border-(--border-hairline) text-transparent'
+          }`}
+        >
+          ✓
+        </button>
 
-          {onMove && (
-            <form
-              action={(formData: FormData) => {
-                const nextQuadrant = String(formData.get('quadrant') ?? '');
-                if (isQuadrantKey(nextQuadrant)) {
-                  onMove(task, nextQuadrant);
-                }
-              }}
-              className="min-w-44"
-            >
-              <SelectField name="quadrant" label="移动到" defaultValue={currentQuadrant} options={quadrantOptions} />
-              <Button type="submit" variant="secondary" fullWidth className="mt-2 text-xs">
-                移动
-              </Button>
-            </form>
-          )}
+        <button
+          type="button"
+          onClick={(event) => {
+            event.stopPropagation();
+            onEdit?.(task);
+          }}
+          className="min-w-0 flex-1 text-left"
+        >
+          <p className={`truncate text-[13px] font-medium ${completed ? 'text-(--text-muted) line-through' : 'text-(--text-primary)'}`}>
+            {task.title}
+          </p>
+        </button>
+
+        <div className="flex shrink-0 items-center gap-2 text-[11px] text-(--text-muted)">
+          <span className="max-w-[7rem] truncate">{task.list?.name ?? ''}</span>
+          <span className={delta !== null && delta < 0 ? 'text-rose-300' : delta === 0 ? 'text-amber-300' : ''}>
+            {formatTaskDateLabel(task.dueDate, today)}
+          </span>
         </div>
-
-        {task.keyResultLinks && task.keyResultLinks.length > 0 && (
-          <div className="flex flex-wrap gap-2">
-            {task.keyResultLinks.map((link) => (
-              <a
-                key={link.keyResult.id}
-                href={`/okr/${link.keyResult.id}`}
-                className="rounded-full border border-(--border-hairline) px-2 py-1 text-xs text-(--text-secondary) transition-colors hover:border-(--border-glow) hover:text-(--text-primary)"
-              >
-                {link.keyResult.title}
-              </a>
-            ))}
-          </div>
-        )}
       </div>
     </article>
   );
 }
 
-function TaskDetailPanel({ task }: { task: TaskItem }) {
-  const meta = quadrantMeta[getQuadrant(task)];
+function QuadrantTaskModal({
+  state,
+  lists,
+  today,
+  createState,
+  updateState,
+  createPending,
+  updatePending,
+  onClose,
+  onCreateSubmit,
+  onUpdateSubmit,
+}: {
+  state: TaskModalState;
+  lists: TaskListOption[];
+  today: string;
+  createState: TaskActionState;
+  updateState: TaskActionState;
+  createPending: boolean;
+  updatePending: boolean;
+  onClose: () => void;
+  onCreateSubmit: (values: TaskFormValues) => void;
+  onUpdateSubmit: (values: TaskFormValues) => void;
+}) {
+  const defaultListId = lists[0]?.id ?? '';
+  const [values, setValues] = useState<TaskFormValues>(() => getTaskFormValues(undefined, defaultListId, today, 'P1'));
+
+  useEffect(() => {
+    if (!state) {
+      return;
+    }
+
+    if (state.mode === 'create') {
+      const defaults = getQuadrantDefaults(state.quadrant, today);
+      setValues(getTaskFormValues(undefined, defaultListId, defaults.dueDate, defaults.priority));
+      return;
+    }
+
+    setValues(getTaskFormValues(state.task, state.task.listId ?? defaultListId, state.task.dueDate, state.task.priority ?? ''));
+  }, [defaultListId, state, today]);
+
+  const activeState = state?.mode === 'edit' ? updateState : createState;
+  const pending = state?.mode === 'edit' ? updatePending : createPending;
+  const tomorrow = formatDateOnly(addDays(today, 1));
+  const nextWeek = formatDateOnly(addDays(today, 7));
 
   return (
-    <div className="mt-5 space-y-4">
-      <div className="metal-frame rounded-[16px] border border-(--border-hairline) bg-[color:rgba(255,255,255,0.03)] p-4">
-        <div className="flex flex-wrap items-center gap-2">
-          <Badge>{meta.title}</Badge>
-          <Badge>{getTaskStatusLabel(task.status)}</Badge>
-        </div>
-        <h3 className="mt-4 text-xl font-semibold tracking-[-0.02em] text-(--text-primary)">{task.title}</h3>
-        {task.notes ? (
-          <p className="mt-3 text-sm leading-6 text-(--text-secondary)">{task.notes}</p>
-        ) : (
-          <p className="mt-3 text-sm text-(--text-secondary)">该任务当前没有备注说明。</p>
-        )}
-      </div>
+    <Modal
+      open={state !== null}
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
+      title={state?.mode === 'edit' ? '编辑任务' : '新建任务'}
+    >
+      {state ? (
+        <form
+          className="space-y-4"
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (state.mode === 'edit') {
+              onUpdateSubmit(values);
+              return;
+            }
+            onCreateSubmit(values);
+          }}
+        >
+          {activeState.error ? <ErrorAlert message={activeState.error} /> : null}
 
-      <div className="grid gap-3 sm:grid-cols-2">
-        <InspectorMetric label="象限" value={meta.subtitle} />
-        <InspectorMetric label="截止日期" value={task.dueDate ?? '未设置'} />
-      </div>
+          <TextField
+            name="title"
+            label="标题"
+            required
+            autoFocus
+            value={values.title}
+            onChange={(event) => setValues((current) => ({ ...current, title: event.target.value }))}
+          />
 
-      <div className="metal-frame rounded-[16px] border border-(--border-hairline) bg-[color:rgba(255,255,255,0.03)] p-4">
-        <p className="text-[11px] uppercase tracking-[0.22em] text-(--text-muted)">象限说明</p>
-        <p className="mt-3 text-sm leading-6 text-(--text-secondary)">{meta.detail}</p>
-      </div>
+          <SelectField
+            name="listId"
+            label="归属清单"
+            value={values.listId}
+            options={lists.map((list) => ({ value: list.id, label: list.name }))}
+            onValueChange={(value) => setValues((current) => ({ ...current, listId: value }))}
+          />
 
-      <div className="metal-frame rounded-[16px] border border-(--border-hairline) bg-[color:rgba(255,255,255,0.03)] p-4">
-        <p className="text-[11px] uppercase tracking-[0.22em] text-(--text-muted)">关联 KR</p>
-        {task.keyResultLinks && task.keyResultLinks.length > 0 ? (
-          <div className="mt-4 flex flex-wrap gap-2">
-            {task.keyResultLinks.map((link) => (
-              <a
-                key={link.keyResult.id}
-                href={`/okr/${link.keyResult.id}`}
-                className="rounded-full border border-(--border-hairline) px-3 py-2 text-sm text-(--text-secondary) transition-colors hover:border-(--border-glow) hover:text-(--text-primary)"
-              >
-                {link.keyResult.title}
-              </a>
-            ))}
+          <SelectField
+            name="priority"
+            label="优先级"
+            value={values.priority}
+            options={PRIORITY_OPTIONS}
+            onValueChange={(value) => setValues((current) => ({ ...current, priority: value }))}
+          />
+
+          <div className="rounded-[10px] border border-(--border-hairline) bg-[color:rgba(255,255,255,0.03)] p-3.5">
+            <div className="mb-3 flex flex-wrap items-center gap-2">
+              <Button type="button" variant={values.dueDate === today ? 'primary' : 'secondary'} size="sm" onClick={() => setValues((current) => ({ ...current, dueDate: today }))}>
+                今日
+              </Button>
+              <Button type="button" variant={values.dueDate === tomorrow ? 'primary' : 'secondary'} size="sm" onClick={() => setValues((current) => ({ ...current, dueDate: tomorrow }))}>
+                明日
+              </Button>
+              <Button type="button" variant={values.dueDate === nextWeek ? 'primary' : 'secondary'} size="sm" onClick={() => setValues((current) => ({ ...current, dueDate: nextWeek }))}>
+                下周
+              </Button>
+            </div>
+
+            <DatePickerField
+              name="dueDate"
+              label="截止日期"
+              value={values.dueDate}
+              allowClear={false}
+              onValueChange={(value) => setValues((current) => ({ ...current, dueDate: value }))}
+            />
           </div>
-        ) : (
-          <p className="mt-3 text-sm text-(--text-secondary)">该任务当前未绑定任何 KR。</p>
-        )}
-      </div>
-    </div>
+
+          <TextareaField
+            name="description"
+            label="描述"
+            rows={5}
+            value={values.description}
+            onChange={(event) => setValues((current) => ({ ...current, description: event.target.value }))}
+          />
+
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="secondary" onClick={onClose}>
+              取消
+            </Button>
+            <Button type="submit" variant="primary" disabled={!values.title.trim() || pending}>
+              {pending ? '提交中' : state.mode === 'edit' ? '更新任务' : '创建任务'}
+            </Button>
+          </div>
+        </form>
+      ) : null}
+    </Modal>
   );
 }
 
-function InspectorMetric({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="metal-frame rounded-[16px] border border-(--border-hairline) bg-[color:rgba(255,255,255,0.03)] p-4">
-      <p className="text-[11px] uppercase tracking-[0.22em] text-(--text-muted)">{label}</p>
-      <p className="mt-3 text-sm font-medium text-(--text-primary)">{value}</p>
-    </div>
-  );
+function romanLabel(quadrant: QuadrantKey) {
+  if (quadrant === 'Q1') return 'I';
+  if (quadrant === 'Q2') return 'II';
+  if (quadrant === 'Q3') return 'III';
+  return 'IV';
 }

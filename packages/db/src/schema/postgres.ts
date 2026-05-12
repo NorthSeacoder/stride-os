@@ -11,7 +11,6 @@ import {
   check,
   date,
   integer,
-  boolean,
   doublePrecision,
 } from 'drizzle-orm/pg-core';
 
@@ -265,8 +264,6 @@ const tasksColumns = {
   definitionId: uuid('definition_id')
     .references(() => taskDefinitions.id, { onDelete: 'set null' }),
   occurrenceDate: date('occurrence_date'),
-  important: boolean('important').notNull().default(false),
-  urgent: boolean('urgent').notNull().default(false),
   priority: varchar('priority', { length: 8 }),
   energy: varchar('energy', { length: 16 }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -281,7 +278,6 @@ export const tasks = pgTable('tasks', tasksColumns, (table) => [
   index('idx_tasks_definition_id').on(table.definitionId),
   index('idx_tasks_definition_occurrence').on(table.definitionId, table.occurrenceDate),
   index('idx_tasks_priority').on(table.priority),
-  index('idx_tasks_importance_urgency').on(table.important, table.urgent),
   check('tasks_status_check', sql`${table.status} in ('inbox', 'done')`),
   check('tasks_priority_check', sql`${table.priority} is null or ${table.priority} in ('P1', 'P2', 'P3')`),
   check('tasks_energy_check', sql`${table.energy} is null or ${table.energy} in ('low', 'medium', 'high')`),

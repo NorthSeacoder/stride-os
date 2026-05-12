@@ -170,8 +170,6 @@ describe('sqlite smoke', () => {
       title: 'Write weekly review flow',
       status: 'inbox',
       dueDate: '2026-05-12',
-      important: true,
-      urgent: false,
       priority: 'P1',
       energy: 'high',
     }).returning();
@@ -231,8 +229,6 @@ describe('sqlite smoke', () => {
       sqliteDb.insert(sqliteSchema.tasks).values({
         title: 'Broken done task',
         status: 'done',
-        important: false,
-        urgent: false,
       }),
     ).rejects.toThrow();
   });

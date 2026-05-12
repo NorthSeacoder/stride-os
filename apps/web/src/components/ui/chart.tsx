@@ -36,15 +36,23 @@ export function ChartContainer({
   className?: string;
   children: React.ReactNode;
 }) {
+  const [mounted, setMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
   return (
     <ChartContext.Provider value={config}>
       <div
         className={`chart-surface min-h-0 min-w-0 ${className}`.trim()}
-        style={{ width: '100%', height: '100%', minWidth: 0, minHeight: 0, ...buildChartStyle(config) }}
+        style={{ width: '100%', height: '100%', minWidth: 0, minHeight: 160, ...buildChartStyle(config) }}
       >
-        <ResponsiveContainer width="100%" height="100%">
-          {children}
-        </ResponsiveContainer>
+        {mounted ? (
+          <ResponsiveContainer width="100%" height="100%">
+            {children}
+          </ResponsiveContainer>
+        ) : null}
       </div>
     </ChartContext.Provider>
   );

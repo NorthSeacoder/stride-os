@@ -52,7 +52,7 @@ export function DashboardShellSidebar({ user, children }: DashboardShellSidebarP
     <div className="flex h-full min-h-0 flex-col lg:flex-row">
       <aside
         className={`border-b app-shell-divider min-h-0 bg-(--bg-sidebar) backdrop-blur-xl transition-[width,padding] duration-200 lg:flex lg:h-full lg:flex-col lg:border-b-0 lg:border-r ${
-          collapsed ? 'px-1.5 py-2 lg:w-15 lg:px-1.5 lg:py-2' : 'px-2 py-2.5 lg:w-48 lg:px-2 lg:py-3'
+          collapsed ? 'px-1.5 py-2 lg:w-13 lg:px-1 lg:py-2' : 'px-2 py-2.5 lg:w-48 lg:px-2 lg:py-3'
         }`}
       >
         <div className={`flex items-center ${collapsed ? 'justify-center' : 'justify-between'} gap-2`}>
@@ -97,7 +97,7 @@ export function DashboardShellSidebar({ user, children }: DashboardShellSidebarP
                   title={collapsed ? item.label : undefined}
                   className={`flex rounded-[8px] border transition-[background-color,border-color,color,width] ${
                     collapsed
-                      ? 'items-center justify-center px-0 py-2'
+                      ? 'mx-auto h-9 w-9 items-center justify-center px-0 py-0'
                       : 'items-center justify-between px-2.5 py-2.25'
                   } ${
                     active
