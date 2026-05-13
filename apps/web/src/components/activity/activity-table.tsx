@@ -13,7 +13,6 @@ import type {
 } from '@/lib/services/activity-service';
 import {
   getActivityActionLabel,
-  getActivityActorTypeLabel,
   getActivitySourceLabel,
   getActivityTargetTypeLabel,
 } from '@/lib/presentation/labels';
@@ -41,18 +40,6 @@ function formatDiffValue(value: ActivityDiffValue, label?: string) {
   }
 
   return String(value);
-}
-
-function getActorLabel(item: ActivityListRow) {
-  if (item.actorLabel) {
-    return item.actorLabel;
-  }
-
-  if (item.actorId) {
-    return `${getActivityActorTypeLabel(item.actorType)} ${item.actorId.slice(0, 8)}`;
-  }
-
-  return getActivityActorTypeLabel(item.actorType);
 }
 
 function renderDiff(item: ActivityListRow) {
@@ -103,13 +90,6 @@ const columns = [
       const item = info.row.original;
       return <Badge>{item.sourceLabel ?? getActivitySourceLabel(item.source)}</Badge>;
     },
-  }),
-  columnHelper.display({
-    id: 'actor',
-    header: '执行者',
-    cell: (info) => (
-      <span className="text-sm text-(--text-secondary)">{getActorLabel(info.row.original)}</span>
-    ),
   }),
   columnHelper.display({
     id: 'action',

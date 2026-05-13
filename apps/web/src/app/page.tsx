@@ -15,11 +15,15 @@ export default function HomePage() {
           <LinkButton href="/api/health" variant="secondary">
             健康检查
           </LinkButton>
+          <LinkButton href="/llm.txt" variant="secondary">
+            LLM Entry
+          </LinkButton>
         </div>
         <div className="space-y-1 border-t border-(--border-hairline) pt-3 text-xs text-(--text-secondary)">
           <p>本地优先使用 SQLite，部署环境支持 PostgreSQL</p>
           <p>支持会话登录与个人访问令牌</p>
           <p>提供面向 Hermes 集成的 OpenAPI v1 基础能力</p>
+          <p>公开发现入口：`/llm.txt` 与 `/api/openapi.json`</p>
         </div>
       </div>
     </main>

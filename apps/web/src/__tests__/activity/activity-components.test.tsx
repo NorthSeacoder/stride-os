@@ -55,7 +55,6 @@ describe('ActivityTable', () => {
 
     expect(html).toContain('时间');
     expect(html).toContain('来源');
-    expect(html).toContain('执行者');
     expect(html).toContain('Write release notes');
     expect(html).toContain('查看变更明细');
   });
