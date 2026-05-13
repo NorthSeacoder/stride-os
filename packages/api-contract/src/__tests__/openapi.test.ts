@@ -53,4 +53,16 @@ describe('v1 openapi contract', () => {
     ]));
     expect(v1Spec.components.schemas.ReviewContextResponse).toBeTruthy();
   });
+
+  it('includes activity list endpoint and schemas', () => {
+    expect(v1Spec.paths['/activity']?.get.operationId).toBe('listActivity');
+    expect(v1Spec.paths['/activity']?.get.parameters).toEqual(expect.arrayContaining([
+      expect.objectContaining({ name: 'targetType' }),
+      expect.objectContaining({ name: 'source' }),
+      expect.objectContaining({ name: 'changedField' }),
+      expect.objectContaining({ name: 'limit' }),
+    ]));
+    expect(v1Spec.components.schemas.ActivityRow).toBeTruthy();
+    expect(v1Spec.components.schemas.ActivityListResponse).toBeTruthy();
+  });
 });

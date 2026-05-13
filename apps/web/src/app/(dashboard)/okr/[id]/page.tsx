@@ -1,5 +1,7 @@
 import Link from 'next/link';
+import { ActivityList } from '@/components/activity/activity-list';
 import { Badge, Empty, PageIntro, SectionHeader, SurfacePanel } from '@/components/ui';
+import { listActivity } from '@/lib/services/activity-service';
 import { getKeyResultDetail } from '@/lib/services/okr-service';
 import {
   getConfidenceLabel,
@@ -15,7 +17,14 @@ export default async function KeyResultDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const keyResult = await getKeyResultDetail(id);
+  const [keyResult, activity] = await Promise.all([
+    getKeyResultDetail(id),
+    listActivity({
+      targetType: 'key_result',
+      targetId: id,
+      limit: 20,
+    }),
+  ]);
 
   if (!keyResult) {
     return (
@@ -96,6 +105,17 @@ export default async function KeyResultDetailPage({
               </div>
             ))
           )}
+        </div>
+      </SurfacePanel>
+
+      <SurfacePanel className="metal-frame instrument-surface p-3.5">
+        <SectionHeader
+          eyebrow="Activity"
+          title="活动轨迹"
+          description="这里汇总这个 KR 本身的变更和 check-in 记录，便于回看推进过程。"
+        />
+        <div className="mt-4">
+          <ActivityList items={activity.items} emptyText="这个 KR 还没有活动记录。" />
         </div>
       </SurfacePanel>
     </div>

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getPeriod, updatePeriod } from '@/lib/services/okr-service';
-import { parsePeriodInput, recordOkrAudit, requireId, requireOkrApiUser } from '../../_lib';
+import { getOkrActivityContext, parsePeriodInput, requireId, requireOkrApiUser } from '../../_lib';
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const user = await requireOkrApiUser(request);
@@ -20,9 +20,8 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   const input = await parsePeriodInput(request, 'update');
   if (input instanceof NextResponse) return input;
   try {
-    const period = await updatePeriod(id, input);
+    const period = await updatePeriod(id, input, { activityContext: getOkrActivityContext(user) });
     if (!period) return NextResponse.json({ error: 'Not found' }, { status: 404 });
-    await recordOkrAudit(user.id, 'okr.period.update', 'okr_period', id);
     return NextResponse.json(period);
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : 'Invalid period' }, { status: 400 });

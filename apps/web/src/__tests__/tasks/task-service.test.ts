@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+const recordActivity = vi.fn();
 const txDeleteWhere = vi.fn();
 const txDelete = vi.fn(() => ({ where: txDeleteWhere }));
 const txInsertValues = vi.fn();
@@ -22,6 +23,14 @@ const insertValues = vi.fn();
 const updateSet = vi.fn();
 const updateWhere = vi.fn();
 const updateReturning = vi.fn();
+
+vi.mock('@/lib/services/activity-service', async () => {
+  const actual = await vi.importActual<typeof import('@/lib/services/activity-service')>('@/lib/services/activity-service');
+  return {
+    ...actual,
+    recordActivity: (...args: unknown[]) => recordActivity(...args),
+  };
+});
 
 vi.mock('@stride-os/db', () => ({
   db: {
@@ -87,6 +96,7 @@ import {
   buildQuadrantDefaults,
   buildTaskUpdatePatch,
   archiveTask,
+  createTask,
   createTaskDefinition,
   getTaskDetail,
   ensureRecurringTasksForDate,
@@ -102,12 +112,15 @@ import {
   moveTaskToQuadrantList,
   replaceTaskDefinitionKeyResultLinks,
   replaceTaskKeyResultLinks,
+  toggleTaskCompletion,
   updateTaskDefinition,
+  updateTask,
 } from '@/lib/services/task-service';
 
 describe('task service rules', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    recordActivity.mockResolvedValue(undefined);
     txDelete.mockReturnValue({ where: txDeleteWhere });
     txInsert.mockReturnValue({ values: txInsertValues });
     txUpdate.mockReturnValue({ set: txUpdateSet });
@@ -168,6 +181,15 @@ describe('task service rules', () => {
   });
 
   it('replaces task key result links and reads linked records outside the transaction', async () => {
+    findFirstTask.mockResolvedValue({
+      id: 'task_1',
+      title: 'Write review',
+      status: 'inbox',
+      dueDate: null,
+      priority: 'P1',
+      listId: 'list_1',
+      completedAt: null,
+    });
     findManyTaskKrLinks.mockResolvedValue([
       { taskId: 'task_1', keyResultId: 'kr_1' },
       { taskId: 'task_1', keyResultId: 'kr_2' },
@@ -181,16 +203,26 @@ describe('task service rules', () => {
       { taskId: 'task_1', keyResultId: 'kr_1' },
       { taskId: 'task_1', keyResultId: 'kr_2' },
     ]);
-    expect(findManyTaskKrLinks).toHaveBeenCalledTimes(1);
+    expect(findManyTaskKrLinks).toHaveBeenCalledTimes(2);
   });
 
   it('clears task key result links without querying when no key results are selected', async () => {
+    findFirstTask.mockResolvedValue({
+      id: 'task_1',
+      title: 'Write review',
+      status: 'inbox',
+      dueDate: null,
+      priority: 'P1',
+      listId: 'list_1',
+      completedAt: null,
+    });
+    findManyTaskKrLinks.mockResolvedValue([{ taskId: 'task_1', keyResultId: 'kr_1' }]);
     await expect(replaceTaskKeyResultLinks('task_1', [])).resolves.toEqual([]);
 
     expect(transaction).toHaveBeenCalledTimes(1);
     expect(txDelete).toHaveBeenCalled();
     expect(txInsert).not.toHaveBeenCalled();
-    expect(findManyTaskKrLinks).not.toHaveBeenCalled();
+    expect(findManyTaskKrLinks).toHaveBeenCalledTimes(1);
   });
 
   it('builds dashboard counts from due date and completion state', async () => {
@@ -326,6 +358,15 @@ describe('task service rules', () => {
   });
 
   it('moves a task to a quadrant through the default reverse map', async () => {
+    findFirstTask.mockResolvedValue({
+      id: 'task_1',
+      title: 'Hot priority',
+      status: 'inbox',
+      dueDate: '2026-05-12',
+      priority: 'P1',
+      listId: 'list_work',
+      completedAt: null,
+    });
     updateReturning.mockResolvedValue([{ id: 'task_1', priority: 'P2', dueDate: '2026-05-20' }]);
 
     await expect(moveTaskToQuadrant('task_1', 'Q2', '2026-05-12')).resolves.toMatchObject({
@@ -336,6 +377,15 @@ describe('task service rules', () => {
   });
 
   it('moves a task to another list without changing quadrant fields', async () => {
+    findFirstTask.mockResolvedValue({
+      id: 'task_1',
+      title: 'Hot priority',
+      status: 'inbox',
+      dueDate: '2026-05-12',
+      priority: 'P1',
+      listId: 'list_work',
+      completedAt: null,
+    });
     updateReturning.mockResolvedValue([{ id: 'task_1', listId: 'list_2' }]);
 
     await expect(moveTaskToQuadrantList('task_1', 'list_2')).resolves.toMatchObject({
@@ -345,6 +395,15 @@ describe('task service rules', () => {
   });
 
   it('moves a task to the unassigned bucket with null listId', async () => {
+    findFirstTask.mockResolvedValue({
+      id: 'task_1',
+      title: 'Hot priority',
+      status: 'inbox',
+      dueDate: '2026-05-12',
+      priority: 'P1',
+      listId: 'list_work',
+      completedAt: null,
+    });
     updateReturning.mockResolvedValue([{ id: 'task_1', listId: null }]);
 
     await expect(moveTaskToQuadrantList('task_1', null)).resolves.toMatchObject({
@@ -354,12 +413,163 @@ describe('task service rules', () => {
   });
 
   it('archives a task by setting archivedAt', async () => {
+    findFirstTask.mockResolvedValue({
+      id: 'task_1',
+      title: 'Archive me',
+      status: 'inbox',
+      dueDate: '2026-05-12',
+      priority: 'P2',
+      listId: 'list_1',
+      completedAt: null,
+    });
     updateReturning.mockResolvedValue([{ id: 'task_1', archivedAt: new Date('2026-05-12T10:00:00.000Z') }]);
 
     await expect(archiveTask('task_1')).resolves.toMatchObject({ id: 'task_1' });
     expect(updateSet).toHaveBeenCalledWith(expect.objectContaining({
       archivedAt: expect.any(Date),
       updatedAt: expect.any(Date),
+    }));
+  });
+
+  it('records activity for create, update, complete, archive, and link changes when context exists', async () => {
+    insertValues.mockReturnValueOnce({
+      returning: vi.fn().mockResolvedValue([{
+        id: 'task_1',
+        title: 'Write review',
+        status: 'inbox',
+        dueDate: null,
+        priority: 'P1',
+        listId: null,
+        completedAt: null,
+      }]),
+    });
+
+    await createTask({
+      title: 'Write review',
+      priority: 'P1',
+    }, {
+      activityContext: { actorType: 'user', actorId: 'user_1', source: 'web' },
+    });
+
+    findFirstTask.mockResolvedValue({
+      id: 'task_1',
+      title: 'Write review',
+      status: 'inbox',
+      dueDate: null,
+      priority: 'P1',
+      listId: null,
+      completedAt: null,
+    });
+    updateReturning.mockResolvedValueOnce([{
+      id: 'task_1',
+      title: 'Write better review',
+      status: 'inbox',
+      dueDate: '2026-05-12',
+      priority: 'P2',
+      listId: 'list_1',
+      completedAt: null,
+    }]);
+
+    await updateTask('task_1', {
+      title: 'Write better review',
+      dueDate: '2026-05-12',
+      priority: 'P2',
+      listId: 'list_1',
+    }, {
+      activityContext: { actorType: 'user', actorId: 'user_1', source: 'web' },
+    });
+
+    findFirstTask.mockResolvedValue({
+      id: 'task_1',
+      title: 'Write better review',
+      status: 'inbox',
+      dueDate: '2026-05-12',
+      priority: 'P2',
+      listId: 'list_1',
+      completedAt: null,
+    });
+    updateReturning.mockResolvedValueOnce([{
+      id: 'task_1',
+      title: 'Write better review',
+      status: 'done',
+      dueDate: '2026-05-12',
+      priority: 'P2',
+      listId: 'list_1',
+      completedAt: new Date('2026-05-12T12:00:00.000Z'),
+    }]);
+
+    await toggleTaskCompletion('task_1', true, {
+      activityContext: { actorType: 'user', actorId: 'user_1', source: 'web' },
+    });
+
+    findFirstTask.mockResolvedValue({
+      id: 'task_1',
+      title: 'Write better review',
+      status: 'done',
+      dueDate: '2026-05-12',
+      priority: 'P2',
+      listId: 'list_1',
+      completedAt: new Date('2026-05-12T12:00:00.000Z'),
+    });
+    updateReturning.mockResolvedValueOnce([{
+      id: 'task_1',
+      title: 'Write better review',
+      status: 'done',
+      dueDate: '2026-05-12',
+      priority: 'P2',
+      listId: 'list_1',
+      completedAt: new Date('2026-05-12T12:00:00.000Z'),
+      archivedAt: new Date('2026-05-12T13:00:00.000Z'),
+    }]);
+
+    await archiveTask('task_1', {
+      activityContext: { actorType: 'user', actorId: 'user_1', source: 'web' },
+    });
+
+    findFirstTask.mockResolvedValue({
+      id: 'task_1',
+      title: 'Write better review',
+      status: 'done',
+      dueDate: '2026-05-12',
+      priority: 'P2',
+      listId: 'list_1',
+      completedAt: new Date('2026-05-12T12:00:00.000Z'),
+    });
+    findManyTaskKrLinks
+      .mockResolvedValueOnce([{ taskId: 'task_1', keyResultId: 'kr_1' }])
+      .mockResolvedValueOnce([
+        { taskId: 'task_1', keyResultId: 'kr_1' },
+        { taskId: 'task_1', keyResultId: 'kr_2' },
+      ]);
+
+    await replaceTaskKeyResultLinks('task_1', ['kr_1', 'kr_2'], {
+      activityContext: { actorType: 'user', actorId: 'user_1', source: 'web' },
+    });
+
+    expect(recordActivity).toHaveBeenCalledWith(expect.objectContaining({
+      action: 'task.create',
+      targetTitle: 'Write review',
+    }));
+    expect(recordActivity).toHaveBeenCalledWith(expect.objectContaining({
+      action: 'task.update',
+      targetTitle: 'Write better review',
+      metadata: expect.objectContaining({
+        changedFields: expect.arrayContaining(['title', 'dueDate', 'priority', 'listId']),
+      }),
+    }));
+    expect(recordActivity).toHaveBeenCalledWith(expect.objectContaining({
+      action: 'task.complete',
+      targetTitle: 'Write better review',
+    }));
+    expect(recordActivity).toHaveBeenCalledWith(expect.objectContaining({
+      action: 'task.archive',
+      targetTitle: 'Write better review',
+    }));
+    expect(recordActivity).toHaveBeenCalledWith(expect.objectContaining({
+      action: 'task.link_key_result',
+      metadata: expect.objectContaining({
+        keyResultId: 'kr_2',
+      }),
     }));
   });
 

@@ -1,28 +1,35 @@
-import { db, schema } from '@stride-os/db';
+import { recordActivity, type ActivityContext, type ActivityMetadata } from '@/lib/services/activity-service';
 
 type AuditInput = {
-  actorId?: string | null;
-  actorType?: string;
+  activityContext?: ActivityContext;
   action: string;
   targetType?: string | null;
   targetId?: string | null;
-  metadata?: Record<string, unknown>;
+  targetTitle?: string | null;
+  source?: string | null;
+  summary?: string | null;
+  metadata?: ActivityMetadata;
 };
 
 export async function recordAuditLog({
-  actorId,
-  actorType = 'user',
+  activityContext,
   action,
   targetType,
   targetId,
+  targetTitle,
+  source,
+  summary,
   metadata,
 }: AuditInput) {
-  await db.insert(schema.auditLogs).values({
-    actorType,
-    actorId,
+  await recordActivity({
+    actorType: activityContext?.actorType ?? 'user',
+    actorId: activityContext?.actorId ?? null,
     action,
     targetType,
     targetId,
+    targetTitle,
+    source: source ?? activityContext?.source ?? null,
+    summary,
     metadata,
   });
 }

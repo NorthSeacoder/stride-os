@@ -1,8 +1,8 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { db, schema } from '@stride-os/db';
 import { getSessionUser } from '@/lib/auth/session';
+import { buildWebActivityContext } from '@/lib/services/activity-service';
 import {
   createTaskDefinition,
   createTaskList,
@@ -45,7 +45,13 @@ async function requireTaskUser() {
     return null;
   }
 
-  return user;
+  return {
+    ...user,
+    activityContext: buildWebActivityContext({
+      userId: user.id,
+      actorLabel: 'You',
+    }),
+  };
 }
 
 function revalidateTasks() {
@@ -53,36 +59,7 @@ function revalidateTasks() {
   revalidatePath('/okr');
   revalidatePath('/dashboard');
   revalidatePath('/review');
-}
-
-async function writeTaskAudit(userId: string, action: string, taskId: string) {
-  await db.insert(schema.auditLogs).values({
-    actorType: 'user',
-    actorId: userId,
-    action,
-    targetType: 'task',
-    targetId: taskId,
-  });
-}
-
-async function writeTaskListAudit(userId: string, action: string, listId: string) {
-  await db.insert(schema.auditLogs).values({
-    actorType: 'user',
-    actorId: userId,
-    action,
-    targetType: 'task_list',
-    targetId: listId,
-  });
-}
-
-async function writeTaskDefinitionAudit(userId: string, action: string, definitionId: string) {
-  await db.insert(schema.auditLogs).values({
-    actorType: 'user',
-    actorId: userId,
-    action,
-    targetType: 'task_definition',
-    targetId: definitionId,
-  });
+  revalidatePath('/activity');
 }
 
 export async function createTaskAction(
@@ -108,14 +85,12 @@ export async function createTaskAction(
       listId: getNullable(formData, 'listId'),
       dueDate: getNullable(formData, 'dueDate'),
       priority: (getNullable(formData, 'priority') as 'P1' | 'P2' | 'P3' | null),
-    });
+    }, { activityContext: user.activityContext });
 
     const keyResultIds = getKeyResultIds(formData);
     if (keyResultIds.length > 0) {
-      await replaceTaskKeyResultLinks(task.id, keyResultIds);
+      await replaceTaskKeyResultLinks(task.id, keyResultIds, { activityContext: user.activityContext });
     }
-
-    await writeTaskAudit(user.id, 'task.create', task.id);
     revalidateTasks();
     return { error: '' };
   } catch (error) {
@@ -149,14 +124,13 @@ export async function updateTaskAction(
       listId: getNullable(formData, 'listId'),
       dueDate: getNullable(formData, 'dueDate'),
       priority: (getNullable(formData, 'priority') as 'P1' | 'P2' | 'P3' | null),
-    });
+    }, { activityContext: user.activityContext });
 
     if (!task) {
       return { error: '未找到任务' };
     }
 
-    await replaceTaskKeyResultLinks(taskId, getKeyResultIds(formData));
-    await writeTaskAudit(user.id, 'task.update', taskId);
+    await replaceTaskKeyResultLinks(taskId, getKeyResultIds(formData), { activityContext: user.activityContext });
     revalidateTasks();
     return { error: '' };
   } catch (error) {
@@ -182,12 +156,11 @@ export async function createTaskListAction(
   }
 
   try {
-    const list = await createTaskList({
+    await createTaskList({
       name,
       icon: getNullable(formData, 'icon'),
     });
 
-    await writeTaskListAudit(user.id, 'task.list.create', list.id);
     revalidateTasks();
     return { error: '' };
   } catch (error) {
@@ -226,7 +199,6 @@ export async function createTaskDefinitionAction(
 
     await replaceTaskDefinitionKeyResultLinks(definition.id, getKeyResultIds(formData));
     await ensureRecurringTasksForDate(getNullable(formData, 'targetDate') ?? undefined);
-    await writeTaskDefinitionAudit(user.id, 'task.definition.create', definition.id);
     revalidateTasks();
     return { error: '' };
   } catch (error) {
@@ -268,7 +240,6 @@ export async function updateTaskDefinitionAction(
 
     await replaceTaskDefinitionKeyResultLinks(definitionId, getKeyResultIds(formData));
     await ensureRecurringTasksForDate(getNullable(formData, 'targetDate') ?? undefined);
-    await writeTaskDefinitionAudit(user.id, 'task.definition.update', definitionId);
     revalidateTasks();
     return { error: '' };
   } catch (error) {
@@ -284,11 +255,9 @@ export async function toggleTaskCompletionAction(taskId: string, completed: bool
     return;
   }
 
-  const task = await toggleTaskCompletion(taskId, completed);
+  const task = await toggleTaskCompletion(taskId, completed, { activityContext: user.activityContext });
   if (!task) {
     return;
   }
-
-  await writeTaskAudit(user.id, completed ? 'task.complete' : 'task.reopen', taskId);
   revalidateTasks();
 }

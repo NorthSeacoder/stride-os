@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { notFound } from '../../../_lib/validation';
-import { parseReviewPatchRequest, recordReviewAudit, requireReviewApiUser, requireReviewId } from '../_lib';
+import { getReviewActivityContext, parseReviewPatchRequest, requireReviewApiUser, requireReviewId } from '../_lib';
 import { finalizeReview, getReview, updateReviewDraftById } from '@/lib/services/review-service';
 
 export async function GET(
@@ -37,7 +37,7 @@ export async function PATCH(
   let updated = review;
 
   if (body.status === 'final') {
-    const finalized = await finalizeReview(id);
+    const finalized = await finalizeReview(id, { activityContext: getReviewActivityContext(user) });
     if (!finalized) return notFound();
     updated = (await getReview(id)) ?? finalized;
   } else {
@@ -45,13 +45,11 @@ export async function PATCH(
       ...(body.title !== undefined ? { title: body.title } : {}),
       ...(body.body !== undefined ? { body: body.body } : {}),
       ...(body.structuredSummary !== undefined ? { structuredSummary: body.structuredSummary } : {}),
-    });
+    }, { activityContext: getReviewActivityContext(user) });
 
     if (!changed) return notFound();
     updated = (await getReview(id)) ?? changed;
   }
-
-  await recordReviewAudit(user.id, body.status === 'final' ? 'review.finalize' : 'review.update', id);
 
   return NextResponse.json(updated);
 }

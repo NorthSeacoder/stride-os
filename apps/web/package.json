@@ -17,6 +17,7 @@
     "@dnd-kit/utilities": "^3.2.2",
     "@stride-os/db": "workspace:*",
     "@tanstack/react-form": "^1.32.0",
+    "@tanstack/react-table": "^8.21.3",
     "drizzle-orm": "^0.45",
     "next": "^16",
     "react": "^19",

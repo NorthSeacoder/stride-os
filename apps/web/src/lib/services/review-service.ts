@@ -2,6 +2,12 @@ import { and, desc, eq, inArray, isNull } from 'drizzle-orm';
 import { db, schema } from '@stride-os/db';
 import { getConfidenceLabel } from '@/lib/presentation/labels';
 import {
+  buildActivityDiff,
+  recordActivity,
+  type ActivityContext,
+  type ActivityMetadata,
+} from './activity-service';
+import {
   getCurrentPeriodSummary,
   listCheckInsInRange,
   listKeyResultsByIds,
@@ -37,6 +43,45 @@ export type ReviewDraftPayload = {
   structuredSummary: Record<string, unknown>;
   keyResultIds: string[];
 };
+
+export type ReviewMutationOptions = {
+  activityContext?: ActivityContext;
+};
+
+function withReviewActivityContextMetadata(options?: ReviewMutationOptions, metadata?: ActivityMetadata | null) {
+  return {
+    actorLabel: options?.activityContext?.actorLabel ?? undefined,
+    sourceLabel: options?.activityContext?.sourceLabel ?? undefined,
+    requestId: options?.activityContext?.requestId ?? undefined,
+    command: options?.activityContext?.command ?? undefined,
+    ...(metadata ?? {}),
+  };
+}
+
+async function recordReviewActivity(input: {
+  options?: ReviewMutationOptions;
+  action: string;
+  reviewId: string;
+  title: string;
+  summary: string;
+  metadata?: ActivityMetadata | null;
+}) {
+  if (!input.options?.activityContext) {
+    return;
+  }
+
+  await recordActivity({
+    actorType: input.options.activityContext.actorType,
+    actorId: input.options.activityContext.actorId ?? null,
+    action: input.action,
+    targetType: 'review',
+    targetId: input.reviewId,
+    targetTitle: input.title,
+    source: input.options.activityContext.source,
+    summary: input.summary,
+    metadata: withReviewActivityContextMetadata(input.options, input.metadata),
+  });
+}
 
 function ensureReviewType(type: ReviewType) {
   if (!REVIEW_TYPES.includes(type)) {
@@ -162,8 +207,9 @@ export async function buildWeeklyReviewDraft(periodStart: string, periodEnd: str
   };
 }
 
-export async function saveReviewDraft(input: ReviewDraftPayload) {
+export async function saveReviewDraft(input: ReviewDraftPayload, _options?: ReviewMutationOptions) {
   const normalizedType = ensureReviewType(input.type);
+  let draftMode: 'create' | 'update' = 'create';
 
   return db.transaction(async (tx: TransactionLike) => {
     const existingDraft = await tx.query.reviews.findFirst({
@@ -175,6 +221,7 @@ export async function saveReviewDraft(input: ReviewDraftPayload) {
         isNull(schema.reviews.archivedAt),
       ),
     });
+    draftMode = existingDraft ? 'update' : 'create';
 
     const review = existingDraft
       ? (await tx
@@ -233,10 +280,32 @@ export async function saveReviewDraft(input: ReviewDraftPayload) {
         krSnapshots: true,
       },
     });
+  }).then(async (review: Awaited<ReturnType<typeof db.query.reviews.findFirst>>) => {
+    if (review) {
+      await recordReviewActivity({
+        options: _options,
+        action: draftMode === 'create' ? 'review.draft.create' : 'review.draft.update',
+        reviewId: review.id,
+        title: review.title,
+        summary: draftMode === 'create'
+          ? `Created review draft ${review.title}`
+          : `Saved review draft ${review.title}`,
+        metadata: reviewsFindMetadata(input),
+      });
+    }
+
+    return review;
   });
 }
 
-export async function finalizeReview(reviewId: string) {
+function reviewsFindMetadata(input: ReviewDraftPayload): ActivityMetadata {
+  return {
+    structuredSummary: input.structuredSummary,
+    keyResultIds: input.keyResultIds,
+  };
+}
+
+export async function finalizeReview(reviewId: string, _options?: ReviewMutationOptions) {
   const review = await db.query.reviews.findFirst({
     where: and(eq(schema.reviews.id, reviewId), isNull(schema.reviews.archivedAt)),
   });
@@ -270,10 +339,28 @@ export async function finalizeReview(reviewId: string) {
     .where(and(eq(schema.reviews.id, reviewId), isNull(schema.reviews.archivedAt)))
     .returning();
 
+  if (finalized) {
+    await recordReviewActivity({
+      options: _options,
+      action: 'review.finalize',
+      reviewId: finalized.id,
+      title: finalized.title,
+      summary: `Finalized review ${finalized.title}`,
+      metadata: buildActivityDiff(review, finalized, ['status']),
+    });
+  }
+
   return finalized ?? null;
 }
 
-export async function archiveReview(reviewId: string) {
+export async function archiveReview(reviewId: string, _options?: ReviewMutationOptions) {
+  const existing = await db.query.reviews.findFirst({
+    where: eq(schema.reviews.id, reviewId),
+  });
+  if (!existing) {
+    return null;
+  }
+
   const [review] = await db
     .update(schema.reviews)
     .set({
@@ -282,6 +369,16 @@ export async function archiveReview(reviewId: string) {
     })
     .where(eq(schema.reviews.id, reviewId))
     .returning();
+
+  if (review) {
+    await recordReviewActivity({
+      options: _options,
+      action: 'review.archive',
+      reviewId: review.id,
+      title: review.title,
+      summary: `Archived review ${review.title}`,
+    });
+  }
 
   return review ?? null;
 }
@@ -293,7 +390,15 @@ export async function updateReviewDraftById(
     body?: string;
     structuredSummary?: Record<string, unknown>;
   },
+  _options?: ReviewMutationOptions,
 ) {
+  const existing = await db.query.reviews.findFirst({
+    where: and(eq(schema.reviews.id, reviewId), isNull(schema.reviews.archivedAt)),
+  });
+  if (!existing) {
+    return null;
+  }
+
   const [review] = await db
     .update(schema.reviews)
     .set({
@@ -304,6 +409,17 @@ export async function updateReviewDraftById(
     })
     .where(and(eq(schema.reviews.id, reviewId), isNull(schema.reviews.archivedAt)))
     .returning();
+
+  if (review) {
+    await recordReviewActivity({
+      options: _options,
+      action: 'review.draft.update',
+      reviewId: review.id,
+      title: review.title,
+      summary: `Updated review draft ${review.title}`,
+      metadata: buildActivityDiff(existing, review, ['title', 'body']),
+    });
+  }
 
   return review ?? null;
 }

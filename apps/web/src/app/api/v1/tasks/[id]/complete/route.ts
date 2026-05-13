@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { completeTask } from '@/lib/services/task-service';
-import { recordTaskAudit, requireTaskApiUser, requireTaskId } from '../../_lib';
+import { getTaskActivityContext, requireTaskApiUser, requireTaskId } from '../../_lib';
 
 export async function POST(
   request: NextRequest,
@@ -12,8 +12,7 @@ export async function POST(
   const taskId = await requireTaskId(params);
   if (taskId instanceof NextResponse) return taskId;
 
-  const task = await completeTask(taskId);
+  const task = await completeTask(taskId, { activityContext: getTaskActivityContext(user) });
   if (!task) return NextResponse.json({ error: 'Not found' }, { status: 404 });
-  await recordTaskAudit(user.id, 'task.complete', taskId);
   return NextResponse.json(task);
 }

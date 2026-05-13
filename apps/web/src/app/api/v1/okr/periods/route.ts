@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createPeriod, listPeriods, type PeriodWriteInput } from '@/lib/services/okr-service';
-import { parsePeriodInput, recordOkrAudit, requireOkrApiUser } from '../_lib';
+import { getOkrActivityContext, parsePeriodInput, requireOkrApiUser } from '../_lib';
 
 export async function GET(request: NextRequest) {
   const user = await requireOkrApiUser(request);
@@ -14,8 +14,7 @@ export async function POST(request: NextRequest) {
   const input = await parsePeriodInput(request, 'create');
   if (input instanceof NextResponse) return input;
   try {
-    const period = await createPeriod(input as PeriodWriteInput);
-    await recordOkrAudit(user.id, 'okr.period.create', 'okr_period', period?.id ?? null);
+    const period = await createPeriod(input as PeriodWriteInput, { activityContext: getOkrActivityContext(user) });
     return NextResponse.json(period, { status: 201 });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : 'Invalid period' }, { status: 400 });

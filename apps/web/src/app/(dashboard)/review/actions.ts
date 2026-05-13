@@ -1,8 +1,8 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { db, schema } from '@stride-os/db';
 import { getSessionUser } from '@/lib/auth/session';
+import { buildWebActivityContext } from '@/lib/services/activity-service';
 import {
   buildWeeklyReviewDraft,
   finalizeReview,
@@ -26,21 +26,17 @@ async function requireReviewUser() {
     return null;
   }
 
-  return user;
+  return {
+    ...user,
+    activityContext: buildWebActivityContext({
+      userId: user.id,
+      actorLabel: 'You',
+    }),
+  };
 }
 
 function trimmed(formData: FormData, key: string) {
   return String(formData.get(key) ?? '').trim();
-}
-
-async function writeReviewAudit(userId: string, action: string, targetId: string) {
-  await db.insert(schema.auditLogs).values({
-    actorType: 'user',
-    actorId: userId,
-    action,
-    targetType: 'review',
-    targetId,
-  });
 }
 
 export async function generateWeeklyDraftAction(
@@ -90,15 +86,15 @@ export async function saveReviewDraftAction(
       body: trimmed(formData, 'body'),
       structuredSummary: rawSummary ? JSON.parse(rawSummary) as Record<string, unknown> : {},
       keyResultIds,
-    });
+    }, { activityContext: user.activityContext });
 
     if (!review) {
       return { error: '保存复盘草稿失败', draft: null };
     }
 
-    await writeReviewAudit(user.id, 'review.draft.save', review.id);
     revalidatePath('/review');
     revalidatePath('/dashboard');
+    revalidatePath('/activity');
 
     return {
       error: '',
@@ -127,12 +123,11 @@ export async function finalizeReviewAction(reviewId: string) {
     return;
   }
 
-  const review = await finalizeReview(reviewId);
+  const review = await finalizeReview(reviewId, { activityContext: user.activityContext });
   if (!review) {
     return;
   }
-
-  await writeReviewAudit(user.id, 'review.finalize', review.id);
   revalidatePath('/review');
   revalidatePath('/dashboard');
+  revalidatePath('/activity');
 }

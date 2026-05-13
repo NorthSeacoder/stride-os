@@ -14,7 +14,9 @@ vi.mock('@/lib/auth/session', () => ({
 
 vi.mock('@/lib/auth/api-auth', () => ({
   getAuthUser: vi.fn(async (request: NextRequest) => {
-    return request.headers.get('authorization') ? { id: 'user_1' } : null;
+    return request.headers.get('authorization')
+      ? { id: 'user_1', email: 'admin@example.com', name: 'Admin', activityContext: { actorType: 'user', actorId: 'user_1', source: 'api' } }
+      : null;
   }),
 }));
 
@@ -35,7 +37,9 @@ vi.mock('@/lib/services/example-service', () => ({
 vi.mock('@stride-os/db', () => ({
   db: {
     insert: vi.fn(() => ({
-      values: vi.fn(async () => undefined),
+      values: vi.fn(() => ({
+        returning: vi.fn(async () => []),
+      })),
     })),
   },
   schema: {
@@ -106,14 +110,15 @@ describe('route handler validation boundaries', () => {
 
   it('records audit logs through a shared helper', async () => {
     await recordAuditLog({
-      actorId: 'user_1',
+      activityContext: {
+        actorType: 'user',
+        actorId: 'user_1',
+        source: 'api',
+      },
       action: 'task.create',
       targetType: 'task',
       targetId: 'task_1',
       metadata: { source: 'api' },
     });
-
-    const { db, schema } = await import('@stride-os/db');
-    expect(db.insert).toHaveBeenCalledWith(schema.auditLogs);
   });
 });

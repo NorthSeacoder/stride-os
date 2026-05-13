@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+const recordActivity = vi.fn();
 const ensureTodayRecurringTasks = vi.fn();
 const listCompletedTasksBetween = vi.fn();
 const listOpenTodayDueTasks = vi.fn();
@@ -90,6 +91,14 @@ vi.mock('@/lib/services/task-service', () => ({
   listTodayTaskCounts: vi.fn(),
 }));
 
+vi.mock('@/lib/services/activity-service', async () => {
+  const actual = await vi.importActual<typeof import('@/lib/services/activity-service')>('@/lib/services/activity-service');
+  return {
+    ...actual,
+    recordActivity: (...args: unknown[]) => recordActivity(...args),
+  };
+});
+
 vi.mock('@/lib/services/okr-service', () => ({
   getCurrentPeriodSummary: vi.fn(),
   listCheckInsInRange: (...args: unknown[]) => listCheckInsInRange(...args),
@@ -118,6 +127,7 @@ import { archiveReview, buildWeeklyReviewDraft, finalizeReview, saveReviewDraft 
 describe('review service', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    recordActivity.mockResolvedValue(undefined);
     ensureTodayRecurringTasks.mockResolvedValue(undefined);
     listCompletedTasksBetween.mockResolvedValue([]);
     listOpenTodayDueTasks.mockResolvedValue([]);
@@ -189,6 +199,8 @@ describe('review service', () => {
       body: 'Draft body',
       structuredSummary: { completedTaskCount: 1 },
       keyResultIds: ['kr_1'],
+    }, {
+      activityContext: { actorType: 'user', actorId: 'user_1', source: 'web' },
     });
 
     expect(insertSnapshotValues).toHaveBeenCalledWith([
@@ -202,6 +214,10 @@ describe('review service', () => {
       }),
     ]);
     expect(result?.id).toBe('review_1');
+    expect(recordActivity).toHaveBeenCalledWith(expect.objectContaining({
+      action: 'review.draft.create',
+      targetId: 'review_1',
+    }));
   });
 
   it('finalizes a draft when no conflicting final exists', async () => {
@@ -222,8 +238,13 @@ describe('review service', () => {
       },
     ]);
 
-    const result = await finalizeReview('review_1');
+    const result = await finalizeReview('review_1', {
+      activityContext: { actorType: 'user', actorId: 'user_1', source: 'web' },
+    });
     expect(result?.status).toBe('final');
+    expect(recordActivity).toHaveBeenCalledWith(expect.objectContaining({
+      action: 'review.finalize',
+    }));
   });
 
   it('archives a review by setting archivedAt', async () => {
@@ -234,11 +255,22 @@ describe('review service', () => {
       },
     ]);
 
-    const result = await archiveReview('review_1');
+    reviewsFindFirst.mockResolvedValueOnce({
+      id: 'review_1',
+      title: 'Weekly review',
+      status: 'final',
+    });
+
+    const result = await archiveReview('review_1', {
+      activityContext: { actorType: 'user', actorId: 'user_1', source: 'web' },
+    });
     expect(result?.id).toBe('review_1');
     expect(finalizeUpdateSet).toHaveBeenCalledWith(expect.objectContaining({
       archivedAt: expect.any(Date),
       updatedAt: expect.any(Date),
+    }));
+    expect(recordActivity).toHaveBeenCalledWith(expect.objectContaining({
+      action: 'review.archive',
     }));
   });
 
@@ -259,5 +291,47 @@ describe('review service', () => {
     await expect(finalizeReview('review_1')).rejects.toThrow(
       'A final review already exists for this period.',
     );
+  });
+
+  it('records draft update activity when saving an existing draft', async () => {
+    reviewsFindFirst
+      .mockResolvedValueOnce({
+        id: 'review_1',
+        type: 'weekly',
+        periodStart: '2026-05-05',
+        periodEnd: '2026-05-11',
+        status: 'draft',
+      })
+      .mockResolvedValueOnce({
+        id: 'review_1',
+        periodStart: '2026-05-05',
+        periodEnd: '2026-05-11',
+        title: 'Weekly review updated',
+        body: 'Draft body updated',
+        structuredSummary: { completedTaskCount: 2 },
+        krSnapshots: [],
+      });
+    updateReviewReturning.mockResolvedValue([{
+      id: 'review_1',
+      title: 'Weekly review updated',
+      body: 'Draft body updated',
+      structuredSummary: { completedTaskCount: 2 },
+    }]);
+
+    await saveReviewDraft({
+      type: 'weekly',
+      periodStart: '2026-05-05',
+      periodEnd: '2026-05-11',
+      title: 'Weekly review updated',
+      body: 'Draft body updated',
+      structuredSummary: { completedTaskCount: 2 },
+      keyResultIds: [],
+    }, {
+      activityContext: { actorType: 'user', actorId: 'user_1', source: 'web' },
+    });
+
+    expect(recordActivity).toHaveBeenCalledWith(expect.objectContaining({
+      action: 'review.draft.update',
+    }));
   });
 });

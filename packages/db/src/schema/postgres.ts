@@ -74,11 +74,20 @@ const auditLogsColumns = {
   action: varchar('action', { length: 100 }).notNull(),
   targetType: varchar('target_type', { length: 50 }),
   targetId: uuid('target_id'),
+  targetTitle: varchar('target_title', { length: 255 }),
+  source: varchar('source', { length: 50 }),
+  summary: text('summary'),
   metadata: jsonb('metadata').$type<Record<string, unknown>>(),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 };
 
-export const auditLogs = pgTable('audit_logs', auditLogsColumns);
+export const auditLogs = pgTable('audit_logs', auditLogsColumns, (table) => [
+  index('idx_audit_logs_created_at').on(table.createdAt),
+  index('idx_audit_logs_target_created_at').on(table.targetType, table.targetId, table.createdAt),
+  index('idx_audit_logs_actor_created_at').on(table.actorType, table.actorId, table.createdAt),
+  index('idx_audit_logs_action_created_at').on(table.action, table.createdAt),
+  index('idx_audit_logs_source_created_at').on(table.source, table.createdAt),
+]);
 
 export const auditLogsRelations = relations(auditLogs, ({ one }) => ({
   user: one(users, {

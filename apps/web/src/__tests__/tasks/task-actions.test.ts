@@ -11,7 +11,6 @@ const toggleTaskCompletion = vi.fn();
 const updateTask = vi.fn();
 const updateTaskDefinition = vi.fn();
 const revalidatePath = vi.fn();
-const auditValues = vi.fn();
 
 vi.mock('next/cache', () => ({
   revalidatePath: (...args: unknown[]) => revalidatePath(...args),
@@ -35,17 +34,6 @@ vi.mock('@/lib/services/task-service', () => ({
   toggleTaskCompletion: (...args: unknown[]) => toggleTaskCompletion(...args),
   updateTask: (...args: unknown[]) => updateTask(...args),
   updateTaskDefinition: (...args: unknown[]) => updateTaskDefinition(...args),
-}));
-
-vi.mock('@stride-os/db', () => ({
-  db: {
-    insert: vi.fn(() => ({
-      values: (...args: unknown[]) => auditValues(...args),
-    })),
-  },
-  schema: {
-    auditLogs: {},
-  },
 }));
 
 import {
@@ -88,8 +76,6 @@ describe('task actions', () => {
     getSessionUser.mockResolvedValue({ id: 'user_1' });
     createTask.mockResolvedValue({ id: 'task_1' });
     replaceTaskKeyResultLinks.mockResolvedValue([]);
-    auditValues.mockResolvedValue(undefined);
-
     const formData = new FormData();
     formData.set('title', 'Write review');
     formData.set('description', 'Keep it short');
@@ -111,17 +97,27 @@ describe('task actions', () => {
         dueDate: '2026-05-12',
         priority: 'P1',
       }),
+      expect.objectContaining({
+        activityContext: expect.objectContaining({
+          actorId: 'user_1',
+          source: 'web',
+        }),
+      }),
     );
-    expect(replaceTaskKeyResultLinks).toHaveBeenCalledWith('task_1', ['kr_1', 'kr_2']);
+    expect(replaceTaskKeyResultLinks).toHaveBeenCalledWith('task_1', ['kr_1', 'kr_2'], expect.objectContaining({
+      activityContext: expect.objectContaining({
+        actorId: 'user_1',
+        source: 'web',
+      }),
+    }));
     expect(revalidatePath).toHaveBeenCalledWith('/tasks');
+    expect(revalidatePath).toHaveBeenCalledWith('/activity');
   });
 
   it('creates a task with due date only in the unified form', async () => {
     getSessionUser.mockResolvedValue({ id: 'user_1' });
     createTask.mockResolvedValue({ id: 'task_1' });
     replaceTaskKeyResultLinks.mockResolvedValue([]);
-    auditValues.mockResolvedValue(undefined);
-
     const formData = new FormData();
     formData.set('title', 'Plan launch');
     formData.set('description', 'Prepare the launch checklist');
@@ -141,14 +137,18 @@ describe('task actions', () => {
         dueDate: '2026-05-20',
         priority: 'P2',
       }),
+      expect.objectContaining({
+        activityContext: expect.objectContaining({
+          actorId: 'user_1',
+          source: 'web',
+        }),
+      }),
     );
   });
 
   it('creates a task list', async () => {
     getSessionUser.mockResolvedValue({ id: 'user_1' });
     createTaskList.mockResolvedValue({ id: 'list_1' });
-    auditValues.mockResolvedValue(undefined);
-
     const formData = new FormData();
     formData.set('name', '工作');
     formData.set('icon', 'briefcase');
@@ -166,8 +166,6 @@ describe('task actions', () => {
     createTaskDefinition.mockResolvedValue({ id: 'def_1' });
     replaceTaskDefinitionKeyResultLinks.mockResolvedValue([]);
     ensureRecurringTasksForDate.mockResolvedValue(['task_1']);
-    auditValues.mockResolvedValue(undefined);
-
     const formData = new FormData();
     formData.set('title', 'Daily triage');
     formData.set('listId', 'list_inbox');
@@ -193,8 +191,6 @@ describe('task actions', () => {
     updateTaskDefinition.mockResolvedValue({ id: 'def_1' });
     replaceTaskDefinitionKeyResultLinks.mockResolvedValue([]);
     ensureRecurringTasksForDate.mockResolvedValue([]);
-    auditValues.mockResolvedValue(undefined);
-
     const formData = new FormData();
     formData.set('id', 'task_1');
     formData.set('definitionId', 'def_1');
@@ -214,7 +210,6 @@ describe('task actions', () => {
     getSessionUser.mockResolvedValue({ id: 'user_1' });
     updateTask.mockResolvedValue({ id: 'task_1' });
     replaceTaskKeyResultLinks.mockResolvedValue([]);
-    auditValues.mockResolvedValue(undefined);
 
     const formData = new FormData();
     formData.set('id', 'def_1');
@@ -228,17 +223,26 @@ describe('task actions', () => {
     expect(updateTask).toHaveBeenCalledWith('task_1', expect.objectContaining({
       title: 'Refine workspace',
       priority: 'P3',
+    }), expect.objectContaining({
+      activityContext: expect.objectContaining({
+        actorId: 'user_1',
+        source: 'web',
+      }),
     }));
   });
 
   it('toggles task completion and revalidates tasks', async () => {
     getSessionUser.mockResolvedValue({ id: 'user_1' });
     toggleTaskCompletion.mockResolvedValue({ id: 'task_1' });
-    auditValues.mockResolvedValue(undefined);
-
     await toggleTaskCompletionAction('task_1', true);
 
-    expect(toggleTaskCompletion).toHaveBeenCalledWith('task_1', true);
+    expect(toggleTaskCompletion).toHaveBeenCalledWith('task_1', true, expect.objectContaining({
+      activityContext: expect.objectContaining({
+        actorId: 'user_1',
+        source: 'web',
+      }),
+    }));
     expect(revalidatePath).toHaveBeenCalledWith('/tasks');
+    expect(revalidatePath).toHaveBeenCalledWith('/activity');
   });
 });

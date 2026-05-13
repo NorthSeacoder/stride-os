@@ -43,6 +43,13 @@
       "when": 1778560000000,
       "tag": "0005_add_archive_markers",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1778616000000,
+      "tag": "0006_add_activity_log_fields",
+      "breakpoints": true
     }
   ]
 }

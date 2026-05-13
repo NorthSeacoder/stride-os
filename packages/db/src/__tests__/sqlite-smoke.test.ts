@@ -32,6 +32,49 @@ beforeAll(() => {
 });
 
 describe('sqlite smoke', () => {
+  it('supports legacy and activity-style audit log rows with optional display fields', async () => {
+    const user = await sqliteDb.query.users.findFirst({
+      where: eq(sqliteSchema.users.email, 'admin@example.com'),
+    });
+
+    expect(user).toBeTruthy();
+
+    const legacyAction = `legacy-${Date.now()}`;
+    const activityAction = `activity-${Date.now()}`;
+
+    await sqliteDb.insert(sqliteSchema.auditLogs).values({
+      actorType: 'user',
+      actorId: user!.id,
+      action: legacyAction,
+      metadata: { channel: 'legacy-smoke' },
+    });
+
+    await sqliteDb.insert(sqliteSchema.auditLogs).values({
+      actorType: 'user',
+      actorId: user!.id,
+      action: activityAction,
+      targetType: 'task',
+      targetTitle: 'Smoke task',
+      source: 'web',
+      summary: 'Created smoke task',
+      metadata: { changedFields: ['title'] },
+    });
+
+    const legacyLog = await sqliteDb.query.auditLogs.findFirst({
+      where: eq(sqliteSchema.auditLogs.action, legacyAction),
+    });
+    const activityLog = await sqliteDb.query.auditLogs.findFirst({
+      where: eq(sqliteSchema.auditLogs.action, activityAction),
+    });
+
+    expect(legacyLog?.targetTitle).toBeNull();
+    expect(legacyLog?.source).toBeNull();
+    expect(legacyLog?.summary).toBeNull();
+    expect(activityLog?.targetTitle).toBe('Smoke task');
+    expect(activityLog?.source).toBe('web');
+    expect(activityLog?.summary).toBe('Created smoke task');
+  });
+
   it('supports token and example CRUD primitives on the default sqlite database', async () => {
     const user = await sqliteDb.query.users.findFirst({
       where: eq(sqliteSchema.users.email, 'admin@example.com'),

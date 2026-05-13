@@ -12,11 +12,12 @@ const moveTaskToQuadrant = vi.fn();
 const replaceTaskKeyResultLinks = vi.fn();
 const ensureTodayRecurringTasks = vi.fn();
 const listQuadrantTasks = vi.fn();
-const insertValues = vi.fn();
 
 vi.mock('@/lib/auth/api-auth', () => ({
   getAuthUser: vi.fn(async (request: NextRequest) => {
-    return request.headers.get('authorization') === 'Bearer ok' ? { id: 'user_1' } : null;
+    return request.headers.get('authorization') === 'Bearer ok'
+      ? { id: 'user_1', activityContext: { actorType: 'user', actorId: 'user_1', source: 'api' } }
+      : null;
   }),
 }));
 
@@ -34,15 +35,6 @@ vi.mock('@/lib/services/task-service', () => ({
   moveTaskToQuadrant: (...args: unknown[]) => moveTaskToQuadrant(...args),
   replaceTaskKeyResultLinks: (...args: unknown[]) => replaceTaskKeyResultLinks(...args),
   updateTask: (...args: unknown[]) => updateTask(...args),
-}));
-
-vi.mock('@stride-os/db', () => ({
-  db: {
-    insert: vi.fn(() => ({ values: (...args: unknown[]) => insertValues(...args) })),
-  },
-  schema: {
-    auditLogs: {},
-  },
 }));
 
 import { GET as tasksGet, POST as tasksPost } from '@/app/api/v1/tasks/route';
@@ -83,9 +75,18 @@ describe('task api routes', () => {
     }));
 
     expect(response.status).toBe(201);
-    expect(createTask).toHaveBeenCalledWith(expect.objectContaining({ title: 'Write review', priority: 'P1' }));
-    expect(replaceTaskKeyResultLinks).toHaveBeenCalledWith('task_1', ['kr_1']);
-    expect(insertValues).toHaveBeenCalledWith(expect.objectContaining({ action: 'task.create' }));
+    expect(createTask).toHaveBeenCalledWith(expect.objectContaining({ title: 'Write review', priority: 'P1' }), expect.objectContaining({
+      activityContext: expect.objectContaining({
+        actorId: 'user_1',
+        source: 'api',
+      }),
+    }));
+    expect(replaceTaskKeyResultLinks).toHaveBeenCalledWith('task_1', ['kr_1'], expect.objectContaining({
+      activityContext: expect.objectContaining({
+        actorId: 'user_1',
+        source: 'api',
+      }),
+    }));
   });
 
   it('returns 400 for blank task title', async () => {
@@ -113,8 +114,18 @@ describe('task api routes', () => {
     }), { params: Promise.resolve({ id: 'task_1' }) });
 
     expect(patchResponse.status).toBe(200);
-    expect(updateTask).toHaveBeenCalledWith('task_1', expect.objectContaining({ title: 'New' }));
-    expect(replaceTaskKeyResultLinks).toHaveBeenCalledWith('task_1', ['kr_2']);
+    expect(updateTask).toHaveBeenCalledWith('task_1', expect.objectContaining({ title: 'New' }), expect.objectContaining({
+      activityContext: expect.objectContaining({
+        actorId: 'user_1',
+        source: 'api',
+      }),
+    }));
+    expect(replaceTaskKeyResultLinks).toHaveBeenCalledWith('task_1', ['kr_2'], expect.objectContaining({
+      activityContext: expect.objectContaining({
+        actorId: 'user_1',
+        source: 'api',
+      }),
+    }));
   });
 
   it('completes, restores, archives, and moves task quadrant', async () => {

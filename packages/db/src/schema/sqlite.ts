@@ -58,9 +58,18 @@ export const auditLogs = sqliteTable('audit_logs', {
   action: text('action').notNull(),
   targetType: text('target_type'),
   targetId: text('target_id'),
+  targetTitle: text('target_title'),
+  source: text('source'),
+  summary: text('summary'),
   metadata: text('metadata', { mode: 'json' }).$type<Record<string, unknown>>(),
   createdAt: timestampColumn('created_at').notNull().$defaultFn(() => new Date()),
-});
+}, (table) => [
+  index('idx_audit_logs_created_at').on(table.createdAt),
+  index('idx_audit_logs_target_created_at').on(table.targetType, table.targetId, table.createdAt),
+  index('idx_audit_logs_actor_created_at').on(table.actorType, table.actorId, table.createdAt),
+  index('idx_audit_logs_action_created_at').on(table.action, table.createdAt),
+  index('idx_audit_logs_source_created_at').on(table.source, table.createdAt),
+]);
 
 export const auditLogsRelations = relations(auditLogs, ({ one }) => ({
   user: one(users, {

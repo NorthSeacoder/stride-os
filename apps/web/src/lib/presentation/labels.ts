@@ -50,6 +50,62 @@ const exampleStatusLabels = {
   draft: '草稿',
 } as const;
 
+const activitySourceLabels = {
+  web: 'Web',
+  api: 'API',
+  cli: 'CLI',
+  hermes: 'Hermes',
+  agent: 'Agent',
+  system: 'System',
+  unknown: 'Unknown',
+} as const;
+
+const activityActorTypeLabels = {
+  user: '用户',
+  api_token: 'API Token',
+  agent: 'Agent',
+  system: 'System',
+  unknown: 'Unknown',
+} as const;
+
+const activityTargetTypeLabels = {
+  task: '任务',
+  objective: '目标',
+  key_result: '关键结果',
+  period: '周期',
+  review: '复盘',
+  system: '系统',
+} as const;
+
+const activityActionLabels = {
+  'task.create': '创建任务',
+  'task.update': '更新任务',
+  'task.complete': '完成任务',
+  'task.restore': '恢复任务',
+  'task.archive': '归档任务',
+  'task.move_list': '移动列表',
+  'task.move_quadrant': '移动四象限',
+  'task.link_key_result': '关联 KR',
+  'task.unlink_key_result': '取消关联 KR',
+  'okr.period.create': '创建周期',
+  'okr.period.update': '更新周期',
+  'okr.period.archive': '归档周期',
+  'okr.objective.create': '创建目标',
+  'okr.objective.update': '更新目标',
+  'okr.objective.archive': '归档目标',
+  'okr.key_result.create': '创建 KR',
+  'okr.key_result.update': '更新 KR',
+  'okr.key_result.check_in': 'KR Check-in',
+  'review.draft.create': '创建复盘草稿',
+  'review.draft.update': '更新复盘草稿',
+  'review.finalize': '完成复盘',
+  'review.archive': '归档复盘',
+  'auth.login': '登录',
+  'auth.logout': '退出登录',
+  'token.create': '创建令牌',
+  'token.revoke': '撤销令牌',
+} as const;
+
 function labelFromMap<T extends Record<string, string>>(value: string | null | undefined, labels: T, fallback = '-') {
   if (!value) return fallback;
   return labels[value as keyof T] ?? value;
@@ -89,6 +145,38 @@ export function getKeyResultStatusLabel(value: string | null | undefined) {
 
 export function getConfidenceLabel(value: string | null | undefined) {
   return labelFromMap(value, confidenceLabels, '未更新');
+}
+
+export function getActivityFieldLabel(value: string | null | undefined) {
+  return labelFromMap(value, {
+    status: '状态',
+    dueDate: '截止日期',
+    priority: '优先级',
+    title: '标题',
+    listId: '列表',
+    listName: '列表',
+    currentValue: '当前值',
+    targetValue: '目标值',
+    confidence: '信心',
+    reviewStatus: '复盘状态',
+    completedAt: '完成时间',
+  });
+}
+
+export function getActivitySourceLabel(value: string | null | undefined) {
+  return labelFromMap(value, activitySourceLabels);
+}
+
+export function getActivityActorTypeLabel(value: string | null | undefined) {
+  return labelFromMap(value, activityActorTypeLabels);
+}
+
+export function getActivityTargetTypeLabel(value: string | null | undefined) {
+  return labelFromMap(value, activityTargetTypeLabels);
+}
+
+export function getActivityActionLabel(value: string | null | undefined) {
+  return labelFromMap(value, activityActionLabels);
 }
 
 export function getReviewStatusLabel(value: string | null | undefined) {

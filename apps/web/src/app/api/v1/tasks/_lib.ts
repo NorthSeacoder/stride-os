@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/auth/api-auth';
-import { recordAuditLog } from '../../_lib/audit';
 import { badRequest, getTrimmedString, parseJsonBody, requireParam, unauthorized } from '../../_lib/validation';
+import { type ActivityAuthenticatedUser, type ActivityContext } from '@/lib/services/activity-service';
 import {
   QUADRANT_KEYS,
   TASK_ENERGIES,
@@ -13,7 +13,7 @@ import {
   type TaskWriteInput,
 } from '@/lib/services/task-service';
 
-type AuthedUser = { id: string };
+type AuthedUser = ActivityAuthenticatedUser;
 
 export async function requireTaskApiUser(request: NextRequest): Promise<AuthedUser | NextResponse> {
   const user = await getAuthUser(request);
@@ -109,14 +109,8 @@ export function parseTaskSource(value: string | null): TaskSourceId | NextRespon
   return badRequest('source is invalid');
 }
 
-export async function recordTaskAudit(userId: string, action: string, taskId?: string | null, metadata?: Record<string, unknown>) {
-  await recordAuditLog({
-    actorId: userId,
-    action,
-    targetType: 'task',
-    targetId: taskId,
-    metadata,
-  });
+export function getTaskActivityContext(user: AuthedUser): ActivityContext | undefined {
+  return user.activityContext;
 }
 
 export function addDays(base: Date, days: number) {

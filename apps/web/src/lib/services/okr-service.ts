@@ -1,6 +1,12 @@
 import { and, asc, desc, eq, inArray, isNull, lte, gte, ne } from 'drizzle-orm';
 import { db, schema } from '@stride-os/db';
 import { listTasksForKeyResult } from './task-service';
+import {
+  buildActivityDiff,
+  recordActivity,
+  type ActivityContext,
+  type ActivityMetadata,
+} from './activity-service';
 
 type TransactionLike = {
   insert: typeof db.insert;
@@ -56,6 +62,46 @@ export type CheckInWriteInput = {
   blockers?: string | null;
   nextActions?: string | null;
 };
+
+export type OkrMutationOptions = {
+  activityContext?: ActivityContext;
+};
+
+function withActivityContextMetadata(options?: OkrMutationOptions, metadata?: ActivityMetadata | null) {
+  return {
+    actorLabel: options?.activityContext?.actorLabel ?? undefined,
+    sourceLabel: options?.activityContext?.sourceLabel ?? undefined,
+    requestId: options?.activityContext?.requestId ?? undefined,
+    command: options?.activityContext?.command ?? undefined,
+    ...(metadata ?? {}),
+  };
+}
+
+async function recordOkrActivity(input: {
+  options?: OkrMutationOptions;
+  action: string;
+  targetType: 'period' | 'objective' | 'key_result';
+  targetId: string;
+  targetTitle: string;
+  summary: string;
+  metadata?: ActivityMetadata | null;
+}) {
+  if (!input.options?.activityContext) {
+    return;
+  }
+
+  await recordActivity({
+    actorType: input.options.activityContext.actorType,
+    actorId: input.options.activityContext.actorId ?? null,
+    action: input.action,
+    targetType: input.targetType,
+    targetId: input.targetId,
+    targetTitle: input.targetTitle,
+    source: input.options.activityContext.source,
+    summary: input.summary,
+    metadata: withActivityContextMetadata(input.options, input.metadata),
+  });
+}
 
 function ensureTrimmed(value: string, field: string) {
   const normalized = value.trim();
@@ -222,16 +268,34 @@ export async function getPeriod(periodId: string) {
   });
 }
 
-export async function createPeriod(input: PeriodWriteInput) {
+export async function createPeriod(input: PeriodWriteInput, _options?: OkrMutationOptions) {
   const normalized = normalizePeriodInput(input);
   const [period] = await db.insert(schema.periods).values(normalized).returning();
+  if (period) {
+    await recordOkrActivity({
+      options: _options,
+      action: 'okr.period.create',
+      targetType: 'period',
+      targetId: period.id,
+      targetTitle: period.name,
+      summary: `Created OKR period ${period.name}`,
+    });
+  }
   return period;
 }
 
 export async function updatePeriod(
   periodId: string,
   input: Partial<PeriodWriteInput>,
+  _options?: OkrMutationOptions,
 ) {
+  const existing = await db.query.periods.findFirst({
+    where: eq(schema.periods.id, periodId),
+  });
+  if (!existing) {
+    return null;
+  }
+
   const patch = {
     updatedAt: new Date(),
   } as {
@@ -256,11 +320,25 @@ export async function updatePeriod(
     .where(eq(schema.periods.id, periodId))
     .returning();
 
+  if (period) {
+    await recordOkrActivity({
+      options: _options,
+      action: input.status === 'archived' ? 'okr.period.archive' : 'okr.period.update',
+      targetType: 'period',
+      targetId: period.id,
+      targetTitle: period.name,
+      summary: input.status === 'archived'
+        ? `Archived OKR period ${period.name}`
+        : `Updated OKR period ${period.name}`,
+      metadata: buildActivityDiff(existing, period, ['name', 'type', 'startDate', 'endDate', 'status']),
+    });
+  }
+
   return period ?? null;
 }
 
-export async function archivePeriod(periodId: string) {
-  return updatePeriod(periodId, { status: 'archived' });
+export async function archivePeriod(periodId: string, options?: OkrMutationOptions) {
+  return updatePeriod(periodId, { status: 'archived' }, options);
 }
 
 export async function listObjectives(periodId: string) {
@@ -295,16 +373,34 @@ export async function getObjective(objectiveId: string) {
   });
 }
 
-export async function createObjective(input: ObjectiveWriteInput) {
+export async function createObjective(input: ObjectiveWriteInput, _options?: OkrMutationOptions) {
   const normalized = normalizeObjectiveInput(input);
   const [objective] = await db.insert(schema.objectives).values(normalized).returning();
+  if (objective) {
+    await recordOkrActivity({
+      options: _options,
+      action: 'okr.objective.create',
+      targetType: 'objective',
+      targetId: objective.id,
+      targetTitle: objective.title,
+      summary: `Created objective ${objective.title}`,
+    });
+  }
   return objective;
 }
 
 export async function updateObjective(
   objectiveId: string,
   input: Partial<ObjectiveWriteInput>,
+  _options?: OkrMutationOptions,
 ) {
+  const existing = await db.query.objectives.findFirst({
+    where: eq(schema.objectives.id, objectiveId),
+  });
+  if (!existing) {
+    return null;
+  }
+
   const patch = {
     updatedAt: new Date(),
   } as {
@@ -325,6 +421,20 @@ export async function updateObjective(
     .set(patch)
     .where(eq(schema.objectives.id, objectiveId))
     .returning();
+
+  if (objective) {
+    await recordOkrActivity({
+      options: _options,
+      action: input.status === 'archived' ? 'okr.objective.archive' : 'okr.objective.update',
+      targetType: 'objective',
+      targetId: objective.id,
+      targetTitle: objective.title,
+      summary: input.status === 'archived'
+        ? `Archived objective ${objective.title}`
+        : `Updated objective ${objective.title}`,
+      metadata: buildActivityDiff(existing, objective, ['title', 'description', 'status', 'sortOrder']),
+    });
+  }
 
   return objective ?? null;
 }
@@ -350,16 +460,34 @@ export async function getKeyResult(keyResultId: string) {
   });
 }
 
-export async function createKeyResult(input: KeyResultWriteInput) {
+export async function createKeyResult(input: KeyResultWriteInput, _options?: OkrMutationOptions) {
   const normalized = normalizeKeyResultInput(input);
   const [keyResult] = await db.insert(schema.keyResults).values(normalized).returning();
+  if (keyResult) {
+    await recordOkrActivity({
+      options: _options,
+      action: 'okr.key_result.create',
+      targetType: 'key_result',
+      targetId: keyResult.id,
+      targetTitle: keyResult.title,
+      summary: `Created key result ${keyResult.title}`,
+    });
+  }
   return keyResult;
 }
 
 export async function updateKeyResult(
   keyResultId: string,
   input: Partial<KeyResultWriteInput>,
+  _options?: OkrMutationOptions,
 ) {
+  const existing = await db.query.keyResults.findFirst({
+    where: eq(schema.keyResults.id, keyResultId),
+  });
+  if (!existing) {
+    return null;
+  }
+
   const patch = {
     updatedAt: new Date(),
   } as {
@@ -391,23 +519,60 @@ export async function updateKeyResult(
     .where(eq(schema.keyResults.id, keyResultId))
     .returning();
 
+  if (keyResult) {
+    await recordOkrActivity({
+      options: _options,
+      action: input.status === 'archived' ? 'okr.key_result.archive' : 'okr.key_result.update',
+      targetType: 'key_result',
+      targetId: keyResult.id,
+      targetTitle: keyResult.title,
+      summary: input.status === 'archived'
+        ? `Archived key result ${keyResult.title}`
+        : `Updated key result ${keyResult.title}`,
+      metadata: buildActivityDiff(existing, keyResult, ['title', 'type', 'targetValue', 'currentValue', 'unit', 'status', 'confidence']),
+    });
+  }
+
   return keyResult ?? null;
 }
 
-export async function createKrCheckIn(input: CheckInWriteInput) {
+export async function createKrCheckIn(input: CheckInWriteInput, _options?: OkrMutationOptions) {
   const normalized = normalizeCheckInInput(input);
 
   return db.transaction(async (tx: TransactionLike) => {
+    const existingKeyResult = await db.query.keyResults.findFirst({
+      where: eq(schema.keyResults.id, normalized.keyResultId),
+    });
     const [checkIn] = await tx.insert(schema.krCheckIns).values(normalized).returning();
 
-    await tx
+    const [updatedKeyResult] = await tx
       .update(schema.keyResults)
       .set({
         currentValue: normalized.progressValue,
         confidence: normalized.confidence,
         updatedAt: new Date(),
       })
-      .where(eq(schema.keyResults.id, normalized.keyResultId));
+      .where(eq(schema.keyResults.id, normalized.keyResultId))
+      .returning();
+
+    if (updatedKeyResult && existingKeyResult) {
+      await recordOkrActivity({
+        options: _options,
+        action: 'okr.key_result.check_in',
+        targetType: 'key_result',
+        targetId: updatedKeyResult.id,
+        targetTitle: updatedKeyResult.title,
+        summary: `Checked in key result ${updatedKeyResult.title}`,
+        metadata: {
+          ...buildActivityDiff(existingKeyResult, updatedKeyResult, ['currentValue', 'confidence']),
+          progressValue: normalized.progressValue,
+          confidence: normalized.confidence,
+          summary: normalized.summary,
+          blockers: normalized.blockers,
+          nextActions: normalized.nextActions,
+        },
+      });
+    }
 
     return checkIn;
   });

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getKeyResultIdsFromBody, parseTaskWriteRequest, recordTaskAudit, requireTaskApiUser, requireTaskId } from '../_lib';
+import { getKeyResultIdsFromBody, getTaskActivityContext, parseTaskWriteRequest, requireTaskApiUser, requireTaskId } from '../_lib';
 import { getTaskDetail, replaceTaskKeyResultLinks, updateTask } from '@/lib/services/task-service';
 
 export async function GET(
@@ -32,11 +32,11 @@ export async function PATCH(
   if (input instanceof NextResponse) return input;
 
   try {
-    const task = await updateTask(taskId, input);
+    const activityContext = getTaskActivityContext(user);
+    const task = await updateTask(taskId, input, { activityContext });
     if (!task) return NextResponse.json({ error: 'Not found' }, { status: 404 });
     const keyResultIds = getKeyResultIdsFromBody(body);
-    if (keyResultIds) await replaceTaskKeyResultLinks(taskId, keyResultIds);
-    await recordTaskAudit(user.id, 'task.update', taskId);
+    if (keyResultIds) await replaceTaskKeyResultLinks(taskId, keyResultIds, { activityContext });
     return NextResponse.json(task);
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : 'Invalid task' }, { status: 400 });

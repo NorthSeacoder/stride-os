@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/auth/api-auth';
-import { recordAuditLog } from '../../_lib/audit';
 import { badRequest, getTrimmedString, parseJsonBody, requireParam, unauthorized } from '../../_lib/validation';
+import { type ActivityAuthenticatedUser, type ActivityContext } from '@/lib/services/activity-service';
 
 export const REVIEW_CONTEXT_TYPES = ['daily', 'weekly', 'monthly', 'period'] as const;
 
 export type ReviewContextType = typeof REVIEW_CONTEXT_TYPES[number];
 
-type AuthedUser = { id: string };
+type AuthedUser = ActivityAuthenticatedUser;
 
 export async function requireReviewApiUser(request: NextRequest): Promise<AuthedUser | NextResponse> {
   const user = await getAuthUser(request);
@@ -91,12 +91,6 @@ export function parseReviewContextRange(searchParams: URLSearchParams, now = new
   return { type: type as ReviewContextType, periodStart: start, periodEnd: end };
 }
 
-export async function recordReviewAudit(userId: string, action: string, reviewId?: string | null, metadata?: Record<string, unknown>) {
-  await recordAuditLog({
-    actorId: userId,
-    action,
-    targetType: 'review',
-    targetId: reviewId,
-    metadata,
-  });
+export function getReviewActivityContext(user: AuthedUser): ActivityContext | undefined {
+  return user.activityContext;
 }

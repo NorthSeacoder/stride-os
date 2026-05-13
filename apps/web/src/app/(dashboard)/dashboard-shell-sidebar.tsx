@@ -13,7 +13,8 @@ const navItems = [
   { href: '/tasks', label: '任务', code: '03', icon: CheckSquareIcon },
   { href: '/quadrants', label: '四象限', code: '04', icon: QuadrantIcon },
   { href: '/review', label: '复盘', code: '05', icon: NotebookIcon },
-  { href: '/settings', label: '设置', code: '06', icon: GearIcon },
+  { href: '/activity', label: '活动', code: '06', icon: ActivityIcon },
+  { href: '/settings', label: '设置', code: '07', icon: GearIcon },
 ] as const;
 
 type DashboardShellSidebarProps = {
@@ -192,6 +193,15 @@ function NotebookIcon({ className = '' }: { className?: string }) {
     <IconBase className={className}>
       <rect x="4" y="3" width="12" height="14" rx="2" stroke="currentColor" strokeWidth="1.4" />
       <path d="M7 7h6M7 10h6M7 13h4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+    </IconBase>
+  );
+}
+
+function ActivityIcon({ className = '' }: { className?: string }) {
+  return (
+    <IconBase className={className}>
+      <path d="M4 13.5h2.4l1.5-5 2.4 7 2-4h3.7" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+      <rect x="3" y="3.5" width="14" height="13" rx="2.2" stroke="currentColor" strokeWidth="1.4" />
     </IconBase>
   );
 }

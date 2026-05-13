@@ -10,11 +10,12 @@ const listReviews = vi.fn();
 const listTasksForReviewPeriod = vi.fn();
 const getCurrentPeriodSummary = vi.fn();
 const listCheckInsInRange = vi.fn();
-const insertValues = vi.fn();
 
 vi.mock('@/lib/auth/api-auth', () => ({
   getAuthUser: vi.fn(async (request: NextRequest) => {
-    return request.headers.get('authorization') === 'Bearer ok' ? { id: 'user_1' } : null;
+    return request.headers.get('authorization') === 'Bearer ok'
+      ? { id: 'user_1', activityContext: { actorType: 'user', actorId: 'user_1', source: 'api' } }
+      : null;
   }),
 }));
 
@@ -33,15 +34,6 @@ vi.mock('@/lib/services/task-service', () => ({
 vi.mock('@/lib/services/okr-service', () => ({
   getCurrentPeriodSummary: (...args: unknown[]) => getCurrentPeriodSummary(...args),
   listCheckInsInRange: (...args: unknown[]) => listCheckInsInRange(...args),
-}));
-
-vi.mock('@stride-os/db', () => ({
-  db: {
-    insert: vi.fn(() => ({ values: (...args: unknown[]) => insertValues(...args) })),
-  },
-  schema: {
-    auditLogs: {},
-  },
 }));
 
 import { GET as reviewGet, PATCH as reviewPatch } from '@/app/api/v1/reviews/[id]/route';
@@ -91,7 +83,12 @@ describe('review api routes', () => {
     }), { params: Promise.resolve({ id: 'review_1' }) });
 
     expect(patchResponse.status).toBe(200);
-    expect(updateReviewDraftById).toHaveBeenCalledWith('review_1', { title: 'New title' });
+    expect(updateReviewDraftById).toHaveBeenCalledWith('review_1', { title: 'New title' }, expect.objectContaining({
+      activityContext: expect.objectContaining({
+        actorId: 'user_1',
+        source: 'api',
+      }),
+    }));
 
     const finalResponse = await reviewPatch(jsonRequest('http://localhost/api/v1/reviews/review_1', {
       auth: 'ok',
@@ -100,7 +97,12 @@ describe('review api routes', () => {
     }), { params: Promise.resolve({ id: 'review_1' }) });
 
     expect(finalResponse.status).toBe(200);
-    expect(finalizeReview).toHaveBeenCalledWith('review_1');
+    expect(finalizeReview).toHaveBeenCalledWith('review_1', expect.objectContaining({
+      activityContext: expect.objectContaining({
+        actorId: 'user_1',
+        source: 'api',
+      }),
+    }));
   });
 
   it('finalizes and archives reviews through explicit action routes', async () => {
@@ -117,7 +119,6 @@ describe('review api routes', () => {
       params: Promise.resolve({ id: 'review_1' }),
     });
     expect(archiveResponse.status).toBe(200);
-    expect(insertValues).toHaveBeenCalledWith(expect.objectContaining({ action: 'review.archive' }));
   });
 
   it('returns conflict when final review already exists', async () => {

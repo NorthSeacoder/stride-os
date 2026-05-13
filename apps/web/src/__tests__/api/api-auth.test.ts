@@ -39,7 +39,13 @@ describe('api auth header parsing', () => {
       headers: { authorization: 'Bearer tpl_live' },
     });
 
-    await expect(getAuthUser(req)).resolves.toEqual({ id: 'user_pat' });
+    await expect(getAuthUser(req)).resolves.toEqual(expect.objectContaining({
+      id: 'user_pat',
+      activityContext: expect.objectContaining({
+        actorId: 'user_pat',
+        source: 'api',
+      }),
+    }));
     expect(validateBearerToken).toHaveBeenCalledWith('tpl_live');
     expect(getSessionUser).not.toHaveBeenCalled();
   });
@@ -49,7 +55,36 @@ describe('api auth header parsing', () => {
 
     const req = new NextRequest('http://localhost/api/v1/me');
 
-    await expect(getAuthUser(req)).resolves.toEqual({ id: 'user_cookie' });
+    await expect(getAuthUser(req)).resolves.toEqual(expect.objectContaining({
+      id: 'user_cookie',
+      activityContext: expect.objectContaining({
+        actorId: 'user_cookie',
+        source: 'web',
+      }),
+    }));
     expect(getSessionUser).toHaveBeenCalled();
+  });
+
+  it('respects trusted automation source headers for bearer requests', async () => {
+    validateBearerToken.mockResolvedValue({ id: 'user_pat' });
+
+    const req = new NextRequest('http://localhost/api/v1/me', {
+      headers: {
+        authorization: 'Bearer tpl_live',
+        'x-stride-source': 'hermes',
+        'x-stride-source-label': 'Hermes Agent',
+        'x-request-id': 'req_123',
+        'x-stride-command': 'stride sync',
+      },
+    });
+
+    await expect(getAuthUser(req)).resolves.toEqual(expect.objectContaining({
+      activityContext: expect.objectContaining({
+        source: 'hermes',
+        sourceLabel: 'Hermes Agent',
+        requestId: 'req_123',
+        command: 'stride sync',
+      }),
+    }));
   });
 });

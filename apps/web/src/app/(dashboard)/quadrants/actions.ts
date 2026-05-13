@@ -1,8 +1,8 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { db, schema } from '@stride-os/db';
 import { getSessionUser } from '@/lib/auth/session';
+import { buildWebActivityContext } from '@/lib/services/activity-service';
 import {
   moveTaskToQuadrant,
   moveTaskToQuadrantList,
@@ -16,7 +16,13 @@ async function requireQuadrantUser() {
     return null;
   }
 
-  return user;
+  return {
+    ...user,
+    activityContext: buildWebActivityContext({
+      userId: user.id,
+      actorLabel: 'You',
+    }),
+  };
 }
 
 export async function moveTaskToQuadrantAction(taskId: string, quadrant: TaskQuadrantKey) {
@@ -25,23 +31,15 @@ export async function moveTaskToQuadrantAction(taskId: string, quadrant: TaskQua
     return { error: '未授权' };
   }
 
-  const task = await moveTaskToQuadrant(taskId, quadrant);
+  const task = await moveTaskToQuadrant(taskId, quadrant, undefined, { activityContext: user.activityContext });
   if (!task) {
     return { error: '未找到任务' };
   }
 
-  await db.insert(schema.auditLogs).values({
-    actorType: 'user',
-    actorId: user.id,
-    action: 'task.quadrant.move',
-    targetType: 'task',
-    targetId: taskId,
-    metadata: { quadrant },
-  });
-
   revalidatePath('/quadrants');
   revalidatePath('/dashboard');
   revalidatePath('/tasks');
+  revalidatePath('/activity');
   return { error: '' };
 }
 
@@ -51,23 +49,15 @@ export async function moveTaskToQuadrantListAction(taskId: string, listId: strin
     return { error: '未授权' };
   }
 
-  const task = await moveTaskToQuadrantList(taskId, listId);
+  const task = await moveTaskToQuadrantList(taskId, listId, { activityContext: user.activityContext });
   if (!task) {
     return { error: '未找到任务' };
   }
 
-  await db.insert(schema.auditLogs).values({
-    actorType: 'user',
-    actorId: user.id,
-    action: 'task.quadrant.move-list',
-    targetType: 'task',
-    targetId: taskId,
-    metadata: { listId },
-  });
-
   revalidatePath('/quadrants');
   revalidatePath('/dashboard');
   revalidatePath('/tasks');
+  revalidatePath('/activity');
   return { error: '' };
 }
 
@@ -77,22 +67,14 @@ export async function toggleQuadrantTaskCompletionAction(taskId: string, complet
     return { error: '未授权' };
   }
 
-  const task = await toggleTaskCompletion(taskId, completed);
+  const task = await toggleTaskCompletion(taskId, completed, { activityContext: user.activityContext });
   if (!task) {
     return { error: '未找到任务' };
   }
 
-  await db.insert(schema.auditLogs).values({
-    actorType: 'user',
-    actorId: user.id,
-    action: completed ? 'task.complete' : 'task.reopen',
-    targetType: 'task',
-    targetId: taskId,
-    metadata: { completed },
-  });
-
   revalidatePath('/quadrants');
   revalidatePath('/dashboard');
   revalidatePath('/tasks');
+  revalidatePath('/activity');
   return { error: '' };
 }

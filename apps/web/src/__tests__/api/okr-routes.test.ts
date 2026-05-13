@@ -17,11 +17,12 @@ const listPeriods = vi.fn();
 const updateKeyResult = vi.fn();
 const updateObjective = vi.fn();
 const updatePeriod = vi.fn();
-const insertValues = vi.fn();
 
 vi.mock('@/lib/auth/api-auth', () => ({
   getAuthUser: vi.fn(async (request: NextRequest) => {
-    return request.headers.get('authorization') === 'Bearer ok' ? { id: 'user_1' } : null;
+    return request.headers.get('authorization') === 'Bearer ok'
+      ? { id: 'user_1', activityContext: { actorType: 'user', actorId: 'user_1', source: 'api' } }
+      : null;
   }),
 }));
 
@@ -47,15 +48,6 @@ vi.mock('@/lib/services/okr-service', () => ({
   updateKeyResult: (...args: unknown[]) => updateKeyResult(...args),
   updateObjective: (...args: unknown[]) => updateObjective(...args),
   updatePeriod: (...args: unknown[]) => updatePeriod(...args),
-}));
-
-vi.mock('@stride-os/db', () => ({
-  db: {
-    insert: vi.fn(() => ({ values: (...args: unknown[]) => insertValues(...args) })),
-  },
-  schema: {
-    auditLogs: {},
-  },
 }));
 
 import { GET as periodsGet, POST as periodsPost } from '@/app/api/v1/okr/periods/route';
@@ -97,7 +89,6 @@ describe('okr automation api routes', () => {
     expect((await periodGet(new NextRequest('http://localhost/api/v1/okr/periods/period_1', { headers: { authorization: 'Bearer ok' } }), { params: Promise.resolve({ id: 'period_1' }) })).status).toBe(200);
     expect((await periodPatch(jsonRequest('http://localhost/api/v1/okr/periods/period_1', { auth: 'ok', method: 'PATCH', body: { name: '2026 Q2 updated' } }), { params: Promise.resolve({ id: 'period_1' }) })).status).toBe(200);
     expect((await periodArchivePost(jsonRequest('http://localhost/api/v1/okr/periods/period_1/archive', { auth: 'ok' }), { params: Promise.resolve({ id: 'period_1' }) })).status).toBe(200);
-    expect(insertValues).toHaveBeenCalledWith(expect.objectContaining({ action: 'okr.period.archive' }));
   });
 
   it('validates period input', async () => {

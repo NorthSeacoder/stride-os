@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createTask, ensureTodayRecurringTasks, listTasksForSource, replaceTaskKeyResultLinks, type TaskWriteInput } from '@/lib/services/task-service';
-import { getKeyResultIdsFromBody, parseTaskSource, parseTaskWriteRequest, recordTaskAudit, requireTaskApiUser } from './_lib';
+import { getKeyResultIdsFromBody, getTaskActivityContext, parseTaskSource, parseTaskWriteRequest, requireTaskApiUser } from './_lib';
 
 export async function GET(request: NextRequest) {
   const user = await requireTaskApiUser(request);
@@ -23,12 +23,12 @@ export async function POST(request: NextRequest) {
   if (input instanceof NextResponse) return input;
 
   try {
-    const task = await createTask(input as TaskWriteInput);
+    const activityContext = getTaskActivityContext(user);
+    const task = await createTask(input as TaskWriteInput, { activityContext });
     const keyResultIds = getKeyResultIdsFromBody(body);
     if (keyResultIds && task?.id) {
-      await replaceTaskKeyResultLinks(task.id, keyResultIds);
+      await replaceTaskKeyResultLinks(task.id, keyResultIds, { activityContext });
     }
-    await recordTaskAudit(user.id, 'task.create', task?.id ?? null);
     return NextResponse.json(task, { status: 201 });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : 'Invalid task' }, { status: 400 });

@@ -1,8 +1,8 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { db, schema } from '@stride-os/db';
 import { getSessionUser } from '@/lib/auth/session';
+import { buildWebActivityContext } from '@/lib/services/activity-service';
 import {
   createKeyResult,
   createKrCheckIn,
@@ -24,21 +24,18 @@ async function requireOkrUser() {
     return null;
   }
 
-  return user;
+  return {
+    ...user,
+    activityContext: buildWebActivityContext({
+      userId: user.id,
+      actorLabel: 'You',
+    }),
+  };
 }
 
 function revalidateOkr() {
   revalidatePath('/okr');
-}
-
-async function writeOkrAudit(userId: string, action: string, targetType: string, targetId: string) {
-  await db.insert(schema.auditLogs).values({
-    actorType: 'user',
-    actorId: userId,
-    action,
-    targetType,
-    targetId,
-  });
+  revalidatePath('/activity');
 }
 
 function trimmed(formData: FormData, key: string) {
@@ -70,15 +67,13 @@ export async function createPeriodAction(
   }
 
   try {
-    const period = await createPeriod({
+    await createPeriod({
       name: trimmed(formData, 'name'),
       type: trimmed(formData, 'type') as PeriodType,
       startDate: trimmed(formData, 'startDate'),
       endDate: trimmed(formData, 'endDate'),
       status: 'active',
-    });
-
-    await writeOkrAudit(user.id, 'okr.period.create', 'period', period.id);
+    }, { activityContext: user.activityContext });
     revalidateOkr();
     return { error: '' };
   } catch (error) {
@@ -96,15 +91,13 @@ export async function createObjectiveAction(
   }
 
   try {
-    const objective = await createObjective({
+    await createObjective({
       periodId: trimmed(formData, 'periodId'),
       title: trimmed(formData, 'title'),
       description: nullable(formData, 'description'),
       status: 'active' as ObjectiveStatus,
       sortOrder: Number(trimmed(formData, 'sortOrder') || '0'),
-    });
-
-    await writeOkrAudit(user.id, 'okr.objective.create', 'objective', objective.id);
+    }, { activityContext: user.activityContext });
     revalidateOkr();
     return { error: '' };
   } catch (error) {
@@ -122,7 +115,7 @@ export async function createKeyResultAction(
   }
 
   try {
-    const keyResult = await createKeyResult({
+    await createKeyResult({
       objectiveId: trimmed(formData, 'objectiveId'),
       title: trimmed(formData, 'title'),
       type: trimmed(formData, 'type') as KeyResultType,
@@ -131,9 +124,7 @@ export async function createKeyResultAction(
       unit: nullable(formData, 'unit'),
       status: 'active',
       confidence: null,
-    });
-
-    await writeOkrAudit(user.id, 'okr.key_result.create', 'key_result', keyResult.id);
+    }, { activityContext: user.activityContext });
     revalidateOkr();
     return { error: '' };
   } catch (error) {
@@ -151,16 +142,14 @@ export async function createKrCheckInAction(
   }
 
   try {
-    const checkIn = await createKrCheckIn({
+    await createKrCheckIn({
       keyResultId: trimmed(formData, 'keyResultId'),
       progressValue: nullableNumber(formData, 'progressValue'),
       confidence: trimmed(formData, 'confidence') as CheckInConfidence,
       summary: nullable(formData, 'summary'),
       blockers: nullable(formData, 'blockers'),
       nextActions: nullable(formData, 'nextActions'),
-    });
-
-    await writeOkrAudit(user.id, 'okr.check_in.create', 'kr_check_in', checkIn.id);
+    }, { activityContext: user.activityContext });
     revalidateOkr();
     revalidatePath(`/okr/${trimmed(formData, 'keyResultId')}`);
     revalidatePath('/review');

@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getTrimmedString, parseJsonBody } from '../../_lib/validation';
 import { getAuthUser } from '@/lib/auth/api-auth';
-import { db, schema } from '@stride-os/db';
 import { listReviews, saveReviewDraft } from '@/lib/services/review-service';
 
 export async function GET(request: NextRequest) {
@@ -43,15 +42,7 @@ export async function POST(request: NextRequest) {
     body: bodyText,
     structuredSummary,
     keyResultIds,
-  });
-
-  await db.insert(schema.auditLogs).values({
-    actorType: 'user',
-    actorId: user.id,
-    action: 'review.draft.save',
-    targetType: 'review',
-    targetId: review?.id,
-  });
+  }, { activityContext: user.activityContext });
 
   return NextResponse.json(review, { status: 201 });
 }

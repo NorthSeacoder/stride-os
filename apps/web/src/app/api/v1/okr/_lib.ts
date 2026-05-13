@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/auth/api-auth';
-import { recordAuditLog } from '../../_lib/audit';
 import { badRequest, getTrimmedString, parseJsonBody, requireParam, unauthorized } from '../../_lib/validation';
+import { type ActivityAuthenticatedUser, type ActivityContext } from '@/lib/services/activity-service';
 import {
   CHECK_IN_CONFIDENCE,
   KEY_RESULT_STATUSES,
@@ -21,7 +21,7 @@ import {
   type PeriodWriteInput,
 } from '@/lib/services/okr-service';
 
-type AuthedUser = { id: string };
+type AuthedUser = ActivityAuthenticatedUser;
 
 export async function requireOkrApiUser(request: NextRequest): Promise<AuthedUser | NextResponse> {
   const user = await getAuthUser(request);
@@ -156,11 +156,6 @@ export async function parseCheckInInput(request: NextRequest, keyResultId: strin
   } as CheckInWriteInput;
 }
 
-export async function recordOkrAudit(userId: string, action: string, targetType: string, targetId?: string | null) {
-  await recordAuditLog({
-    actorId: userId,
-    action,
-    targetType,
-    targetId,
-  });
+export function getOkrActivityContext(user: AuthedUser): ActivityContext | undefined {
+  return user.activityContext;
 }

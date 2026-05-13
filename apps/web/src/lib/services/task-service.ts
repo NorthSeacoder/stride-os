@@ -1,5 +1,11 @@
 import { and, asc, desc, eq, inArray, isNotNull, isNull, ne, notInArray } from 'drizzle-orm';
 import { db, schema } from '@stride-os/db';
+import {
+  buildActivityDiff,
+  recordActivity,
+  type ActivityContext,
+  type ActivityMetadata,
+} from './activity-service';
 
 type TransactionLike = {
   query: typeof db.query;
@@ -590,10 +596,146 @@ export async function getTask(taskId: string) {
   });
 }
 
-export async function createTask(input: TaskWriteInput) {
+export async function createTask(input: TaskWriteInput, _options?: TaskMutationOptions) {
   const normalized = normalizeTaskState(input);
   const [task] = await db.insert(schema.tasks).values(normalized).returning();
+  if (task) {
+    await recordTaskChangeActivity(null, task, _options);
+  }
   return task;
+}
+
+export type TaskMutationOptions = {
+  activityContext?: ActivityContext;
+  activityAction?: string;
+  summary?: string;
+};
+
+function toTaskActivitySnapshot(task: {
+  id: string;
+  title: string;
+  status: string;
+  dueDate: string | null;
+  priority: TaskPriority | null;
+  listId: string | null;
+  completedAt: Date | null;
+}) {
+  return {
+    id: task.id,
+    title: task.title,
+    status: task.status,
+    dueDate: task.dueDate,
+    priority: task.priority,
+    listId: task.listId,
+    completedAt: task.completedAt,
+  };
+}
+
+function getTaskActivityAction(
+  before: ReturnType<typeof toTaskActivitySnapshot> | null,
+  after: ReturnType<typeof toTaskActivitySnapshot>,
+  options?: TaskMutationOptions,
+) {
+  if (options?.activityAction) {
+    return options.activityAction;
+  }
+
+  if (!before) {
+    return 'task.create';
+  }
+
+  if (before.completedAt === null && after.completedAt !== null) {
+    return 'task.complete';
+  }
+
+  if (before.completedAt !== null && after.completedAt === null) {
+    return 'task.restore';
+  }
+
+  return 'task.update';
+}
+
+function getTaskActivitySummary(action: string, task: ReturnType<typeof toTaskActivitySnapshot>) {
+  switch (action) {
+    case 'task.create':
+      return `Created task ${task.title}`;
+    case 'task.complete':
+      return `Completed task ${task.title}`;
+    case 'task.restore':
+      return `Restored task ${task.title}`;
+    case 'task.archive':
+      return `Archived task ${task.title}`;
+    case 'task.move_quadrant':
+      return `Moved task ${task.title} to a new quadrant`;
+    case 'task.move_list':
+      return `Moved task ${task.title} to a new list`;
+    case 'task.link_key_result':
+      return `Linked task ${task.title} to a key result`;
+    case 'task.unlink_key_result':
+      return `Unlinked task ${task.title} from a key result`;
+    default:
+      return `Updated task ${task.title}`;
+  }
+}
+
+async function recordTaskActivity(
+  task: ReturnType<typeof toTaskActivitySnapshot>,
+  options: TaskMutationOptions | undefined,
+  action: string,
+  metadata?: ActivityMetadata | null,
+) {
+  if (!options?.activityContext) {
+    return;
+  }
+
+  await recordActivity({
+    actorType: options.activityContext.actorType,
+    actorId: options.activityContext.actorId ?? null,
+    action,
+    targetType: 'task',
+    targetId: task.id,
+    targetTitle: task.title,
+    source: options.activityContext.source,
+    summary: options.summary ?? getTaskActivitySummary(action, task),
+    metadata: {
+      actorLabel: options.activityContext.actorLabel ?? undefined,
+      sourceLabel: options.activityContext.sourceLabel ?? undefined,
+      requestId: options.activityContext.requestId ?? undefined,
+      command: options.activityContext.command ?? undefined,
+      ...(metadata ?? {}),
+    },
+  });
+}
+
+async function recordTaskChangeActivity(
+  before: {
+    id: string;
+    title: string;
+    status: string;
+    dueDate: string | null;
+    priority: TaskPriority | null;
+    listId: string | null;
+    completedAt: Date | null;
+  } | null,
+  after: {
+    id: string;
+    title: string;
+    status: string;
+    dueDate: string | null;
+    priority: TaskPriority | null;
+    listId: string | null;
+    completedAt: Date | null;
+  },
+  options?: TaskMutationOptions,
+) {
+  const beforeSnapshot = before ? toTaskActivitySnapshot(before) : null;
+  const afterSnapshot = toTaskActivitySnapshot(after);
+  const action = getTaskActivityAction(beforeSnapshot, afterSnapshot, options);
+  const metadata = beforeSnapshot
+    ? buildActivityDiff(beforeSnapshot, afterSnapshot, ['status', 'dueDate', 'priority', 'title', 'listId', 'completedAt'])
+    : null;
+
+  await recordTaskActivity(afterSnapshot, options, action, metadata);
 }
 
 export async function createTaskList(input: { name: string; icon?: string | null; kind?: 'system' | 'user'; slug?: string | null }) {
@@ -618,7 +760,15 @@ export async function createTaskList(input: { name: string; icon?: string | null
   return list;
 }
 
-export async function updateTask(taskId: string, input: Partial<TaskWriteInput>) {
+export async function updateTask(taskId: string, input: Partial<TaskWriteInput>, _options?: TaskMutationOptions) {
+  const existing = await db.query.tasks.findFirst({
+    where: eq(schema.tasks.id, taskId),
+  });
+
+  if (!existing) {
+    return null;
+  }
+
   const patch = buildTaskUpdatePatch(input);
   if (patch.completedAt !== undefined) {
     patch.status = patch.completedAt ? 'done' : 'inbox';
@@ -629,42 +779,64 @@ export async function updateTask(taskId: string, input: Partial<TaskWriteInput>)
     .where(eq(schema.tasks.id, taskId))
     .returning();
 
+  if (task) {
+    await recordTaskChangeActivity(existing, task, _options);
+  }
+
   return task ?? null;
 }
 
-export async function toggleTaskCompletion(taskId: string, completed: boolean) {
+export async function toggleTaskCompletion(taskId: string, completed: boolean, options?: TaskMutationOptions) {
   return updateTask(taskId, completed
     ? { completedAt: new Date() }
-    : { completedAt: null });
+    : { completedAt: null }, options);
 }
 
-export async function completeTask(taskId: string) {
+export async function completeTask(taskId: string, options?: TaskMutationOptions) {
   return updateTask(taskId, {
     completedAt: new Date(),
-  });
+  }, options);
 }
 
-export async function archiveTask(taskId: string) {
+export async function archiveTask(taskId: string, _options?: TaskMutationOptions) {
+  const existing = await db.query.tasks.findFirst({
+    where: eq(schema.tasks.id, taskId),
+  });
+
+  if (!existing) {
+    return null;
+  }
+
   const [task] = await db
     .update(schema.tasks)
     .set({ archivedAt: new Date(), updatedAt: new Date() })
     .where(eq(schema.tasks.id, taskId))
     .returning();
 
+  if (task) {
+    await recordTaskActivity(toTaskActivitySnapshot(task), _options, 'task.archive');
+  }
+
   return task ?? null;
 }
 
-export async function moveTaskToQuadrant(taskId: string, quadrant: TaskQuadrantKey, today?: string) {
+export async function moveTaskToQuadrant(taskId: string, quadrant: TaskQuadrantKey, today?: string, options?: TaskMutationOptions) {
   const defaults = buildQuadrantDefaults(quadrant, today ?? formatDateOnly(new Date()));
   return updateTask(taskId, {
     priority: defaults.priority,
     dueDate: defaults.dueDate,
+  }, {
+    ...options,
+    activityAction: 'task.move_quadrant',
   });
 }
 
-export async function moveTaskToQuadrantList(taskId: string, listId: string | null) {
+export async function moveTaskToQuadrantList(taskId: string, listId: string | null, options?: TaskMutationOptions) {
   return updateTask(taskId, {
     listId,
+  }, {
+    ...options,
+    activityAction: 'task.move_list',
   });
 }
 
@@ -680,8 +852,17 @@ export async function listTasksForKeyResult(keyResultId: string) {
   return links.map((link: { task: unknown }) => link.task);
 }
 
-export async function replaceTaskKeyResultLinks(taskId: string, keyResultIds: string[]) {
+export async function replaceTaskKeyResultLinks(taskId: string, keyResultIds: string[], _options?: TaskMutationOptions) {
   const dedupedIds = Array.from(new Set(keyResultIds));
+  const existingLinks = await db.query.taskKrLinks.findMany({
+    where: eq(schema.taskKrLinks.taskId, taskId),
+  });
+  const task = _options?.activityContext
+    ? await db.query.tasks.findFirst({
+        where: eq(schema.tasks.id, taskId),
+      })
+    : null;
+  const existingIds = new Set<string>(existingLinks.map((link: { keyResultId: string }) => link.keyResultId));
 
   await db.transaction((tx: TransactionLike) => {
     tx.delete(schema.taskKrLinks).where(eq(schema.taskKrLinks.taskId, taskId));
@@ -697,15 +878,44 @@ export async function replaceTaskKeyResultLinks(taskId: string, keyResultIds: st
   });
 
   if (dedupedIds.length === 0) {
+    if (task && _options?.activityContext) {
+      for (const removedId of Array.from(existingIds)) {
+        await recordTaskActivity(toTaskActivitySnapshot(task), _options, 'task.unlink_key_result', {
+          keyResultId: removedId,
+        });
+      }
+    }
     return [];
   }
 
-  return db.query.taskKrLinks.findMany({
+  const links = await db.query.taskKrLinks.findMany({
     where: and(eq(schema.taskKrLinks.taskId, taskId), inArray(schema.taskKrLinks.keyResultId, dedupedIds)),
     with: {
       keyResult: true,
     },
   });
+
+  if (task && _options?.activityContext) {
+    const nextIds = new Set<string>(dedupedIds);
+
+    for (const keyResultId of dedupedIds) {
+      if (!existingIds.has(keyResultId)) {
+        await recordTaskActivity(toTaskActivitySnapshot(task), _options, 'task.link_key_result', {
+          keyResultId,
+        });
+      }
+    }
+
+    for (const removedId of Array.from(existingIds)) {
+      if (!nextIds.has(removedId)) {
+        await recordTaskActivity(toTaskActivitySnapshot(task), _options, 'task.unlink_key_result', {
+          keyResultId: removedId,
+        });
+      }
+    }
+  }
+
+  return links;
 }
 
 export async function unlinkTaskFromAllKeyResults(taskId: string) {
