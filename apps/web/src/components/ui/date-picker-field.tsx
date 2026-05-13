@@ -85,7 +85,7 @@ export function DatePickerField({
         </div>
         <Popover.Portal>
           <Popover.Positioner className="z-50">
-            <Popover.Popup className="metal-frame rounded-[16px] border border-(--border-hairline) bg-(--bg-surface-2) p-3 shadow-xl">
+            <Popover.Popup className="metal-frame rounded-[var(--radius-compact)] border border-(--border-hairline) bg-(--bg-surface-2) p-3 shadow-xl">
               <Calendar
                 mode="single"
                 selected={selected}

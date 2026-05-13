@@ -46,7 +46,7 @@ export function DashboardTaskStatusChart({
   data: ReadonlyArray<{ key: string; label: string; value: number }>;
 }) {
   return (
-    <SurfacePanel className="p-5 md:p-6">
+    <SurfacePanel className="p-3.5">
       <SectionHeader
         eyebrow="状态切片"
         title="任务分布"
@@ -57,8 +57,8 @@ export function DashboardTaskStatusChart({
           </Link>
         }
       />
-      <div className="mt-5 grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1fr)_180px]">
-        <ChartContainer config={taskStatusChartConfig} className="h-64 min-h-64">
+      <div className="mt-3 grid min-w-0 gap-3 lg:grid-cols-[minmax(0,1fr)_160px]">
+        <ChartContainer config={taskStatusChartConfig} className="h-56 min-h-56">
           <BarChart data={data} barGap={12}>
             <CartesianGrid vertical={false} stroke="rgba(255,255,255,0.08)" />
             <XAxis dataKey="label" tickLine={false} axisLine={false} tick={{ fill: 'var(--text-muted)', fontSize: 12 }} />
@@ -67,7 +67,7 @@ export function DashboardTaskStatusChart({
             <Bar dataKey="value" radius={[10, 10, 4, 4]} fill="var(--color-value)" />
           </BarChart>
         </ChartContainer>
-        <div className="min-w-0 grid gap-3 self-center">
+        <div className="min-w-0 grid gap-2 self-center">
           {data.map((item) => (
             <MetricChip key={item.key} label={item.label} value={String(item.value)} />
           ))}
@@ -85,7 +85,7 @@ export function DashboardTodayLoadChart({
   const total = data.reduce((sum, item) => sum + item.value, 0);
 
   return (
-    <div className="mt-5 grid min-w-0 gap-4 lg:grid-cols-[180px_minmax(0,1fr)]">
+    <div className="mt-3 grid min-w-0 gap-3 lg:grid-cols-[160px_minmax(0,1fr)]">
       <ChartContainer config={todayLoadChartConfig} className="h-44 min-h-44">
         <PieChart>
           <Pie
@@ -103,18 +103,18 @@ export function DashboardTodayLoadChart({
           <ChartTooltip />
         </PieChart>
       </ChartContainer>
-      <div className="min-w-0 space-y-3 self-center">
-        <div className="rounded-[var(--radius-panel)] border border-(--border-hairline) bg-[color:rgba(255,255,255,0.03)] p-4">
+      <div className="min-w-0 space-y-2 self-center">
+        <div className="rounded-[var(--radius-compact)] border border-(--border-hairline) bg-[color:rgba(255,255,255,0.03)] p-3">
           <p className="text-xs uppercase tracking-[0.18em] text-(--text-muted)">今日总负载</p>
-          <p className="mt-2 text-3xl font-semibold tracking-[-0.03em] text-(--text-primary)">{total}</p>
+          <p className="mt-1.5 text-2xl font-semibold tracking-[-0.03em] text-(--text-primary)">{total}</p>
         </div>
         {data.map((item) => (
-          <div key={item.key} className="flex items-center justify-between rounded-[var(--radius-panel)] border border-(--border-hairline) bg-[color:rgba(255,255,255,0.03)] px-4 py-3">
+          <div key={item.key} className="flex items-center justify-between rounded-[var(--radius-compact)] border border-(--border-hairline) bg-[color:rgba(255,255,255,0.03)] px-3 py-2.5">
             <div className="flex items-center gap-2">
               <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: `var(--color-${item.key})` }} />
               <span className="text-sm text-(--text-secondary)">{item.label}</span>
             </div>
-            <span className="text-lg font-semibold text-(--text-primary)">{item.value}</span>
+            <span className="text-base font-semibold text-(--text-primary)">{item.value}</span>
           </div>
         ))}
       </div>
@@ -128,8 +128,8 @@ export function DashboardReviewClosureChart({
   data: ReadonlyArray<{ key: 'risk' | 'closure'; label: string; value: number; detail: string }>;
 }) {
   return (
-    <div className="mt-5 grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1fr)_220px]">
-      <ChartContainer config={reviewSummaryChartConfig} className="h-56 min-h-56">
+    <div className="mt-3 grid min-w-0 gap-3 lg:grid-cols-[minmax(0,1fr)_200px]">
+      <ChartContainer config={reviewSummaryChartConfig} className="h-48 min-h-48">
         <BarChart data={data} layout="vertical" barSize={26}>
           <CartesianGrid horizontal={false} stroke="rgba(255,255,255,0.08)" />
           <XAxis type="number" allowDecimals={false} tickLine={false} axisLine={false} tick={{ fill: 'var(--text-muted)', fontSize: 12 }} />
@@ -142,14 +142,14 @@ export function DashboardReviewClosureChart({
           </Bar>
         </BarChart>
       </ChartContainer>
-      <div className="min-w-0 space-y-3">
+      <div className="min-w-0 space-y-2">
         {data.map((item) => (
-          <div key={item.key} className="rounded-[var(--radius-panel)] border border-(--border-hairline) bg-[color:rgba(255,255,255,0.03)] p-4">
+          <div key={item.key} className="rounded-[var(--radius-compact)] border border-(--border-hairline) bg-[color:rgba(255,255,255,0.03)] p-3">
             <div className="flex items-center justify-between gap-3">
               <p className="text-sm font-medium text-(--text-primary)">{item.label}</p>
               <Badge tone={item.key === 'risk' ? 'danger' : 'success'}>{item.value}</Badge>
             </div>
-            <p className="mt-2 text-sm text-(--text-secondary)">{item.detail}</p>
+            <p className="mt-1.5 text-xs leading-5 text-(--text-secondary)">{item.detail}</p>
           </div>
         ))}
       </div>
@@ -159,9 +159,9 @@ export function DashboardReviewClosureChart({
 
 function MetricChip({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-[var(--radius-panel)] border border-(--border-hairline) bg-[color:rgba(255,255,255,0.04)] p-4">
+    <div className="rounded-[var(--radius-compact)] border border-(--border-hairline) bg-[color:rgba(255,255,255,0.04)] p-3">
       <p className="text-xs uppercase tracking-[0.18em] text-(--text-muted)">{label}</p>
-      <p className="mt-2 text-3xl font-semibold tracking-[-0.03em] text-(--text-primary)">{value}</p>
+      <p className="mt-1.5 text-2xl font-semibold tracking-[-0.03em] text-(--text-primary)">{value}</p>
     </div>
   );
 }

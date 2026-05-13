@@ -1,6 +1,6 @@
 'use client';
 
-import { Badge, Button, Empty, ErrorAlert, SelectField, TextareaField, TextField } from '@/components/ui';
+import { Badge, Button, Empty, ErrorAlert, PageIntro, SelectField, SurfacePanel, TextareaField, TextField } from '@/components/ui';
 import { useActionState, useEffect, useState } from 'react';
 import { getExampleStatusLabel } from '@/lib/presentation/labels';
 import {
@@ -60,13 +60,17 @@ export function ExamplesClient({ items }: { items: ExampleItem[] }) {
   }
 
   return (
-    <div>
-      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-2xl font-bold text-[var(--text-primary)]">示例</h1>
-        <Button type="button" variant="primary" onClick={startCreate} className="min-h-11 sm:min-h-0">
-          新增条目
-        </Button>
-      </div>
+    <div className="space-y-3">
+      <PageIntro
+        eyebrow="Examples"
+        title="示例"
+        description="用于验证基础增删改流程的轻量数据集。"
+        action={
+          <Button type="button" variant="primary" onClick={startCreate}>
+            新增条目
+          </Button>
+        }
+      />
 
       {showCreateForm && (
         <ExampleForm
@@ -92,7 +96,7 @@ export function ExamplesClient({ items }: { items: ExampleItem[] }) {
       ) : (
         <div className="space-y-2">
           {items.map((item) => (
-            <div key={item.id} className="flex flex-col gap-3 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-panel)] p-4 shadow-[0_0_0_1px_rgba(255,255,255,0.02)] sm:flex-row sm:items-center sm:justify-between">
+            <div key={item.id} className="metal-frame flex flex-col gap-2 rounded-[var(--radius-compact)] border border-(--border-hairline) bg-[color:rgba(255,255,255,0.03)] p-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="min-w-0">
                 <p className="break-words font-medium text-[var(--text-primary)]">{item.title}</p>
                 <p className="mt-1 text-sm text-[var(--text-secondary)]">
@@ -102,8 +106,8 @@ export function ExamplesClient({ items }: { items: ExampleItem[] }) {
                   {item.notes && <span className="ml-2 break-words">{item.notes}</span>}
                 </p>
               </div>
-              <div className="flex shrink-0 gap-3">
-                <Button type="button" variant="ghost" onClick={() => startEdit(item)} className="min-h-11 px-1 sm:min-h-0">
+              <div className="flex shrink-0 gap-2">
+                <Button type="button" variant="ghost" size="sm" onClick={() => startEdit(item)}>
                   编辑
                 </Button>
                 <form
@@ -111,7 +115,7 @@ export function ExamplesClient({ items }: { items: ExampleItem[] }) {
                     await deleteExampleAction(item.id);
                   }}
                 >
-                  <Button type="submit" variant="danger" className="min-h-11 px-1 sm:min-h-0">
+                  <Button type="submit" variant="danger" size="sm">
                     删除
                   </Button>
                 </form>
@@ -138,7 +142,8 @@ function ExampleForm({
   onCancel: () => void;
 }) {
   return (
-    <form action={action} className="mb-6 space-y-3 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-panel)] p-4">
+    <SurfacePanel className="metal-frame instrument-surface mb-3 p-3.5">
+      <form action={action} className="space-y-3">
       {item && <input type="hidden" name="id" value={item.id} />}
       {error && <ErrorAlert message={error} />}
       <TextField id={`${submitLabel}-title`} name="title" label="标题" defaultValue={item?.title ?? ''} required />
@@ -154,13 +159,14 @@ function ExampleForm({
       />
       <TextareaField id={`${submitLabel}-notes`} name="notes" label="备注" defaultValue={item?.notes ?? ''} rows={3} />
       <div className="flex flex-col gap-2 sm:flex-row">
-        <Button type="submit" variant="primary" className="min-h-11 sm:min-h-0">
+        <Button type="submit" variant="primary">
           {submitLabel}
         </Button>
-        <Button type="button" variant="secondary" onClick={onCancel} className="min-h-11 sm:min-h-0">
+        <Button type="button" variant="secondary" onClick={onCancel}>
           取消
         </Button>
       </div>
-    </form>
+      </form>
+    </SurfacePanel>
   );
 }

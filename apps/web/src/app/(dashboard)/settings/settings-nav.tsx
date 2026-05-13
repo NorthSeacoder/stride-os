@@ -38,7 +38,7 @@ export function SettingsNav() {
             <div
               key={item.href}
               aria-disabled="true"
-              className="metal-frame rounded-[16px] border border-dashed border-(--border-hairline) bg-[color:rgba(255,255,255,0.02)] p-4 opacity-80"
+              className="metal-frame rounded-[var(--radius-compact)] border border-dashed border-(--border-hairline) bg-[color:rgba(255,255,255,0.02)] p-3 opacity-80"
             >
               <div className="flex items-center justify-between gap-3">
                 <p className="text-sm font-medium text-(--text-primary)">{item.label}</p>
@@ -55,7 +55,7 @@ export function SettingsNav() {
           <Link
             key={item.href}
             href={item.href}
-            className={`metal-frame block rounded-[16px] border p-4 transition-colors ${
+            className={`metal-frame block rounded-[var(--radius-compact)] border p-3 transition-colors ${
               active
                 ? 'border-(--border-glow) bg-[color:rgba(180,204,255,0.08)]'
                 : 'border-(--border-hairline) bg-[color:rgba(255,255,255,0.03)] hover:border-(--border-glow) hover:bg-[color:rgba(255,255,255,0.05)]'

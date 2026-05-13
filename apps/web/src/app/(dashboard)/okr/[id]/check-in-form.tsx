@@ -10,16 +10,16 @@ export function CheckInForm({ keyResultId }: { keyResultId: string }) {
   const [state, action] = useActionState(createKrCheckInAction, initialState);
 
   return (
-    <SurfacePanel className="metal-frame instrument-surface p-5 md:p-6">
+    <SurfacePanel className="metal-frame instrument-surface p-3.5">
       <SectionHeader
         eyebrow="Progress Source"
         title="新增 Check-in"
         description="进展的真实来源在这里，不在任务完成数量里。"
       />
-      <form action={action} className="mt-5 space-y-4">
+      <form action={action} className="mt-3 space-y-3">
         <input type="hidden" name="keyResultId" value={keyResultId} />
         {state.error && <ErrorAlert message={state.error} />}
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-3 md:grid-cols-2">
           <TextField name="progressValue" label="进度值" type="number" step="0.01" />
           <SelectField
             name="confidence"

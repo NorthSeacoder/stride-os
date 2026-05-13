@@ -16,7 +16,7 @@ type FieldShellProps = {
 function FieldShell({ label, error, description, children }: FieldShellProps) {
   return (
     <Field.Root className="block">
-      <Field.Label className="mb-1 block text-sm text-(--text-secondary)">{label}</Field.Label>
+      <Field.Label className="mb-1 block text-xs text-(--text-secondary)">{label}</Field.Label>
       {children}
       {description && <Field.Description className="mt-1 text-xs text-(--text-muted)">{description}</Field.Description>}
       {error && <Field.Error className="mt-1 text-xs text-(--danger-text)">{error}</Field.Error>}
@@ -35,7 +35,7 @@ export function TextField({ label, error, description, className = '', ...props 
     <FieldShell label={label} error={error} description={description}>
       <Field.Control
         {...props}
-        className={`w-full rounded-[14px] border border-(--border-hairline) bg-[color:rgba(255,255,255,0.03)] px-3 py-2 text-sm text-(--text-primary) outline-none transition-colors focus:border-(--border-glow) focus:ring-2 focus:ring-(--focus-ring)/30 ${className}`}
+        className={`w-full rounded-[var(--radius-compact)] border border-(--border-hairline) bg-[color:rgba(255,255,255,0.03)] px-3 py-2 text-sm text-(--text-primary) outline-none transition-colors focus:border-(--border-glow) focus:ring-2 focus:ring-(--focus-ring)/30 ${className}`}
       />
     </FieldShell>
   );
@@ -56,7 +56,7 @@ export function TextareaField({ label, error, description, className = '', ...pr
 
   return (
     <div className="block">
-      <label htmlFor={controlId} className="mb-1 block text-sm text-(--text-secondary)">
+      <label htmlFor={controlId} className="mb-1 block text-xs text-(--text-secondary)">
         {label}
       </label>
       <textarea
@@ -64,7 +64,7 @@ export function TextareaField({ label, error, description, className = '', ...pr
         id={controlId}
         aria-describedby={describedBy}
         aria-invalid={error ? true : undefined}
-        className={`w-full rounded-[14px] border border-(--border-hairline) bg-[color:rgba(255,255,255,0.03)] px-3 py-2 text-sm text-(--text-primary) outline-none transition-colors focus:border-(--border-glow) focus:ring-2 focus:ring-(--focus-ring)/30 ${className}`}
+        className={`w-full rounded-[var(--radius-compact)] border border-(--border-hairline) bg-[color:rgba(255,255,255,0.03)] px-3 py-2 text-sm text-(--text-primary) outline-none transition-colors focus:border-(--border-glow) focus:ring-2 focus:ring-(--focus-ring)/30 ${className}`}
       />
       {description && <p id={descriptionId} className="mt-1 text-xs text-(--text-muted)">{description}</p>}
       {error && <p id={errorId} className="mt-1 text-xs text-(--danger-text)">{error}</p>}
@@ -168,13 +168,13 @@ export function SelectField({
           onValueChange?.(resolvedValue);
         }}
       >
-        <Select.Trigger className="flex w-full items-center justify-between rounded-[14px] border border-(--border-hairline) bg-[color:rgba(255,255,255,0.03)] px-3 py-2 text-left text-sm text-(--text-primary) outline-none transition-colors focus:border-(--border-glow) focus:ring-2 focus:ring-(--focus-ring)/30 disabled:cursor-not-allowed disabled:opacity-50">
+        <Select.Trigger className="flex w-full items-center justify-between rounded-[var(--radius-compact)] border border-(--border-hairline) bg-[color:rgba(255,255,255,0.03)] px-3 py-2 text-left text-sm text-(--text-primary) outline-none transition-colors focus:border-(--border-glow) focus:ring-2 focus:ring-(--focus-ring)/30 disabled:cursor-not-allowed disabled:opacity-50">
           <Select.Value>{selected?.label ?? placeholder}</Select.Value>
           <Select.Icon className="text-(--text-muted)">⌄</Select.Icon>
         </Select.Trigger>
         <Select.Portal>
           <Select.Positioner className="z-50">
-            <Select.Popup className="metal-frame min-w-[var(--anchor-width)] rounded-[14px] border border-(--border-hairline) bg-(--bg-surface-2) p-1 shadow-xl">
+            <Select.Popup className="metal-frame min-w-[var(--anchor-width)] rounded-[var(--radius-compact)] border border-(--border-hairline) bg-(--bg-surface-2) p-1 shadow-xl">
               {options.map((option) => (
                 <Select.Item
                   key={option.value}

@@ -43,7 +43,7 @@ export default async function DashboardPage() {
   ] as const;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3">
       <PageIntro
         eyebrow="系统总览"
         title="工作台"
@@ -100,8 +100,8 @@ export default async function DashboardPage() {
         </div>
       </SurfacePanel>
 
-      <div className="grid gap-6 xl:grid-cols-2">
-        <SurfacePanel className="metal-frame instrument-surface p-5 md:p-6">
+      <div className="grid gap-3 xl:grid-cols-2">
+        <SurfacePanel className="metal-frame instrument-surface p-3.5">
           <SectionHeader
             eyebrow="执行负载"
             title="今日快照"
@@ -122,7 +122,7 @@ export default async function DashboardPage() {
         <DashboardTaskStatusChart data={statusChartData} />
       </div>
 
-      <SurfacePanel className="metal-frame instrument-surface p-5 md:p-6">
+      <SurfacePanel className="metal-frame instrument-surface p-3.5">
         <SectionHeader
           eyebrow="战略焦点"
           title="风险关键结果"
@@ -133,7 +133,7 @@ export default async function DashboardPage() {
             </Link>
           }
         />
-        <div className="mt-5 space-y-3">
+        <div className="mt-3 space-y-2">
           {summary.riskKeyResults.length === 0 ? (
             <Empty text="当前没有风险 KR。" />
           ) : (
@@ -141,23 +141,23 @@ export default async function DashboardPage() {
               <Link
                 key={kr.id}
                 href={`/okr/${kr.id}`}
-                className="metal-frame block rounded-[16px] border border-(--border-hairline) bg-[color:rgba(255,255,255,0.03)] p-4 transition-colors hover:border-(--border-glow) hover:bg-[color:rgba(255,255,255,0.05)]"
+                className="metal-frame block rounded-[var(--radius-compact)] border border-(--border-hairline) bg-[color:rgba(255,255,255,0.03)] p-3 transition-colors hover:border-(--border-glow) hover:bg-[color:rgba(255,255,255,0.05)]"
               >
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <p className="text-xs uppercase tracking-[0.18em] text-(--text-muted)">{kr.objective.period.name}</p>
                   <Badge>{getKeyResultStatusLabel(kr.status)}</Badge>
                 </div>
-                <p className="mt-3 text-base font-medium text-(--text-primary)">{kr.title}</p>
+                <p className="mt-2 text-sm font-medium text-(--text-primary)">{kr.title}</p>
                 <p className="mt-1 text-sm text-(--text-secondary)">{kr.objective.title}</p>
-                <p className="mt-3 text-xs text-(--text-muted)">最新信心: {getConfidenceLabel(kr.checkIns[0]?.confidence)}</p>
+                <p className="mt-2 text-xs text-(--text-muted)">最新信心: {getConfidenceLabel(kr.checkIns[0]?.confidence)}</p>
               </Link>
             ))
           )}
         </div>
       </SurfacePanel>
 
-      <div className="grid gap-6 xl:grid-cols-[1fr_1fr]">
-        <SurfacePanel className="metal-frame instrument-surface p-5 md:p-6">
+      <div className="grid gap-3 xl:grid-cols-[1fr_1fr]">
+        <SurfacePanel className="metal-frame instrument-surface p-3.5">
           <SectionHeader
             eyebrow="闭环摘要"
             title="最近复盘"
@@ -168,9 +168,9 @@ export default async function DashboardPage() {
               </Link>
             }
           />
-          <div className="mt-5">
+          <div className="mt-3">
             {summary.latestReview ? (
-              <div className="metal-frame rounded-[16px] border border-(--border-hairline) bg-[color:rgba(255,255,255,0.03)] p-4">
+              <div className="metal-frame rounded-[var(--radius-compact)] border border-(--border-hairline) bg-[color:rgba(255,255,255,0.03)] p-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <p className="font-medium text-(--text-primary)">{summary.latestReview.title}</p>
                   <Badge>{getReviewStatusLabel(summary.latestReview.status)}</Badge>
@@ -185,7 +185,7 @@ export default async function DashboardPage() {
           </div>
         </SurfacePanel>
 
-        <SurfacePanel className="metal-frame instrument-surface p-5 md:p-6">
+        <SurfacePanel className="metal-frame instrument-surface p-3.5">
           <SectionHeader
             eyebrow="闭环信号"
             title="风险与复盘"
@@ -219,26 +219,26 @@ function StatusTile({
   return (
     <Link
       href={href}
-      className={`metal-frame instrument-surface px-5 py-5 transition-colors hover:bg-[color:rgba(22,26,33,0.88)] ${
+      className={`metal-frame instrument-surface rounded-[var(--radius-compact)] px-3.5 py-3 transition-colors hover:bg-[color:rgba(22,26,33,0.88)] ${
         featured
           ? 'bg-[color:rgba(18,22,29,0.9)]'
           : 'bg-[color:rgba(14,17,22,0.7)]'
       }`}
     >
       <p className="text-[11px] uppercase tracking-[0.22em] text-(--text-muted)">{eyebrow}</p>
-      <p className={`mt-4 font-semibold tracking-[-0.03em] text-(--text-primary) ${featured ? 'text-[2rem]' : 'text-2xl'}`}>
+      <p className={`mt-2.5 font-semibold tracking-[-0.03em] text-(--text-primary) ${featured ? 'text-2xl' : 'text-xl'}`}>
         {title}
       </p>
-      <p className={`mt-2 text-(--text-secondary) ${featured ? 'max-w-[18rem] text-sm' : 'text-sm'}`}>{description}</p>
+      <p className={`mt-1.5 text-(--text-secondary) ${featured ? 'max-w-[18rem] text-xs leading-5' : 'text-xs leading-5'}`}>{description}</p>
     </Link>
   );
 }
 
 function MetricChip({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-[var(--radius-panel)] border border-(--border-hairline) bg-[color:rgba(255,255,255,0.04)] p-4">
+    <div className="rounded-[var(--radius-compact)] border border-(--border-hairline) bg-[color:rgba(255,255,255,0.04)] p-3">
       <p className="text-xs uppercase tracking-[0.18em] text-(--text-muted)">{label}</p>
-      <p className="mt-2 text-3xl font-semibold tracking-[-0.03em] text-(--text-primary)">{value}</p>
+      <p className="mt-1.5 text-2xl font-semibold tracking-[-0.03em] text-(--text-primary)">{value}</p>
     </div>
   );
 }

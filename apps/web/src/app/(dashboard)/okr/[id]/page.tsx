@@ -19,7 +19,7 @@ export default async function KeyResultDetailPage({
 
   if (!keyResult) {
     return (
-      <div className="space-y-4">
+      <div className="space-y-3">
         <Link href="/okr" className="text-sm text-(--text-secondary) hover:text-(--text-primary)">
           返回 OKR
         </Link>
@@ -29,7 +29,7 @@ export default async function KeyResultDetailPage({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3">
       <PageIntro
         eyebrow={`${keyResult.objective.period.name} / ${keyResult.objective.title}`}
         title={keyResult.title}
@@ -48,7 +48,7 @@ export default async function KeyResultDetailPage({
         <InspectorMetric label="进度" value={String(keyResult.progress?.progressValue ?? '暂无')} />
       </div>
 
-      <SurfacePanel className="metal-frame instrument-surface p-5 md:p-6">
+      <SurfacePanel className="metal-frame instrument-surface p-3.5">
         <SectionHeader
           eyebrow="Execution Context"
           title="关联任务"
@@ -59,7 +59,7 @@ export default async function KeyResultDetailPage({
             <Empty text="这个 KR 还没有关联任务。" />
           ) : (
             keyResult.tasks.map((task: { id: string; title: string; status: string; dueDate: string | null; notes: string | null; description?: string | null }) => (
-              <div key={task.id} className="metal-frame rounded-[16px] border border-(--border-hairline) bg-[color:rgba(255,255,255,0.03)] p-4">
+              <div key={task.id} className="metal-frame rounded-[var(--radius-compact)] border border-(--border-hairline) bg-[color:rgba(255,255,255,0.03)] p-3">
                 <div className="flex flex-wrap items-center gap-2">
                   <p className="font-medium text-(--text-primary)">{task.title}</p>
                   <Badge>{getTaskStatusLabel(task.status)}</Badge>
@@ -74,7 +74,7 @@ export default async function KeyResultDetailPage({
 
       <CheckInForm keyResultId={keyResult.id} />
 
-      <SurfacePanel className="metal-frame instrument-surface p-5 md:p-6">
+      <SurfacePanel className="metal-frame instrument-surface p-3.5">
         <SectionHeader
           eyebrow="History"
           title="Check-in 历史"
@@ -84,7 +84,7 @@ export default async function KeyResultDetailPage({
             <Empty text="还没有 check-in 记录。" />
           ) : (
             keyResult.checkIns.map((checkIn: { id: string; confidence: string; progressValue: number | null; summary: string | null; blockers: string | null; nextActions: string | null; createdAt: Date }) => (
-              <div key={checkIn.id} className="metal-frame rounded-[16px] border border-(--border-hairline) bg-[color:rgba(255,255,255,0.03)] p-4">
+              <div key={checkIn.id} className="metal-frame rounded-[var(--radius-compact)] border border-(--border-hairline) bg-[color:rgba(255,255,255,0.03)] p-3">
                 <div className="flex flex-wrap gap-3 text-sm text-(--text-secondary)">
                   <span>{String(checkIn.createdAt).slice(0, 10)}</span>
                   <span>信心 {getConfidenceLabel(checkIn.confidence)}</span>
@@ -104,9 +104,9 @@ export default async function KeyResultDetailPage({
 
 function InspectorMetric({ label, value }: { label: string; value: string }) {
   return (
-    <div className="metal-frame rounded-[16px] border border-(--border-hairline) bg-[color:rgba(255,255,255,0.03)] p-4">
+    <div className="metal-frame rounded-[var(--radius-compact)] border border-(--border-hairline) bg-[color:rgba(255,255,255,0.03)] p-3">
       <p className="text-[11px] uppercase tracking-[0.22em] text-(--text-muted)">{label}</p>
-      <p className="mt-3 text-lg font-semibold tracking-[-0.02em] text-(--text-primary)">{value}</p>
+      <p className="mt-2 text-base font-semibold tracking-[-0.02em] text-(--text-primary)">{value}</p>
     </div>
   );
 }
