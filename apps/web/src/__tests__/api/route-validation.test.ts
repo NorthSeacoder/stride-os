@@ -47,6 +47,9 @@ import { POST as loginPost } from '@/app/api/auth/login/route';
 import { POST as tokensPost } from '@/app/api/tokens/route';
 import { POST as examplesPost } from '@/app/api/v1/examples/route';
 import { PATCH as examplePatch } from '@/app/api/v1/examples/[id]/route';
+import { apiError, conflict, notFound, unauthorized } from '@/app/api/_lib/validation';
+import { recordAuditLog } from '@/app/api/_lib/audit';
+import { expectJsonError, jsonRequest } from './helpers';
 
 describe('route handler validation boundaries', () => {
   it('returns 400 for invalid JSON in login route', async () => {
@@ -57,32 +60,26 @@ describe('route handler validation boundaries', () => {
     });
 
     const response = await loginPost(request);
-    expect(response.status).toBe(400);
-    expect(await response.json()).toEqual({ error: 'Invalid JSON body' });
+    await expectJsonError(response, 400, 'Invalid JSON body');
   });
 
   it('returns 400 for blank token name', async () => {
-    const request = new NextRequest('http://localhost/api/tokens', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ name: '   ' }),
+    const request = jsonRequest('http://localhost/api/tokens', {
+      body: { name: '   ' },
     });
 
     const response = await tokensPost(request);
-    expect(response.status).toBe(400);
-    expect(await response.json()).toEqual({ error: 'Name is required' });
+    await expectJsonError(response, 400, 'Name is required');
   });
 
   it('returns 400 for blank example title in create route', async () => {
-    const request = new NextRequest('http://localhost/api/v1/examples', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', authorization: 'Bearer tpl_fake' },
-      body: JSON.stringify({ title: '   ' }),
+    const request = jsonRequest('http://localhost/api/v1/examples', {
+      auth: 'tpl_fake',
+      body: { title: '   ' },
     });
 
     const response = await examplesPost(request);
-    expect(response.status).toBe(400);
-    expect(await response.json()).toEqual({ error: 'Title is required' });
+    await expectJsonError(response, 400, 'Title is required');
   });
 
   it('returns 400 for blank example id in patch route', async () => {
@@ -98,5 +95,25 @@ describe('route handler validation boundaries', () => {
 
     expect(response.status).toBe(400);
     expect(await response.json()).toEqual({ error: 'Example id is required' });
+  });
+
+  it('provides shared JSON error helpers', async () => {
+    await expectJsonError(unauthorized(), 401, 'Unauthorized');
+    await expectJsonError(notFound('Task not found'), 404, 'Task not found');
+    await expectJsonError(conflict('Task already archived'), 409, 'Task already archived');
+    await expectJsonError(apiError('Custom error', 418), 418, 'Custom error');
+  });
+
+  it('records audit logs through a shared helper', async () => {
+    await recordAuditLog({
+      actorId: 'user_1',
+      action: 'task.create',
+      targetType: 'task',
+      targetId: 'task_1',
+      metadata: { source: 'api' },
+    });
+
+    const { db, schema } = await import('@stride-os/db');
+    expect(db.insert).toHaveBeenCalledWith(schema.auditLogs);
   });
 });

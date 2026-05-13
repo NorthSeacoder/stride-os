@@ -266,6 +266,7 @@ const tasksColumns = {
   occurrenceDate: date('occurrence_date'),
   priority: varchar('priority', { length: 8 }),
   energy: varchar('energy', { length: 16 }),
+  archivedAt: timestamp('archived_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 };
@@ -275,6 +276,7 @@ export const tasks = pgTable('tasks', tasksColumns, (table) => [
   index('idx_tasks_list_id').on(table.listId),
   index('idx_tasks_due_date').on(table.dueDate),
   index('idx_tasks_completed_at').on(table.completedAt),
+  index('idx_tasks_archived_at').on(table.archivedAt),
   index('idx_tasks_definition_id').on(table.definitionId),
   index('idx_tasks_definition_occurrence').on(table.definitionId, table.occurrenceDate),
   index('idx_tasks_priority').on(table.priority),
@@ -339,6 +341,7 @@ const reviewsColumns = {
   title: varchar('title', { length: 255 }).notNull(),
   body: text('body').notNull(),
   structuredSummary: jsonb('structured_summary').$type<Record<string, unknown>>(),
+  archivedAt: timestamp('archived_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 };
@@ -347,6 +350,7 @@ export const reviews = pgTable('reviews', reviewsColumns, (table) => [
   index('idx_reviews_type').on(table.type),
   index('idx_reviews_period_start_end').on(table.periodStart, table.periodEnd),
   index('idx_reviews_status').on(table.status),
+  index('idx_reviews_archived_at').on(table.archivedAt),
   check('reviews_type_check', sql`${table.type} in ('weekly', 'monthly', 'period')`),
   check('reviews_status_check', sql`${table.status} in ('draft', 'final')`),
   check('reviews_period_range_check', sql`${table.periodEnd} >= ${table.periodStart}`),

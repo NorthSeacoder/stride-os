@@ -86,6 +86,125 @@ export const v1Spec = {
         },
       },
     },
+    '/tasks': {
+      get: {
+        operationId: 'listTasks',
+        summary: 'List tasks by smart source',
+        security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+        parameters: [{ name: 'source', in: 'query', schema: { type: 'string', default: 'all' } }],
+        responses: {
+          '200': { description: 'Tasks', content: { 'application/json': { schema: { type: 'array', items: { $ref: '#/components/schemas/TaskItem' } } } } },
+          '401': { $ref: '#/components/responses/Unauthorized' },
+        },
+      },
+      post: {
+        operationId: 'createTask',
+        summary: 'Create task',
+        security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+        requestBody: { required: true, content: { 'application/json': { schema: { $ref: '#/components/schemas/TaskWriteRequest' } } } },
+        responses: {
+          '201': { description: 'Created task', content: { 'application/json': { schema: { $ref: '#/components/schemas/TaskItem' } } } },
+          '400': { $ref: '#/components/responses/BadRequest' },
+          '401': { $ref: '#/components/responses/Unauthorized' },
+        },
+      },
+    },
+    '/tasks/{id}': {
+      get: {
+        operationId: 'getTask',
+        summary: 'Get task detail',
+        security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+        parameters: [{ $ref: '#/components/parameters/IdPath' }],
+        responses: {
+          '200': { description: 'Task detail', content: { 'application/json': { schema: { $ref: '#/components/schemas/TaskItem' } } } },
+          '401': { $ref: '#/components/responses/Unauthorized' },
+          '404': { $ref: '#/components/responses/NotFound' },
+        },
+      },
+      patch: {
+        operationId: 'updateTask',
+        summary: 'Update task',
+        security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+        parameters: [{ $ref: '#/components/parameters/IdPath' }],
+        requestBody: { required: true, content: { 'application/json': { schema: { $ref: '#/components/schemas/TaskWriteRequest' } } } },
+        responses: {
+          '200': { description: 'Updated task', content: { 'application/json': { schema: { $ref: '#/components/schemas/TaskItem' } } } },
+          '400': { $ref: '#/components/responses/BadRequest' },
+          '401': { $ref: '#/components/responses/Unauthorized' },
+          '404': { $ref: '#/components/responses/NotFound' },
+        },
+      },
+    },
+    '/tasks/{id}/complete': {
+      post: {
+        operationId: 'completeTask',
+        summary: 'Complete task',
+        security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+        parameters: [{ $ref: '#/components/parameters/IdPath' }],
+        responses: {
+          '200': { description: 'Completed task', content: { 'application/json': { schema: { $ref: '#/components/schemas/TaskItem' } } } },
+          '401': { $ref: '#/components/responses/Unauthorized' },
+          '404': { $ref: '#/components/responses/NotFound' },
+        },
+      },
+    },
+    '/tasks/{id}/restore': {
+      post: {
+        operationId: 'restoreTask',
+        summary: 'Restore task from done state',
+        security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+        parameters: [{ $ref: '#/components/parameters/IdPath' }],
+        responses: {
+          '200': { description: 'Restored task', content: { 'application/json': { schema: { $ref: '#/components/schemas/TaskItem' } } } },
+          '401': { $ref: '#/components/responses/Unauthorized' },
+          '404': { $ref: '#/components/responses/NotFound' },
+        },
+      },
+    },
+    '/tasks/{id}/archive': {
+      post: {
+        operationId: 'archiveTask',
+        summary: 'Archive task',
+        security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+        parameters: [{ $ref: '#/components/parameters/IdPath' }],
+        responses: {
+          '200': { description: 'Archived task', content: { 'application/json': { schema: { $ref: '#/components/schemas/TaskItem' } } } },
+          '401': { $ref: '#/components/responses/Unauthorized' },
+          '404': { $ref: '#/components/responses/NotFound' },
+        },
+      },
+    },
+    '/tasks/{id}/quadrant': {
+      post: {
+        operationId: 'moveTaskQuadrant',
+        summary: 'Move task to Eisenhower quadrant',
+        security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+        parameters: [{ $ref: '#/components/parameters/IdPath' }],
+        requestBody: { required: true, content: { 'application/json': { schema: { $ref: '#/components/schemas/MoveTaskQuadrantRequest' } } } },
+        responses: {
+          '200': { description: 'Moved task', content: { 'application/json': { schema: { $ref: '#/components/schemas/TaskItem' } } } },
+          '400': { $ref: '#/components/responses/BadRequest' },
+          '401': { $ref: '#/components/responses/Unauthorized' },
+          '404': { $ref: '#/components/responses/NotFound' },
+        },
+      },
+    },
+    '/tasks/reminders': {
+      get: {
+        operationId: 'listTaskReminderCandidates',
+        summary: 'List stateless task reminder candidates',
+        security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+        parameters: [
+          { name: 'today', in: 'query', schema: { type: 'string', format: 'date' } },
+          { name: 'to', in: 'query', schema: { type: 'string', format: 'date' } },
+        ],
+        responses: {
+          '200': { description: 'Reminder candidates', content: { 'application/json': { schema: { $ref: '#/components/schemas/TaskReminderResponse' } } } },
+          '400': { $ref: '#/components/responses/BadRequest' },
+          '401': { $ref: '#/components/responses/Unauthorized' },
+        },
+      },
+    },
     '/tasks/inbox': {
       get: {
         operationId: 'listInboxTasks',
@@ -120,6 +239,210 @@ export const v1Spec = {
           '201': { description: 'Check-in created', content: { 'application/json': { schema: { $ref: '#/components/schemas/CheckInItem' } } } },
           '400': { description: 'Bad request' },
           '401': { description: 'Unauthorized' },
+        },
+      },
+    },
+    '/okr/periods': {
+      get: {
+        operationId: 'listOkrPeriods',
+        summary: 'List OKR periods',
+        security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+        responses: {
+          '200': { description: 'OKR periods', content: { 'application/json': { schema: { type: 'array', items: { $ref: '#/components/schemas/OkrPeriod' } } } } },
+          '401': { $ref: '#/components/responses/Unauthorized' },
+        },
+      },
+      post: {
+        operationId: 'createOkrPeriod',
+        summary: 'Create OKR period',
+        security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+        requestBody: { required: true, content: { 'application/json': { schema: { $ref: '#/components/schemas/OkrPeriodWriteRequest' } } } },
+        responses: {
+          '201': { description: 'Created OKR period', content: { 'application/json': { schema: { $ref: '#/components/schemas/OkrPeriod' } } } },
+          '400': { $ref: '#/components/responses/BadRequest' },
+          '401': { $ref: '#/components/responses/Unauthorized' },
+        },
+      },
+    },
+    '/okr/periods/{id}': {
+      get: {
+        operationId: 'getOkrPeriod',
+        summary: 'Get OKR period',
+        security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+        parameters: [{ $ref: '#/components/parameters/IdPath' }],
+        responses: {
+          '200': { description: 'OKR period', content: { 'application/json': { schema: { $ref: '#/components/schemas/OkrPeriod' } } } },
+          '401': { $ref: '#/components/responses/Unauthorized' },
+          '404': { $ref: '#/components/responses/NotFound' },
+        },
+      },
+      patch: {
+        operationId: 'updateOkrPeriod',
+        summary: 'Update OKR period',
+        security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+        parameters: [{ $ref: '#/components/parameters/IdPath' }],
+        requestBody: { required: true, content: { 'application/json': { schema: { $ref: '#/components/schemas/OkrPeriodWriteRequest' } } } },
+        responses: {
+          '200': { description: 'Updated OKR period', content: { 'application/json': { schema: { $ref: '#/components/schemas/OkrPeriod' } } } },
+          '400': { $ref: '#/components/responses/BadRequest' },
+          '401': { $ref: '#/components/responses/Unauthorized' },
+          '404': { $ref: '#/components/responses/NotFound' },
+        },
+      },
+    },
+    '/okr/periods/{id}/archive': {
+      post: {
+        operationId: 'archiveOkrPeriod',
+        summary: 'Archive OKR period',
+        security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+        parameters: [{ $ref: '#/components/parameters/IdPath' }],
+        responses: {
+          '200': { description: 'Archived OKR period', content: { 'application/json': { schema: { $ref: '#/components/schemas/OkrPeriod' } } } },
+          '401': { $ref: '#/components/responses/Unauthorized' },
+          '404': { $ref: '#/components/responses/NotFound' },
+        },
+      },
+    },
+    '/okr/periods/{id}/objectives': {
+      get: {
+        operationId: 'listOkrPeriodObjectives',
+        summary: 'List objectives in an OKR period',
+        security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+        parameters: [{ $ref: '#/components/parameters/IdPath' }],
+        responses: {
+          '200': { description: 'Objectives', content: { 'application/json': { schema: { type: 'array', items: { $ref: '#/components/schemas/OkrObjective' } } } } },
+          '401': { $ref: '#/components/responses/Unauthorized' },
+          '404': { $ref: '#/components/responses/NotFound' },
+        },
+      },
+    },
+    '/okr/objectives': {
+      post: {
+        operationId: 'createOkrObjective',
+        summary: 'Create OKR objective',
+        security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+        requestBody: { required: true, content: { 'application/json': { schema: { $ref: '#/components/schemas/OkrObjectiveWriteRequest' } } } },
+        responses: {
+          '201': { description: 'Created objective', content: { 'application/json': { schema: { $ref: '#/components/schemas/OkrObjective' } } } },
+          '400': { $ref: '#/components/responses/BadRequest' },
+          '401': { $ref: '#/components/responses/Unauthorized' },
+        },
+      },
+    },
+    '/okr/objectives/{id}': {
+      get: {
+        operationId: 'getOkrObjective',
+        summary: 'Get OKR objective',
+        security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+        parameters: [{ $ref: '#/components/parameters/IdPath' }],
+        responses: {
+          '200': { description: 'Objective', content: { 'application/json': { schema: { $ref: '#/components/schemas/OkrObjective' } } } },
+          '401': { $ref: '#/components/responses/Unauthorized' },
+          '404': { $ref: '#/components/responses/NotFound' },
+        },
+      },
+      patch: {
+        operationId: 'updateOkrObjective',
+        summary: 'Update OKR objective',
+        security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+        parameters: [{ $ref: '#/components/parameters/IdPath' }],
+        requestBody: { required: true, content: { 'application/json': { schema: { $ref: '#/components/schemas/OkrObjectiveWriteRequest' } } } },
+        responses: {
+          '200': { description: 'Updated objective', content: { 'application/json': { schema: { $ref: '#/components/schemas/OkrObjective' } } } },
+          '400': { $ref: '#/components/responses/BadRequest' },
+          '401': { $ref: '#/components/responses/Unauthorized' },
+          '404': { $ref: '#/components/responses/NotFound' },
+        },
+      },
+    },
+    '/okr/objectives/{id}/archive': {
+      post: {
+        operationId: 'archiveOkrObjective',
+        summary: 'Archive OKR objective',
+        security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+        parameters: [{ $ref: '#/components/parameters/IdPath' }],
+        responses: {
+          '200': { description: 'Archived objective', content: { 'application/json': { schema: { $ref: '#/components/schemas/OkrObjective' } } } },
+          '401': { $ref: '#/components/responses/Unauthorized' },
+          '404': { $ref: '#/components/responses/NotFound' },
+        },
+      },
+    },
+    '/okr/key-results': {
+      post: {
+        operationId: 'createOkrKeyResult',
+        summary: 'Create OKR key result',
+        security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+        requestBody: { required: true, content: { 'application/json': { schema: { $ref: '#/components/schemas/OkrKeyResultWriteRequest' } } } },
+        responses: {
+          '201': { description: 'Created key result', content: { 'application/json': { schema: { $ref: '#/components/schemas/OkrKeyResult' } } } },
+          '400': { $ref: '#/components/responses/BadRequest' },
+          '401': { $ref: '#/components/responses/Unauthorized' },
+        },
+      },
+    },
+    '/okr/key-results/{id}': {
+      get: {
+        operationId: 'getOkrKeyResult',
+        summary: 'Get OKR key result',
+        security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+        parameters: [{ $ref: '#/components/parameters/IdPath' }],
+        responses: {
+          '200': { description: 'Key result', content: { 'application/json': { schema: { $ref: '#/components/schemas/OkrKeyResult' } } } },
+          '401': { $ref: '#/components/responses/Unauthorized' },
+          '404': { $ref: '#/components/responses/NotFound' },
+        },
+      },
+      patch: {
+        operationId: 'updateOkrKeyResult',
+        summary: 'Update OKR key result',
+        security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+        parameters: [{ $ref: '#/components/parameters/IdPath' }],
+        requestBody: { required: true, content: { 'application/json': { schema: { $ref: '#/components/schemas/OkrKeyResultWriteRequest' } } } },
+        responses: {
+          '200': { description: 'Updated key result', content: { 'application/json': { schema: { $ref: '#/components/schemas/OkrKeyResult' } } } },
+          '400': { $ref: '#/components/responses/BadRequest' },
+          '401': { $ref: '#/components/responses/Unauthorized' },
+          '404': { $ref: '#/components/responses/NotFound' },
+        },
+      },
+    },
+    '/okr/key-results/{id}/archive': {
+      post: {
+        operationId: 'archiveOkrKeyResult',
+        summary: 'Archive OKR key result',
+        security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+        parameters: [{ $ref: '#/components/parameters/IdPath' }],
+        responses: {
+          '200': { description: 'Archived key result', content: { 'application/json': { schema: { $ref: '#/components/schemas/OkrKeyResult' } } } },
+          '401': { $ref: '#/components/responses/Unauthorized' },
+          '404': { $ref: '#/components/responses/NotFound' },
+        },
+      },
+    },
+    '/okr/key-results/{id}/check-ins': {
+      get: {
+        operationId: 'listOkrKeyResultCheckIns',
+        summary: 'List KR check-ins',
+        security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+        parameters: [{ $ref: '#/components/parameters/IdPath' }],
+        responses: {
+          '200': { description: 'Check-ins', content: { 'application/json': { schema: { type: 'array', items: { $ref: '#/components/schemas/CheckInItem' } } } } },
+          '401': { $ref: '#/components/responses/Unauthorized' },
+          '404': { $ref: '#/components/responses/NotFound' },
+        },
+      },
+      post: {
+        operationId: 'createOkrKeyResultCheckIn',
+        summary: 'Create namespaced KR check-in',
+        security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+        parameters: [{ $ref: '#/components/parameters/IdPath' }],
+        requestBody: { required: true, content: { 'application/json': { schema: { $ref: '#/components/schemas/CreateCheckInRequest' } } } },
+        responses: {
+          '201': { description: 'Check-in created', content: { 'application/json': { schema: { $ref: '#/components/schemas/CheckInItem' } } } },
+          '400': { $ref: '#/components/responses/BadRequest' },
+          '401': { $ref: '#/components/responses/Unauthorized' },
+          '404': { $ref: '#/components/responses/NotFound' },
         },
       },
     },
@@ -159,6 +482,17 @@ export const v1Spec = {
       },
     },
     '/reviews/{id}': {
+      get: {
+        operationId: 'getReview',
+        summary: 'Get review detail',
+        security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+        parameters: [{ $ref: '#/components/parameters/IdPath' }],
+        responses: {
+          '200': { description: 'Review detail', content: { 'application/json': { schema: { $ref: '#/components/schemas/ReviewItem' } } } },
+          '401': { $ref: '#/components/responses/Unauthorized' },
+          '404': { $ref: '#/components/responses/NotFound' },
+        },
+      },
       patch: {
         operationId: 'updateReview',
         summary: 'Update or finalize a review',
@@ -173,13 +507,71 @@ export const v1Spec = {
         },
       },
     },
+    '/reviews/{id}/finalize': {
+      post: {
+        operationId: 'finalizeReview',
+        summary: 'Finalize review',
+        security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+        parameters: [{ $ref: '#/components/parameters/IdPath' }],
+        responses: {
+          '200': { description: 'Finalized review', content: { 'application/json': { schema: { $ref: '#/components/schemas/ReviewItem' } } } },
+          '401': { $ref: '#/components/responses/Unauthorized' },
+          '404': { $ref: '#/components/responses/NotFound' },
+          '409': { $ref: '#/components/responses/Conflict' },
+        },
+      },
+    },
+    '/reviews/{id}/archive': {
+      post: {
+        operationId: 'archiveReview',
+        summary: 'Archive review',
+        security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+        parameters: [{ $ref: '#/components/parameters/IdPath' }],
+        responses: {
+          '200': { description: 'Archived review', content: { 'application/json': { schema: { $ref: '#/components/schemas/ReviewItem' } } } },
+          '401': { $ref: '#/components/responses/Unauthorized' },
+          '404': { $ref: '#/components/responses/NotFound' },
+        },
+      },
+    },
+    '/reviews/context': {
+      get: {
+        operationId: 'getReviewContext',
+        summary: 'Get review context for Hermes or CLI',
+        security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+        parameters: [
+          { name: 'type', in: 'query', schema: { type: 'string', enum: ['daily', 'weekly', 'monthly', 'period'], default: 'daily' } },
+          { name: 'start', in: 'query', schema: { type: 'string', format: 'date' } },
+          { name: 'end', in: 'query', schema: { type: 'string', format: 'date' } },
+        ],
+        responses: {
+          '200': { description: 'Review context', content: { 'application/json': { schema: { $ref: '#/components/schemas/ReviewContextResponse' } } } },
+          '400': { $ref: '#/components/responses/BadRequest' },
+          '401': { $ref: '#/components/responses/Unauthorized' },
+        },
+      },
+    },
   },
   components: {
     securitySchemes: {
       bearerAuth: { type: 'http', scheme: 'bearer' },
       cookieAuth: { type: 'apiKey', in: 'cookie', name: 'session_token' },
     },
+    parameters: {
+      IdPath: { name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+    },
+    responses: {
+      BadRequest: { description: 'Bad request', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+      Unauthorized: { description: 'Unauthorized', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+      NotFound: { description: 'Not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+      Conflict: { description: 'Conflict', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+    },
     schemas: {
+      ErrorResponse: {
+        type: 'object',
+        properties: { error: { type: 'string' } },
+        required: ['error'],
+      },
       UserResponse: {
         type: 'object',
         properties: { id: { type: 'string', format: 'uuid' }, email: { type: 'string' }, name: { type: 'string' } },
@@ -239,6 +631,34 @@ export const v1Spec = {
         },
         required: ['id', 'title', 'status', 'important', 'urgent'],
       },
+      TaskWriteRequest: {
+        type: 'object',
+        properties: {
+          title: { type: 'string' },
+          notes: { type: ['string', 'null'] },
+          description: { type: ['string', 'null'] },
+          listId: { type: ['string', 'null'], format: 'uuid' },
+          dueDate: { type: ['string', 'null'], format: 'date' },
+          priority: { type: ['string', 'null'], enum: ['P1', 'P2', 'P3', null] },
+          energy: { type: ['string', 'null'], enum: ['low', 'medium', 'high', null] },
+          completedAt: { oneOf: [{ type: 'string', format: 'date-time' }, { type: 'boolean' }, { type: 'null' }] },
+          keyResultIds: { type: 'array', items: { type: 'string', format: 'uuid' } },
+        },
+      },
+      MoveTaskQuadrantRequest: {
+        type: 'object',
+        properties: { quadrant: { type: 'string', enum: ['Q1', 'Q2', 'Q3', 'Q4'] } },
+        required: ['quadrant'],
+      },
+      TaskReminderResponse: {
+        type: 'object',
+        properties: {
+          today: { type: 'string', format: 'date' },
+          to: { type: 'string', format: 'date' },
+          items: { type: 'array', items: { $ref: '#/components/schemas/TaskItem' } },
+        },
+        required: ['today', 'to', 'items'],
+      },
       CurrentOkrSummary: {
         type: ['object', 'null'],
         properties: {
@@ -253,6 +673,81 @@ export const v1Spec = {
           objectiveCount: { type: 'integer' },
           keyResultCount: { type: 'integer' },
           activeKeyResultCount: { type: 'integer' },
+        },
+      },
+      OkrPeriod: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', format: 'uuid' },
+          name: { type: 'string' },
+          type: { type: 'string', enum: ['quarter', 'year', 'custom'] },
+          startDate: { type: 'string', format: 'date' },
+          endDate: { type: 'string', format: 'date' },
+          status: { type: 'string', enum: ['draft', 'active', 'closed', 'archived'] },
+          createdAt: { type: 'string', format: 'date-time' },
+          updatedAt: { type: 'string', format: 'date-time' },
+        },
+        required: ['id', 'name', 'type', 'startDate', 'endDate', 'status'],
+      },
+      OkrPeriodWriteRequest: {
+        type: 'object',
+        properties: {
+          name: { type: 'string' },
+          type: { type: 'string', enum: ['quarter', 'year', 'custom'] },
+          startDate: { type: 'string', format: 'date' },
+          endDate: { type: 'string', format: 'date' },
+          status: { type: 'string', enum: ['draft', 'active', 'closed', 'archived'] },
+        },
+      },
+      OkrObjective: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', format: 'uuid' },
+          periodId: { type: 'string', format: 'uuid' },
+          title: { type: 'string' },
+          description: { type: ['string', 'null'] },
+          status: { type: 'string', enum: ['active', 'done', 'archived'] },
+          sortOrder: { type: 'number' },
+          keyResults: { type: 'array', items: { $ref: '#/components/schemas/OkrKeyResult' } },
+        },
+        required: ['id', 'periodId', 'title', 'status'],
+      },
+      OkrObjectiveWriteRequest: {
+        type: 'object',
+        properties: {
+          periodId: { type: 'string', format: 'uuid' },
+          title: { type: 'string' },
+          description: { type: ['string', 'null'] },
+          status: { type: 'string', enum: ['active', 'done', 'archived'] },
+          sortOrder: { type: 'number' },
+        },
+      },
+      OkrKeyResult: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', format: 'uuid' },
+          objectiveId: { type: 'string', format: 'uuid' },
+          title: { type: 'string' },
+          type: { type: 'string', enum: ['numeric', 'milestone', 'hybrid'] },
+          targetValue: { type: ['number', 'null'] },
+          currentValue: { type: ['number', 'null'] },
+          unit: { type: ['string', 'null'] },
+          status: { type: 'string', enum: ['active', 'done', 'archived'] },
+          confidence: { type: ['string', 'null'], enum: ['low', 'medium', 'high', null] },
+        },
+        required: ['id', 'objectiveId', 'title', 'type', 'status'],
+      },
+      OkrKeyResultWriteRequest: {
+        type: 'object',
+        properties: {
+          objectiveId: { type: 'string', format: 'uuid' },
+          title: { type: 'string' },
+          type: { type: 'string', enum: ['numeric', 'milestone', 'hybrid'] },
+          targetValue: { type: 'number' },
+          currentValue: { type: 'number' },
+          unit: { type: ['string', 'null'] },
+          status: { type: 'string', enum: ['active', 'done', 'archived'] },
+          confidence: { type: ['string', 'null'], enum: ['low', 'medium', 'high', null] },
         },
       },
       CreateCheckInRequest: {
@@ -350,6 +845,32 @@ export const v1Spec = {
           updatedAt: { type: 'string', format: 'date-time' },
         },
         required: ['id', 'type', 'periodStart', 'periodEnd', 'status', 'title', 'body', 'createdAt', 'updatedAt'],
+      },
+      ReviewContextResponse: {
+        type: 'object',
+        properties: {
+          type: { type: 'string', enum: ['daily', 'weekly', 'monthly', 'period'] },
+          periodStart: { type: 'string', format: 'date' },
+          periodEnd: { type: 'string', format: 'date' },
+          tasks: {
+            type: 'object',
+            properties: {
+              completedTasks: { type: 'array', items: { $ref: '#/components/schemas/TaskItem' } },
+              openTodayDueTasks: { type: 'array', items: { $ref: '#/components/schemas/TaskItem' } },
+            },
+            required: ['completedTasks', 'openTodayDueTasks'],
+          },
+          okr: {
+            type: 'object',
+            properties: {
+              current: { $ref: '#/components/schemas/CurrentOkrSummary' },
+              checkIns: { type: 'array', items: { $ref: '#/components/schemas/CheckInItem' } },
+            },
+            required: ['current', 'checkIns'],
+          },
+          reviews: { type: 'array', items: { $ref: '#/components/schemas/ReviewItem' } },
+        },
+        required: ['type', 'periodStart', 'periodEnd', 'tasks', 'okr', 'reviews'],
       },
     },
   },

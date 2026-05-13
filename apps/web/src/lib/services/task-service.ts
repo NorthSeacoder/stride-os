@@ -471,8 +471,8 @@ export function buildTaskUpdatePatch(input: Partial<TaskWriteInput>) {
 
 export async function listQuadrantTasks(options?: { includeCompleted?: boolean }) {
   const where = options?.includeCompleted
-    ? undefined
-    : ne(schema.tasks.status, 'done');
+    ? isNull(schema.tasks.archivedAt)
+    : and(ne(schema.tasks.status, 'done'), isNull(schema.tasks.archivedAt));
 
   return db.query.tasks.findMany({
     where,
@@ -526,6 +526,7 @@ function buildQuadrantGroups(tasks: Array<TaskWorkspaceTask & { list?: { id?: st
 export async function listQuadrantBoard(options?: { includeCompleted?: boolean; today?: string }) {
   const today = options?.today ?? formatDateOnly(new Date());
   const items = await db.query.tasks.findMany({
+    where: isNull(schema.tasks.archivedAt),
     orderBy: [asc(schema.tasks.dueDate), asc(schema.tasks.createdAt)],
     with: {
       list: true,
@@ -643,6 +644,16 @@ export async function completeTask(taskId: string) {
   });
 }
 
+export async function archiveTask(taskId: string) {
+  const [task] = await db
+    .update(schema.tasks)
+    .set({ archivedAt: new Date(), updatedAt: new Date() })
+    .where(eq(schema.tasks.id, taskId))
+    .returning();
+
+  return task ?? null;
+}
+
 export async function moveTaskToQuadrant(taskId: string, quadrant: TaskQuadrantKey, today?: string) {
   const defaults = buildQuadrantDefaults(quadrant, today ?? formatDateOnly(new Date()));
   return updateTask(taskId, {
@@ -706,6 +717,7 @@ export async function listCompletedTasksBetween(periodStart: string, periodEnd: 
     where: and(
       eq(schema.tasks.status, 'done'),
       isNotNull(schema.tasks.completedAt),
+      isNull(schema.tasks.archivedAt),
     ),
     orderBy: [desc(schema.tasks.completedAt)],
     with: {
@@ -731,6 +743,7 @@ export async function listOpenTodayDueTasks() {
     where: and(
       eq(schema.tasks.dueDate, today),
       ne(schema.tasks.status, 'done'),
+      isNull(schema.tasks.archivedAt),
     ),
     orderBy: [asc(schema.tasks.createdAt)],
   });
@@ -757,8 +770,8 @@ export async function listTasksWithoutKeyResults() {
   const linkedIds: string[] = Array.from(new Set(linked.map((item: { taskId: string }) => item.taskId)));
   return db.query.tasks.findMany({
     where: linkedIds.length > 0
-      ? notInArray(schema.tasks.id, linkedIds)
-      : undefined,
+      ? and(isNull(schema.tasks.archivedAt), notInArray(schema.tasks.id, linkedIds))
+      : isNull(schema.tasks.archivedAt),
     orderBy: [asc(schema.tasks.createdAt)],
   });
 }
@@ -776,12 +789,18 @@ export async function listTasksCompletedForKeyResults(keyResultIds: string[]) {
     },
   });
 
-  return links.filter((link: { task: { status: string } }) => link.task.status === 'done');
+  return links.filter((link: { task: { archivedAt?: Date | string | null; status: string } }) => (
+    link.task.status === 'done' && !link.task.archivedAt
+  ));
 }
 
 export async function listTasksDueSoon(fromDate: string, toDate: string) {
   return db.query.tasks.findMany({
-    where: and(isNotNull(schema.tasks.dueDate), ne(schema.tasks.status, 'done')),
+    where: and(
+      isNotNull(schema.tasks.dueDate),
+      ne(schema.tasks.status, 'done'),
+      isNull(schema.tasks.archivedAt),
+    ),
     orderBy: [asc(schema.tasks.dueDate), asc(schema.tasks.createdAt)],
   }).then((items: Array<{ dueDate: string | null }>) =>
     items.filter((item: { dueDate: string | null }) => item.dueDate !== null && item.dueDate >= fromDate && item.dueDate <= toDate),
@@ -811,6 +830,7 @@ export async function listTasksForReviewPeriod(periodStart: string, periodEnd: s
 export async function listTodayTaskCounts() {
   const today = formatDateOnly(new Date());
   const tasks = await db.query.tasks.findMany({
+    where: isNull(schema.tasks.archivedAt),
     columns: {
       dueDate: true,
       completedAt: true,
@@ -841,6 +861,7 @@ export async function listTaskDashboardCounts(): Promise<TaskDashboardCounts> {
   const today = formatDateOnly(new Date());
   const tomorrow = formatDateOnly(addDays(new Date(), 1));
   const tasks = await db.query.tasks.findMany({
+    where: isNull(schema.tasks.archivedAt),
     columns: {
       dueDate: true,
       completedAt: true,
@@ -905,6 +926,7 @@ export async function listTaskListsWithCounts(): Promise<TaskListSummary[]> {
       orderBy: [asc(schema.taskLists.sortOrder), asc(schema.taskLists.createdAt)],
     }),
     db.query.tasks.findMany({
+      where: isNull(schema.tasks.archivedAt),
       columns: {
         listId: true,
       },
@@ -929,6 +951,7 @@ export async function listTaskListsWithCounts(): Promise<TaskListSummary[]> {
 
 export async function listTaskWorkspaceTasks() {
   return db.query.tasks.findMany({
+    where: isNull(schema.tasks.archivedAt),
     orderBy: [asc(schema.tasks.dueDate), asc(schema.tasks.createdAt)],
     with: {
       list: true,

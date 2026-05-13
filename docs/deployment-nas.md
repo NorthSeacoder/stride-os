@@ -73,7 +73,7 @@ DATABASE_URL=postgresql://<project_db_user>:<project_db_password>@<shared_postgr
 2. 通过版本 tag 触发 GitHub Actions 构建镜像
 3. 产出镜像推送到 `ghcr.io/northseacoder/stride-os:<tag>`
 4. NAS 上更新 `/vol1/1000/Docker/stride-os/.env` 与 `docker-compose.yml`
-5. 拉取新镜像并重建容器
+5. 拉取新镜像并重建容器；容器启动前会按需执行数据库 migration
 6. 用正式域名做登录、关键页面和日志检查
 
 当前已验证版本：
@@ -111,6 +111,14 @@ NAS 项目目录：
 - `DATABASE_SCHEMA`
 - `SESSION_SECRET`
 
+推荐在 NAS 单实例部署中开启启动前自动迁移：
+
+```text
+RUN_MIGRATIONS_ON_START=true
+```
+
+该开关会在应用进程启动前执行镜像内置的 PostgreSQL migration。迁移记录由 `__drizzle_migrations` 表控制，重复启动不会重复执行已应用迁移。若未来改为多副本部署，应改成独立 release job 先迁移，再启动应用副本，避免多个实例同时抢迁移。
+
 Umami 接入建议：
 
 - script: `<UMAMI_SCRIPT_URL>`
@@ -139,7 +147,7 @@ Umami 接入建议：
 每次发布后至少检查：
 
 1. `docker ps` 中镜像 tag 是否正确
-2. `docker logs stride-os` 是否出现启动异常
+2. `docker logs stride-os` 是否出现 `[migrate] complete` 或明确的启动异常
 3. 首页是否正常返回
 4. 登录是否成功
 5. 关键写操作是否产生 2xx 而不是 5xx

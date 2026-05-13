@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNull } from 'drizzle-orm';
 import { db, schema } from '@stride-os/db';
 import { getConfidenceLabel } from '@/lib/presentation/labels';
 import {
@@ -83,6 +83,7 @@ function buildReviewBody(input: {
 
 export async function listReviews() {
   return db.query.reviews.findMany({
+    where: isNull(schema.reviews.archivedAt),
     orderBy: [desc(schema.reviews.periodStart), desc(schema.reviews.createdAt)],
     with: {
       krSnapshots: true,
@@ -171,6 +172,7 @@ export async function saveReviewDraft(input: ReviewDraftPayload) {
         eq(schema.reviews.periodStart, input.periodStart),
         eq(schema.reviews.periodEnd, input.periodEnd),
         eq(schema.reviews.status, 'draft'),
+        isNull(schema.reviews.archivedAt),
       ),
     });
 
@@ -236,7 +238,7 @@ export async function saveReviewDraft(input: ReviewDraftPayload) {
 
 export async function finalizeReview(reviewId: string) {
   const review = await db.query.reviews.findFirst({
-    where: eq(schema.reviews.id, reviewId),
+    where: and(eq(schema.reviews.id, reviewId), isNull(schema.reviews.archivedAt)),
   });
 
   if (!review) {
@@ -250,6 +252,7 @@ export async function finalizeReview(reviewId: string) {
       eq(schema.reviews.periodStart, review.periodStart),
       eq(schema.reviews.periodEnd, review.periodEnd),
       eq(schema.reviews.status, 'final'),
+      isNull(schema.reviews.archivedAt),
     ),
     orderBy: [desc(schema.reviews.updatedAt)],
   });
@@ -264,10 +267,23 @@ export async function finalizeReview(reviewId: string) {
       status: ensureReviewStatus('final'),
       updatedAt: new Date(),
     })
-    .where(eq(schema.reviews.id, reviewId))
+    .where(and(eq(schema.reviews.id, reviewId), isNull(schema.reviews.archivedAt)))
     .returning();
 
   return finalized ?? null;
+}
+
+export async function archiveReview(reviewId: string) {
+  const [review] = await db
+    .update(schema.reviews)
+    .set({
+      archivedAt: new Date(),
+      updatedAt: new Date(),
+    })
+    .where(eq(schema.reviews.id, reviewId))
+    .returning();
+
+  return review ?? null;
 }
 
 export async function updateReviewDraftById(
@@ -286,7 +302,7 @@ export async function updateReviewDraftById(
       ...(input.structuredSummary !== undefined ? { structuredSummary: input.structuredSummary } : {}),
       updatedAt: new Date(),
     })
-    .where(eq(schema.reviews.id, reviewId))
+    .where(and(eq(schema.reviews.id, reviewId), isNull(schema.reviews.archivedAt)))
     .returning();
 
   return review ?? null;
@@ -294,6 +310,7 @@ export async function updateReviewDraftById(
 
 export async function getLatestReview() {
   return db.query.reviews.findFirst({
+    where: isNull(schema.reviews.archivedAt),
     orderBy: [desc(schema.reviews.periodStart), desc(schema.reviews.createdAt)],
     with: {
       krSnapshots: true,
@@ -325,14 +342,14 @@ export async function getDashboardSummary() {
 
 export async function listDraftReviews() {
   return db.query.reviews.findMany({
-    where: eq(schema.reviews.status, 'draft'),
+    where: and(eq(schema.reviews.status, 'draft'), isNull(schema.reviews.archivedAt)),
     orderBy: [desc(schema.reviews.periodStart), desc(schema.reviews.updatedAt)],
   });
 }
 
 export async function listFinalReviews() {
   return db.query.reviews.findMany({
-    where: eq(schema.reviews.status, 'final'),
+    where: and(eq(schema.reviews.status, 'final'), isNull(schema.reviews.archivedAt)),
     orderBy: [desc(schema.reviews.periodStart), desc(schema.reviews.updatedAt)],
   });
 }
@@ -340,7 +357,7 @@ export async function listFinalReviews() {
 export async function listReviewHistoryByType(type: ReviewType) {
   const normalizedType = ensureReviewType(type);
   return db.query.reviews.findMany({
-    where: eq(schema.reviews.type, normalizedType),
+    where: and(eq(schema.reviews.type, normalizedType), isNull(schema.reviews.archivedAt)),
     orderBy: [desc(schema.reviews.periodStart), desc(schema.reviews.updatedAt)],
     with: {
       krSnapshots: true,
@@ -355,6 +372,7 @@ export async function getReviewDraftOrGenerate(periodStart: string, periodEnd: s
       eq(schema.reviews.periodStart, periodStart),
       eq(schema.reviews.periodEnd, periodEnd),
       eq(schema.reviews.status, 'draft'),
+      isNull(schema.reviews.archivedAt),
     ),
     with: {
       krSnapshots: true,

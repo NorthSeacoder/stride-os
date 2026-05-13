@@ -36,7 +36,15 @@ const {
   finalizeUpdateWhere: vi.fn(),
   finalizeUpdateReturning: vi.fn(),
   mockedSchema: {
-    reviews: {},
+    reviews: {
+      archivedAt: {},
+      id: {},
+      periodEnd: {},
+      periodStart: {},
+      status: {},
+      type: {},
+      updatedAt: {},
+    },
     reviewKrSnapshots: {},
     keyResults: {
       id: {},
@@ -105,7 +113,7 @@ vi.mock('@stride-os/db', () => ({
   schema: mockedSchema,
 }));
 
-import { buildWeeklyReviewDraft, finalizeReview, saveReviewDraft } from '@/lib/services/review-service';
+import { archiveReview, buildWeeklyReviewDraft, finalizeReview, saveReviewDraft } from '@/lib/services/review-service';
 
 describe('review service', () => {
   beforeEach(() => {
@@ -216,6 +224,22 @@ describe('review service', () => {
 
     const result = await finalizeReview('review_1');
     expect(result?.status).toBe('final');
+  });
+
+  it('archives a review by setting archivedAt', async () => {
+    finalizeUpdateReturning.mockResolvedValue([
+      {
+        id: 'review_1',
+        archivedAt: new Date('2026-05-12T10:00:00.000Z'),
+      },
+    ]);
+
+    const result = await archiveReview('review_1');
+    expect(result?.id).toBe('review_1');
+    expect(finalizeUpdateSet).toHaveBeenCalledWith(expect.objectContaining({
+      archivedAt: expect.any(Date),
+      updatedAt: expect.any(Date),
+    }));
   });
 
   it('rejects finalizing when another final review already exists for the week', async () => {

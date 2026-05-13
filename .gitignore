@@ -35,6 +35,10 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
+# Agent/tool local state
+.token-savior-cache.json
+specs/.active
+
 # Testing
 coverage/
 *.tsbuildinfo

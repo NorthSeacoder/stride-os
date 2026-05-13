@@ -1,7 +1,27 @@
 import { NextResponse } from 'next/server';
 
+export function apiJson(data: unknown, init?: ResponseInit) {
+  return NextResponse.json(data, init);
+}
+
+export function apiError(error: string, status: number) {
+  return apiJson({ error }, { status });
+}
+
+export function unauthorized(error = 'Unauthorized') {
+  return apiError(error, 401);
+}
+
 export function badRequest(error: string) {
-  return NextResponse.json({ error }, { status: 400 });
+  return apiError(error, 400);
+}
+
+export function notFound(error = 'Not found') {
+  return apiError(error, 404);
+}
+
+export function conflict(error: string) {
+  return apiError(error, 409);
 }
 
 export async function parseJsonBody(request: Request): Promise<Record<string, unknown> | NextResponse> {

@@ -15,6 +15,7 @@ vi.mock('@/lib/services/okr-service', () => ({
 }));
 
 vi.mock('@/lib/services/review-service', () => ({
+  archiveReview: vi.fn(async () => ({ id: 'review_1', archivedAt: new Date() })),
   buildWeeklyReviewDraft: vi.fn(async (periodStart: string, periodEnd: string) => ({
     type: 'weekly',
     periodStart,

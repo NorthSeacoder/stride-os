@@ -72,6 +72,7 @@ vi.mock('@stride-os/db', () => ({
       id: {},
     },
     tasks: {
+      archivedAt: {},
       id: {},
       status: {},
       dueDate: {},
@@ -85,6 +86,7 @@ vi.mock('@stride-os/db', () => ({
 import {
   buildQuadrantDefaults,
   buildTaskUpdatePatch,
+  archiveTask,
   createTaskDefinition,
   getTaskDetail,
   ensureRecurringTasksForDate,
@@ -349,6 +351,16 @@ describe('task service rules', () => {
       id: 'task_1',
       listId: null,
     });
+  });
+
+  it('archives a task by setting archivedAt', async () => {
+    updateReturning.mockResolvedValue([{ id: 'task_1', archivedAt: new Date('2026-05-12T10:00:00.000Z') }]);
+
+    await expect(archiveTask('task_1')).resolves.toMatchObject({ id: 'task_1' });
+    expect(updateSet).toHaveBeenCalledWith(expect.objectContaining({
+      archivedAt: expect.any(Date),
+      updatedAt: expect.any(Date),
+    }));
   });
 
   it('creates a recurring task definition', async () => {

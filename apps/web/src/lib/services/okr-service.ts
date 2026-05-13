@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray, isNull, lte, gte } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNull, lte, gte, ne } from 'drizzle-orm';
 import { db, schema } from '@stride-os/db';
 import { listTasksForKeyResult } from './task-service';
 
@@ -265,9 +265,25 @@ export async function archivePeriod(periodId: string) {
 
 export async function listObjectives(periodId: string) {
   return db.query.objectives.findMany({
-    where: eq(schema.objectives.periodId, periodId),
+    where: and(eq(schema.objectives.periodId, periodId), ne(schema.objectives.status, 'archived')),
     orderBy: [asc(schema.objectives.sortOrder), asc(schema.objectives.createdAt)],
     with: {
+      keyResults: {
+        with: {
+          checkIns: {
+            orderBy: [desc(schema.krCheckIns.createdAt)],
+          },
+        },
+      },
+    },
+  });
+}
+
+export async function getObjective(objectiveId: string) {
+  return db.query.objectives.findFirst({
+    where: eq(schema.objectives.id, objectiveId),
+    with: {
+      period: true,
       keyResults: {
         with: {
           checkIns: {
