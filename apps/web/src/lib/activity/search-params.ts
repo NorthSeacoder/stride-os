@@ -1,4 +1,6 @@
 export type ActivitySearchParamValue = string | string[] | undefined;
+type SearchParamEntry = readonly [string, unknown];
+type RawSearchParamEntry = readonly [string, ActivitySearchParamValue];
 
 function appendNonEmptyValue(searchParams: URLSearchParams, key: string, value: unknown) {
   if (typeof value !== 'string') {
@@ -13,10 +15,11 @@ function appendNonEmptyValue(searchParams: URLSearchParams, key: string, value: 
   searchParams.append(key, trimmed);
 }
 
-export function buildActivitySearchParams(entries: Iterable<[string, unknown]>) {
+export function buildActivitySearchParams(entries: Iterable<SearchParamEntry>) {
   const searchParams = new URLSearchParams();
 
-  for (const [key, value] of entries) {
+  for (const entry of Array.from(entries)) {
+    const [key, value] = entry;
     if (Array.isArray(value)) {
       for (const item of value) {
         appendNonEmptyValue(searchParams, key, item);
@@ -35,10 +38,11 @@ export function buildActivityHref(pathname: string, entries: Iterable<[string, u
   return searchParams.size > 0 ? `${pathname}?${searchParams.toString()}` : pathname;
 }
 
-export function buildRawSearchParams(entries: Iterable<[string, ActivitySearchParamValue]>) {
+export function buildRawSearchParams(entries: Iterable<RawSearchParamEntry>) {
   const searchParams = new URLSearchParams();
 
-  for (const [key, value] of entries) {
+  for (const entry of Array.from(entries)) {
+    const [key, value] = entry;
     if (Array.isArray(value)) {
       for (const item of value) {
         if (typeof item === 'string') {

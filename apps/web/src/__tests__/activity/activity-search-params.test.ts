@@ -8,10 +8,10 @@ import {
 describe('activity search params', () => {
   it('omits empty and whitespace-only values from generated query strings', () => {
     const searchParams = buildActivitySearchParams([
-      ['source', 'web'],
-      ['action', ''],
-      ['targetType', '   '],
-      ['keyword', '  sprint review  '],
+      ['source', 'web'] as const,
+      ['action', ''] as const,
+      ['targetType', '   '] as const,
+      ['keyword', '  sprint review  '] as const,
     ]);
 
     expect(searchParams.toString()).toBe('source=web&keyword=sprint+review');
@@ -19,8 +19,8 @@ describe('activity search params', () => {
 
   it('supports repeated values and preserves only non-empty array entries', () => {
     const href = buildActivityHref('/activity', [
-      ['source', ['web', '', 'api']],
-      ['keyword', '   '],
+      ['source', ['web', '', 'api']] as const,
+      ['keyword', '   '] as const,
     ]);
 
     expect(href).toBe('/activity?source=web&source=api');
@@ -28,9 +28,9 @@ describe('activity search params', () => {
 
   it('reconstructs the raw query string without trimming values', () => {
     const searchParams = buildRawSearchParams([
-      ['source', ''],
-      ['keyword', '  review  '],
-      ['action', ['task.update', '']],
+      ['source', ''] as const,
+      ['keyword', '  review  '] as const,
+      ['action', ['task.update', '']] as const,
     ]);
 
     expect(searchParams.toString()).toBe('source=&keyword=++review++&action=task.update&action=');
