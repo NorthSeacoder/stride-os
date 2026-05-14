@@ -1,6 +1,6 @@
 services:
   web:
-    image: ${DOCKER_REGISTRY:-ghcr.io/your-org}/${DOCKER_IMAGE_NAME:-stride-os}:${IMAGE_TAG:-v0.1.0}
+    image: ${DOCKER_REGISTRY:-ghcr.io/your-org}/${DOCKER_IMAGE_NAME:-stride-os}:${IMAGE_TAG:-latest}
     restart: unless-stopped
     expose:
       - "3000"

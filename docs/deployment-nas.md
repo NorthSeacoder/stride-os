@@ -70,13 +70,13 @@ DATABASE_URL=postgresql://<project_db_user>:<project_db_password>@<shared_postgr
 当前稳定发布流程：
 
 1. 本地提交代码并推送远程分支
-2. 通过版本 tag 触发 GitHub Actions 构建镜像
-3. 产出镜像推送到 `ghcr.io/northseacoder/stride-os:<tag>`
-4. NAS 上更新 `/vol1/1000/Docker/stride-os/.env` 与 `docker-compose.yml`
-5. 拉取新镜像并重建容器；容器启动前会按需执行数据库 migration
+2. 创建并推送 `v*` 版本 tag
+3. GitHub Actions 构建镜像，并同时推送 `ghcr.io/northseacoder/stride-os:<tag>` 与 `ghcr.io/northseacoder/stride-os:latest`
+4. NAS 上保持 `/vol1/1000/Docker/stride-os/.env` 使用 `IMAGE_TAG=latest`
+5. NAS 拉取新镜像并重建容器；容器启动前会按需执行数据库 migration
 6. 用正式域名做登录、关键页面和日志检查
 
-当前已验证版本：
+当前已验证版本锚点：
 
 - `v0.1.0`
 - `v0.1.1`
@@ -94,9 +94,9 @@ NAS 项目目录：
 典型操作顺序：
 
 1. 准备 `.env`
-2. 固定 `IMAGE_TAG`
+2. 固定 `IMAGE_TAG=latest`
 3. 确认 `DATABASE_URL`、`DATABASE_SCHEMA`、`SESSION_SECRET`
-4. `docker pull ghcr.io/northseacoder/stride-os:<tag>`
+4. `docker pull ghcr.io/northseacoder/stride-os:latest`
 5. `docker compose up -d`
 6. `docker logs stride-os` 检查启动
 
