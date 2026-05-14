@@ -35,6 +35,9 @@ importers:
       '@dnd-kit/utilities':
         specifier: ^3.2.2
         version: 3.2.2(react@19.2.5)
+      '@stride-os/api-contract':
+        specifier: workspace:*
+        version: link:../../packages/api-contract
       '@stride-os/db':
         specifier: workspace:*
         version: link:../../packages/db

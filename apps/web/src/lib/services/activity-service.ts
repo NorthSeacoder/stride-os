@@ -11,11 +11,8 @@ import {
 } from 'drizzle-orm';
 import { db, schema } from '@stride-os/db';
 import {
-  ACTIVITY_ACTOR_TYPES,
-  ACTIVITY_SOURCES,
   type ActivityActorType,
   type ActivitySource,
-  ACTIVITY_TARGET_TYPES,
 } from '@/lib/activity/constants';
 import {
   getConfidenceLabel,
