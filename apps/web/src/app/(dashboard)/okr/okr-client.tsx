@@ -37,6 +37,18 @@ type PeriodView = {
       currentValue: number | null;
       targetValue: number | null;
       confidence: string | null;
+      taskProgress: {
+        committedTaskCount: number;
+        completedCommittedTaskCount: number;
+        openCommittedTaskCount: number;
+        hasCommittedTasks: boolean;
+      };
+      latestCheckIn: {
+        hasCheckIn: boolean;
+        progressValue: number | null;
+        confidence: string | null;
+        updatedAt: string | Date | null;
+      };
     }>;
   }>;
 };
@@ -81,7 +93,7 @@ export function OkrClient({ periods }: { periods: PeriodView[] }) {
   const activePeriod = periods.find((period) => period.id === activePeriodId) ?? periods[0] ?? null;
 
   return (
-    <div className="space-y-3">
+    <div className="flex h-full min-h-0 flex-col gap-3">
       <PageIntro
         eyebrow="目标体系"
         title="OKR"
@@ -120,14 +132,14 @@ export function OkrClient({ periods }: { periods: PeriodView[] }) {
       {periods.length === 0 ? (
         <Empty text="还没有周期。先创建第一个周期，开始搭建 OKR 结构。" />
       ) : (
-        <div className="grid gap-3 xl:grid-cols-[280px_minmax(0,1fr)]">
-          <SurfacePanel className="metal-frame instrument-surface p-3.5">
+        <div className="grid min-h-0 flex-1 gap-3 xl:grid-cols-[280px_minmax(0,1fr)]">
+          <SurfacePanel className="metal-frame instrument-surface flex min-h-0 flex-col p-3.5">
             <SectionHeader
               eyebrow="Period Index"
               title="周期列表"
               description="先锁定当前周期，再在右侧展开目标和关键结果。"
             />
-            <div className="mt-3 space-y-2">
+            <div className="mt-3 min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
               {periods.map((period) => {
                 const active = activePeriod?.id === period.id;
 
@@ -161,7 +173,7 @@ export function OkrClient({ periods }: { periods: PeriodView[] }) {
           </SurfacePanel>
 
           {activePeriod ? (
-            <SurfacePanel className="metal-frame instrument-surface p-3.5">
+            <SurfacePanel className="metal-frame instrument-surface flex min-h-0 flex-col p-3.5">
               <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                 <div>
                   <p className="text-[11px] uppercase tracking-[0.22em] text-(--text-muted)">
@@ -199,21 +211,22 @@ export function OkrClient({ periods }: { periods: PeriodView[] }) {
                 />
               </div>
 
-              {objectivePeriodId === activePeriod.id && (
-                <form action={objectiveAction} className="mt-3 grid gap-3 rounded-[var(--radius-compact)] border border-(--border-hairline) bg-[color:rgba(255,255,255,0.03)] p-3">
-                  <input type="hidden" name="periodId" value={activePeriod.id} />
-                  {objectiveState.error && <ErrorAlert message={objectiveState.error} />}
-                  <TextField name="title" label="目标标题" required />
-                  <TextareaField name="description" label="描述" rows={2} />
-                  <div>
-                    <Button type="submit" variant="primary">
-                      创建目标
-                    </Button>
-                  </div>
-                </form>
-              )}
+              <div className="mt-3 min-h-0 flex-1 overflow-y-auto pr-1">
+                {objectivePeriodId === activePeriod.id && (
+                  <form action={objectiveAction} className="grid gap-3 rounded-[var(--radius-compact)] border border-(--border-hairline) bg-[color:rgba(255,255,255,0.03)] p-3">
+                    <input type="hidden" name="periodId" value={activePeriod.id} />
+                    {objectiveState.error && <ErrorAlert message={objectiveState.error} />}
+                    <TextField name="title" label="目标标题" required />
+                    <TextareaField name="description" label="描述" rows={2} />
+                    <div>
+                      <Button type="submit" variant="primary">
+                        创建目标
+                      </Button>
+                    </div>
+                  </form>
+                )}
 
-              <div className="mt-3 space-y-3">
+                <div className={`${objectivePeriodId === activePeriod.id ? 'mt-3' : ''} space-y-3`}>
                 {activePeriod.objectives.length === 0 ? (
                   <Empty text="这个周期下还没有目标。" />
                 ) : (
@@ -253,7 +266,7 @@ export function OkrClient({ periods }: { periods: PeriodView[] }) {
                           />
                           <TextField name="unit" label="单位" />
                           <TextField name="targetValue" label="目标值" type="number" step="0.01" />
-                          <TextField name="currentValue" label="当前值" type="number" step="0.01" />
+                          <TextField name="currentValue" label="手工当前值" type="number" step="0.01" />
                           <div className="md:col-span-2">
                             <Button type="submit" variant="primary">
                               创建关键结果
@@ -276,8 +289,13 @@ export function OkrClient({ periods }: { periods: PeriodView[] }) {
                               <div className="mt-3 flex flex-wrap items-center gap-2">
                                 <Badge>{getKeyResultTypeLabel(keyResult.type)}</Badge>
                                 <Badge>{getKeyResultStatusLabel(keyResult.status)}</Badge>
-                                <Badge>进度 {keyResult.currentValue ?? '暂无'} / {keyResult.targetValue ?? '暂无'}</Badge>
-                                <Badge>信心 {getConfidenceLabel(keyResult.confidence)}</Badge>
+                                <Badge>{formatTaskProgressBadge(keyResult.taskProgress)}</Badge>
+                                <Badge>
+                                  {keyResult.latestCheckIn.hasCheckIn
+                                    ? `最近判断 ${keyResult.latestCheckIn.progressValue ?? '已记录'}`
+                                    : '暂无 check-in'}
+                                </Badge>
+                                <Badge>信心 {getConfidenceLabel(keyResult.latestCheckIn.confidence ?? keyResult.confidence)}</Badge>
                               </div>
                             </Link>
                           ))
@@ -286,6 +304,7 @@ export function OkrClient({ periods }: { periods: PeriodView[] }) {
                     </div>
                   ))
                 )}
+                </div>
               </div>
             </SurfacePanel>
           ) : null}
@@ -302,6 +321,18 @@ function InspectorMetric({ label, value }: { label: string; value: string }) {
       <p className="mt-3 text-2xl font-semibold tracking-[-0.02em] text-(--text-primary)">{value}</p>
     </div>
   );
+}
+
+function formatTaskProgressBadge(taskProgress: {
+  hasCommittedTasks: boolean;
+  completedCommittedTaskCount: number;
+  committedTaskCount: number;
+}) {
+  if (!taskProgress.hasCommittedTasks) {
+    return '暂无承诺任务';
+  }
+
+  return `任务 ${taskProgress.completedCommittedTaskCount}/${taskProgress.committedTaskCount}`;
 }
 
 function getQuarterRange(quarter: Quarter) {

@@ -611,6 +611,11 @@ export type TaskMutationOptions = {
   summary?: string;
 };
 
+export type TaskKeyResultLinkInput = {
+  keyResultId: string;
+  countsTowardCommitment?: boolean;
+};
+
 function toTaskActivitySnapshot(task: {
   id: string;
   title: string;
@@ -849,11 +854,108 @@ export async function listTasksForKeyResult(keyResultId: string) {
     },
   });
 
-  return links.map((link: { task: unknown }) => link.task);
+  return links.map((link: {
+    keyResultId: string;
+    countsTowardCommitment?: boolean | null;
+    committedAt?: Date | null;
+    task: { keyResultLinks?: unknown[] };
+  }) => ({
+    ...link.task,
+    keyResultLinks: [
+      ...(link.task.keyResultLinks ?? []),
+      {
+        keyResultId: link.keyResultId,
+        countsTowardCommitment: Boolean(link.countsTowardCommitment),
+        committedAt: link.committedAt ?? null,
+        keyResult: { id: link.keyResultId },
+      },
+    ],
+  }));
 }
 
-export async function replaceTaskKeyResultLinks(taskId: string, keyResultIds: string[], _options?: TaskMutationOptions) {
-  const dedupedIds = Array.from(new Set(keyResultIds));
+export type KeyResultTaskProgressSnapshot = {
+  keyResultId: string;
+  committedTaskCount: number;
+  completedCommittedTaskCount: number;
+  openCommittedTaskCount: number;
+  hasCommittedTasks: boolean;
+  lastTaskProgressAt: Date | null;
+};
+
+export async function listTaskProgressSnapshotsForKeyResults(keyResultIds: string[]): Promise<KeyResultTaskProgressSnapshot[]> {
+  if (keyResultIds.length === 0) {
+    return [];
+  }
+
+  const uniqueIds = Array.from(new Set(keyResultIds));
+  const links = await db.query.taskKrLinks.findMany({
+    where: inArray(schema.taskKrLinks.keyResultId, uniqueIds),
+    with: {
+      task: true,
+    },
+  });
+
+  const snapshotMap = new Map<string, KeyResultTaskProgressSnapshot>(
+    uniqueIds.map((keyResultId) => [keyResultId, {
+      keyResultId,
+      committedTaskCount: 0,
+      completedCommittedTaskCount: 0,
+      openCommittedTaskCount: 0,
+      hasCommittedTasks: false,
+      lastTaskProgressAt: null,
+    }]),
+  );
+
+  for (const link of links as Array<{
+    keyResultId: string;
+    countsTowardCommitment?: boolean | null;
+    task: { archivedAt?: Date | string | null; status: string; completedAt?: Date | null; updatedAt?: Date | null };
+  }>) {
+    if (!link.countsTowardCommitment || link.task.archivedAt) {
+      continue;
+    }
+
+    const snapshot = snapshotMap.get(link.keyResultId);
+    if (!snapshot) continue;
+
+    snapshot.committedTaskCount += 1;
+    snapshot.hasCommittedTasks = true;
+    if (link.task.status === 'done') {
+      snapshot.completedCommittedTaskCount += 1;
+    } else {
+      snapshot.openCommittedTaskCount += 1;
+    }
+
+    const candidate = link.task.completedAt ?? link.task.updatedAt ?? null;
+    if (candidate && (!snapshot.lastTaskProgressAt || candidate > snapshot.lastTaskProgressAt)) {
+      snapshot.lastTaskProgressAt = candidate;
+    }
+  }
+
+  return uniqueIds.map((keyResultId) => snapshotMap.get(keyResultId) as KeyResultTaskProgressSnapshot);
+}
+
+export async function getTaskProgressSnapshotForKeyResult(keyResultId: string): Promise<KeyResultTaskProgressSnapshot> {
+  const [snapshot] = await listTaskProgressSnapshotsForKeyResults([keyResultId]);
+  return snapshot ?? {
+    keyResultId,
+    committedTaskCount: 0,
+    completedCommittedTaskCount: 0,
+    openCommittedTaskCount: 0,
+    hasCommittedTasks: false,
+    lastTaskProgressAt: null,
+  };
+}
+
+export async function replaceTaskKeyResultLinks(taskId: string, keyResultLinks: Array<string | TaskKeyResultLinkInput>, _options?: TaskMutationOptions) {
+  const dedupedLinks = Array.from(new Map(
+    keyResultLinks
+      .map((item) => typeof item === 'string'
+        ? { keyResultId: item, countsTowardCommitment: false }
+        : { keyResultId: item.keyResultId, countsTowardCommitment: Boolean(item.countsTowardCommitment) })
+      .filter((item) => item.keyResultId)
+      .map((item) => [item.keyResultId, item]),
+  ).values());
   const existingLinks = await db.query.taskKrLinks.findMany({
     where: eq(schema.taskKrLinks.taskId, taskId),
   });
@@ -867,17 +969,19 @@ export async function replaceTaskKeyResultLinks(taskId: string, keyResultIds: st
   await db.transaction((tx: TransactionLike) => {
     tx.delete(schema.taskKrLinks).where(eq(schema.taskKrLinks.taskId, taskId));
 
-    if (dedupedIds.length > 0) {
+    if (dedupedLinks.length > 0) {
       tx.insert(schema.taskKrLinks).values(
-        dedupedIds.map((keyResultId) => ({
+        dedupedLinks.map((link) => ({
           taskId,
-          keyResultId,
+          keyResultId: link.keyResultId,
+          countsTowardCommitment: link.countsTowardCommitment,
+          committedAt: link.countsTowardCommitment ? new Date() : null,
         })),
       );
     }
   });
 
-  if (dedupedIds.length === 0) {
+  if (dedupedLinks.length === 0) {
     if (task && _options?.activityContext) {
       for (const removedId of Array.from(existingIds)) {
         await recordTaskActivity(toTaskActivitySnapshot(task), _options, 'task.unlink_key_result', {
@@ -889,16 +993,16 @@ export async function replaceTaskKeyResultLinks(taskId: string, keyResultIds: st
   }
 
   const links = await db.query.taskKrLinks.findMany({
-    where: and(eq(schema.taskKrLinks.taskId, taskId), inArray(schema.taskKrLinks.keyResultId, dedupedIds)),
+    where: and(eq(schema.taskKrLinks.taskId, taskId), inArray(schema.taskKrLinks.keyResultId, dedupedLinks.map((link) => link.keyResultId))),
     with: {
       keyResult: true,
     },
   });
 
   if (task && _options?.activityContext) {
-    const nextIds = new Set<string>(dedupedIds);
+    const nextIds = new Set<string>(dedupedLinks.map((link) => link.keyResultId));
 
-    for (const keyResultId of dedupedIds) {
+    for (const keyResultId of dedupedLinks.map((link) => link.keyResultId)) {
       if (!existingIds.has(keyResultId)) {
         await recordTaskActivity(toTaskActivitySnapshot(task), _options, 'task.link_key_result', {
           keyResultId,
@@ -1300,30 +1404,39 @@ export async function updateTaskDefinition(definitionId: string, input: Partial<
   return definition ?? null;
 }
 
-export async function replaceTaskDefinitionKeyResultLinks(definitionId: string, keyResultIds: string[]) {
-  const dedupedIds = Array.from(new Set(keyResultIds));
+export async function replaceTaskDefinitionKeyResultLinks(definitionId: string, keyResultLinks: Array<string | TaskKeyResultLinkInput>) {
+  const dedupedLinks = Array.from(new Map(
+    keyResultLinks
+      .map((item) => typeof item === 'string'
+        ? { keyResultId: item, countsTowardCommitment: false }
+        : { keyResultId: item.keyResultId, countsTowardCommitment: Boolean(item.countsTowardCommitment) })
+      .filter((item) => item.keyResultId)
+      .map((item) => [item.keyResultId, item]),
+  ).values());
 
   await db.transaction((tx: TransactionLike) => {
     tx.delete(schema.taskDefinitionKrLinks).where(eq(schema.taskDefinitionKrLinks.definitionId, definitionId));
 
-    if (dedupedIds.length > 0) {
+    if (dedupedLinks.length > 0) {
       tx.insert(schema.taskDefinitionKrLinks).values(
-        dedupedIds.map((keyResultId) => ({
+        dedupedLinks.map((link) => ({
           definitionId,
-          keyResultId,
+          keyResultId: link.keyResultId,
+          countsTowardCommitment: link.countsTowardCommitment,
+          committedAt: link.countsTowardCommitment ? new Date() : null,
         })),
       );
     }
   });
 
-  if (dedupedIds.length === 0) {
+  if (dedupedLinks.length === 0) {
     return [];
   }
 
   return db.query.taskDefinitionKrLinks.findMany({
     where: and(
       eq(schema.taskDefinitionKrLinks.definitionId, definitionId),
-      inArray(schema.taskDefinitionKrLinks.keyResultId, dedupedIds),
+      inArray(schema.taskDefinitionKrLinks.keyResultId, dedupedLinks.map((link) => link.keyResultId)),
     ),
     with: {
       keyResult: true,
@@ -1416,9 +1529,11 @@ export async function ensureRecurringTasksForDate(targetDateInput?: string) {
 
     if (definition.keyResultLinks.length > 0) {
       await db.insert(schema.taskKrLinks).values(
-        definition.keyResultLinks.map((link: { keyResultId: string }) => ({
+        definition.keyResultLinks.map((link: { keyResultId: string; countsTowardCommitment?: boolean | null; committedAt?: Date | null }) => ({
           taskId: created.id,
           keyResultId: link.keyResultId,
+          countsTowardCommitment: Boolean(link.countsTowardCommitment),
+          committedAt: link.countsTowardCommitment ? (link.committedAt ?? new Date()) : null,
         })),
       );
     }

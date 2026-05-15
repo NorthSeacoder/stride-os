@@ -21,8 +21,14 @@ type TaskItem = {
   listId?: string | null;
   definition?: LinkedDefinition | null;
   keyResultLinks?: Array<{
+    countsTowardCommitment?: boolean | null;
     keyResult: LinkedKeyResult;
   }>;
+};
+
+export type TaskKeyResultLinkValue = {
+  keyResultId: string;
+  countsTowardCommitment: boolean;
 };
 
 export type TaskFormValues = {
@@ -40,6 +46,7 @@ export type TaskFormValues = {
   endDate: string;
   occurrenceCount: string;
   keyResultIds: string[];
+  keyResultLinks: TaskKeyResultLinkValue[];
 };
 
 export function getTaskFormValues(
@@ -63,6 +70,10 @@ export function getTaskFormValues(
     endDate: task?.definition?.endDate ?? '',
     occurrenceCount: task?.definition?.occurrenceCount ? String(task.definition.occurrenceCount) : '',
     keyResultIds: (task?.keyResultLinks ?? []).map((link) => link.keyResult.id),
+    keyResultLinks: (task?.keyResultLinks ?? []).map((link) => ({
+      keyResultId: link.keyResult.id,
+      countsTowardCommitment: Boolean(link.countsTowardCommitment),
+    })),
   };
 }
 
@@ -90,8 +101,16 @@ export function buildTaskFormData(values: TaskFormValues) {
   formData.set('endDate', values.endDate);
   formData.set('occurrenceCount', values.occurrenceCount);
 
-  values.keyResultIds.forEach((keyResultId) => {
-    formData.append('keyResultIds', keyResultId);
+  const commitmentByKeyResultId = new Map(
+    values.keyResultLinks.map((link) => [link.keyResultId, link.countsTowardCommitment]),
+  );
+  const normalizedLinks = values.keyResultIds.map((keyResultId) => ({
+    keyResultId,
+    countsTowardCommitment: commitmentByKeyResultId.get(keyResultId) ?? false,
+  }));
+
+  normalizedLinks.forEach((link) => {
+    formData.append('keyResultLinks', JSON.stringify(link));
   });
 
   return formData;

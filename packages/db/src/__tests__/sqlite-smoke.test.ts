@@ -160,6 +160,7 @@ describe('sqlite smoke', () => {
     await sqliteDb.insert(sqliteSchema.taskDefinitionKrLinks).values({
       definitionId: definition.id,
       keyResultId: keyResult.id,
+      countsTowardCommitment: true,
     });
 
     const hydrated = await sqliteDb.query.taskDefinitions.findFirst({
@@ -172,6 +173,7 @@ describe('sqlite smoke', () => {
 
     expect(hydrated?.list.slug).toBe('inbox');
     expect(hydrated?.keyResultLinks[0]?.keyResultId).toBe(keyResult.id);
+    expect(hydrated?.keyResultLinks[0]?.countsTowardCommitment).toBe(true);
   });
 
   it('supports the OKR alpha domain model and enforces key task/link constraints', async () => {
@@ -220,6 +222,7 @@ describe('sqlite smoke', () => {
     await sqliteDb.insert(sqliteSchema.taskKrLinks).values({
       taskId: task.id,
       keyResultId: keyResult.id,
+      countsTowardCommitment: false,
     });
 
     const [review] = await sqliteDb.insert(sqliteSchema.reviews).values({
@@ -235,7 +238,13 @@ describe('sqlite smoke', () => {
     await sqliteDb.insert(sqliteSchema.reviewKrSnapshots).values({
       reviewId: review.id,
       keyResultId: keyResult.id,
-      snapshot: { confidence: 'medium', currentValue: 0.5 },
+      snapshot: {
+        confidence: 'medium',
+        currentValue: 0.5,
+        committedTaskCount: 0,
+        completedCommittedTaskCount: 0,
+        openCommittedTaskCount: 0,
+      },
     });
 
     const hydratedPeriod = await sqliteDb.query.periods.findFirst({
@@ -258,6 +267,7 @@ describe('sqlite smoke', () => {
     expect(hydratedPeriod?.objectives).toHaveLength(1);
     expect(hydratedPeriod?.objectives[0]?.keyResults[0]?.checkIns[0]?.id).toBe(checkIn.id);
     expect(hydratedPeriod?.objectives[0]?.keyResults[0]?.taskLinks[0]?.taskId).toBe(task.id);
+    expect(hydratedPeriod?.objectives[0]?.keyResults[0]?.taskLinks[0]?.countsTowardCommitment).toBe(false);
     expect(hydratedPeriod?.objectives[0]?.keyResults[0]?.reviewSnapshots[0]?.reviewId).toBe(review.id);
     expect(review.createdAt).toBeTruthy();
 

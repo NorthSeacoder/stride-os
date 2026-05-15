@@ -155,7 +155,7 @@ export function getActivityFieldLabel(value: string | null | undefined) {
     title: '标题',
     listId: '列表',
     listName: '列表',
-    currentValue: '当前值',
+    currentValue: '手工当前值',
     targetValue: '目标值',
     confidence: '信心',
     reviewStatus: '复盘状态',

@@ -12,6 +12,7 @@ import {
   date,
   integer,
   doublePrecision,
+  boolean,
 } from 'drizzle-orm/pg-core';
 
 const usersColumns = {
@@ -308,12 +309,15 @@ const taskKrLinksColumns = {
   keyResultId: uuid('key_result_id')
     .notNull()
     .references(() => keyResults.id, { onDelete: 'cascade' }),
+  countsTowardCommitment: boolean('counts_toward_commitment').notNull().default(false),
+  committedAt: timestamp('committed_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 };
 
 export const taskKrLinks = pgTable('task_kr_links', taskKrLinksColumns, (table) => [
   primaryKey({ columns: [table.taskId, table.keyResultId] }),
   index('idx_task_kr_links_key_result_id').on(table.keyResultId),
+  index('idx_task_kr_links_commitment').on(table.keyResultId, table.countsTowardCommitment),
 ]);
 
 export const taskKrLinksRelations = relations(taskKrLinks, ({ one }) => ({
@@ -328,12 +332,15 @@ const taskDefinitionKrLinksColumns = {
   keyResultId: uuid('key_result_id')
     .notNull()
     .references(() => keyResults.id, { onDelete: 'cascade' }),
+  countsTowardCommitment: boolean('counts_toward_commitment').notNull().default(false),
+  committedAt: timestamp('committed_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 };
 
 export const taskDefinitionKrLinks = pgTable('task_definition_kr_links', taskDefinitionKrLinksColumns, (table) => [
   primaryKey({ columns: [table.definitionId, table.keyResultId] }),
   index('idx_task_definition_kr_links_key_result_id').on(table.keyResultId),
+  index('idx_task_definition_kr_links_commitment').on(table.keyResultId, table.countsTowardCommitment),
 ]);
 
 export const taskDefinitionKrLinksRelations = relations(taskDefinitionKrLinks, ({ one }) => ({

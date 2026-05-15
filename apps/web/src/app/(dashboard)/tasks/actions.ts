@@ -39,6 +39,32 @@ function getKeyResultIds(formData: FormData) {
     .filter(Boolean);
 }
 
+function getKeyResultLinks(formData: FormData) {
+  const parsed = formData
+    .getAll('keyResultLinks')
+    .map((value) => {
+      try {
+        const item = JSON.parse(String(value));
+        return {
+          keyResultId: String(item.keyResultId ?? '').trim(),
+          countsTowardCommitment: item.countsTowardCommitment === true,
+        };
+      } catch {
+        return null;
+      }
+    })
+    .filter((item): item is { keyResultId: string; countsTowardCommitment: boolean } => Boolean(item?.keyResultId));
+
+  if (parsed.length > 0) {
+    return parsed;
+  }
+
+  return getKeyResultIds(formData).map((keyResultId) => ({
+    keyResultId,
+    countsTowardCommitment: false,
+  }));
+}
+
 async function requireTaskUser() {
   const user = await getSessionUser();
   if (!user) {
@@ -87,9 +113,9 @@ export async function createTaskAction(
       priority: (getNullable(formData, 'priority') as 'P1' | 'P2' | 'P3' | null),
     }, { activityContext: user.activityContext });
 
-    const keyResultIds = getKeyResultIds(formData);
-    if (keyResultIds.length > 0) {
-      await replaceTaskKeyResultLinks(task.id, keyResultIds, { activityContext: user.activityContext });
+    const keyResultLinks = getKeyResultLinks(formData);
+    if (keyResultLinks.length > 0) {
+      await replaceTaskKeyResultLinks(task.id, keyResultLinks, { activityContext: user.activityContext });
     }
     revalidateTasks();
     return { error: '' };
@@ -130,7 +156,7 @@ export async function updateTaskAction(
       return { error: '未找到任务' };
     }
 
-    await replaceTaskKeyResultLinks(taskId, getKeyResultIds(formData), { activityContext: user.activityContext });
+    await replaceTaskKeyResultLinks(taskId, getKeyResultLinks(formData), { activityContext: user.activityContext });
     revalidateTasks();
     return { error: '' };
   } catch (error) {
@@ -197,7 +223,7 @@ export async function createTaskDefinitionAction(
       occurrenceCount: getNullable(formData, 'occurrenceCount') ? Number(getNullable(formData, 'occurrenceCount')) : null,
     });
 
-    await replaceTaskDefinitionKeyResultLinks(definition.id, getKeyResultIds(formData));
+    await replaceTaskDefinitionKeyResultLinks(definition.id, getKeyResultLinks(formData));
     await ensureRecurringTasksForDate(getNullable(formData, 'targetDate') ?? undefined);
     revalidateTasks();
     return { error: '' };
@@ -219,6 +245,7 @@ export async function updateTaskDefinitionAction(
   }
 
   const definitionId = getTrimmed(formData, 'definitionId') || getTrimmed(formData, 'id');
+  const taskId = getTrimmed(formData, 'taskId');
   if (!definitionId) {
     return { error: '重复定义 ID 不能为空' };
   }
@@ -238,7 +265,11 @@ export async function updateTaskDefinitionAction(
       return { error: '未找到重复定义' };
     }
 
-    await replaceTaskDefinitionKeyResultLinks(definitionId, getKeyResultIds(formData));
+    const keyResultLinks = getKeyResultLinks(formData);
+    await replaceTaskDefinitionKeyResultLinks(definitionId, keyResultLinks);
+    if (taskId) {
+      await replaceTaskKeyResultLinks(taskId, keyResultLinks, { activityContext: user.activityContext });
+    }
     await ensureRecurringTasksForDate(getNullable(formData, 'targetDate') ?? undefined);
     revalidateTasks();
     return { error: '' };

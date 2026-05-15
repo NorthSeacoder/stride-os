@@ -82,8 +82,8 @@ describe('task actions', () => {
     formData.set('listId', 'list_1');
     formData.set('dueDate', '2026-05-12');
     formData.set('priority', 'P1');
-    formData.append('keyResultIds', 'kr_1');
-    formData.append('keyResultIds', 'kr_2');
+    formData.append('keyResultLinks', JSON.stringify({ keyResultId: 'kr_1', countsTowardCommitment: true }));
+    formData.append('keyResultLinks', JSON.stringify({ keyResultId: 'kr_2', countsTowardCommitment: false }));
 
     await expect(createTaskAction({ error: '' }, formData)).resolves.toEqual({
       error: '',
@@ -104,7 +104,10 @@ describe('task actions', () => {
         }),
       }),
     );
-    expect(replaceTaskKeyResultLinks).toHaveBeenCalledWith('task_1', ['kr_1', 'kr_2'], expect.objectContaining({
+    expect(replaceTaskKeyResultLinks).toHaveBeenCalledWith('task_1', [
+      { keyResultId: 'kr_1', countsTowardCommitment: true },
+      { keyResultId: 'kr_2', countsTowardCommitment: false },
+    ], expect.objectContaining({
       activityContext: expect.objectContaining({
         actorId: 'user_1',
         source: 'web',
@@ -172,7 +175,7 @@ describe('task actions', () => {
     formData.set('frequency', 'daily');
     formData.set('endType', 'never');
     formData.set('targetDate', '2026-05-12');
-    formData.append('keyResultIds', 'kr_1');
+    formData.append('keyResultLinks', JSON.stringify({ keyResultId: 'kr_1', countsTowardCommitment: true }));
 
     await expect(createTaskDefinitionAction({ error: '' }, formData)).resolves.toEqual({ error: '' });
 
@@ -182,27 +185,43 @@ describe('task actions', () => {
       frequency: 'daily',
       endType: 'never',
     }));
-    expect(replaceTaskDefinitionKeyResultLinks).toHaveBeenCalledWith('def_1', ['kr_1']);
+    expect(replaceTaskDefinitionKeyResultLinks).toHaveBeenCalledWith('def_1', [
+      { keyResultId: 'kr_1', countsTowardCommitment: true },
+    ]);
     expect(ensureRecurringTasksForDate).toHaveBeenCalledWith('2026-05-12');
   });
 
-  it('updates a recurring task definition', async () => {
+  it('updates a recurring task definition and syncs the current instance links', async () => {
     getSessionUser.mockResolvedValue({ id: 'user_1' });
     updateTaskDefinition.mockResolvedValue({ id: 'def_1' });
     replaceTaskDefinitionKeyResultLinks.mockResolvedValue([]);
+    replaceTaskKeyResultLinks.mockResolvedValue([]);
     ensureRecurringTasksForDate.mockResolvedValue([]);
     const formData = new FormData();
     formData.set('id', 'task_1');
+    formData.set('taskId', 'task_1');
     formData.set('definitionId', 'def_1');
     formData.set('title', 'Morning triage');
     formData.set('listId', 'list_inbox');
     formData.set('frequency', 'daily');
     formData.set('endType', 'never');
+    formData.append('keyResultLinks', JSON.stringify({ keyResultId: 'kr_1', countsTowardCommitment: true }));
 
     await expect(updateTaskDefinitionAction({ error: '' }, formData)).resolves.toEqual({ error: '' });
 
     expect(updateTaskDefinition).toHaveBeenCalledWith('def_1', expect.objectContaining({
       title: 'Morning triage',
+    }));
+    expect(replaceTaskDefinitionKeyResultLinks).toHaveBeenCalledWith('def_1', [
+      { keyResultId: 'kr_1', countsTowardCommitment: true },
+    ]);
+    expect(replaceTaskKeyResultLinks).toHaveBeenCalledWith('task_1', [
+      { keyResultId: 'kr_1', countsTowardCommitment: true },
+    ], expect.objectContaining({
+      activityContext: expect.objectContaining({
+        actorId: 'user_1',
+        source: 'web',
+      }),
     }));
   });
 

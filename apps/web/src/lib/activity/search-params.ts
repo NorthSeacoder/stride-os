@@ -1,4 +1,4 @@
-export type ActivitySearchParamValue = string | string[] | undefined;
+export type ActivitySearchParamValue = string | readonly string[] | undefined;
 type SearchParamEntry = readonly [string, unknown];
 type RawSearchParamEntry = readonly [string, ActivitySearchParamValue];
 
@@ -33,7 +33,7 @@ export function buildActivitySearchParams(entries: Iterable<SearchParamEntry>) {
   return searchParams;
 }
 
-export function buildActivityHref(pathname: string, entries: Iterable<[string, unknown]>) {
+export function buildActivityHref(pathname: string, entries: Iterable<SearchParamEntry>) {
   const searchParams = buildActivitySearchParams(entries);
   return searchParams.size > 0 ? `${pathname}?${searchParams.toString()}` : pathname;
 }

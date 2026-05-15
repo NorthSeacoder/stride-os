@@ -4,6 +4,7 @@ const recordActivity = vi.fn();
 const ensureTodayRecurringTasks = vi.fn();
 const listCompletedTasksBetween = vi.fn();
 const listOpenTodayDueTasks = vi.fn();
+const listTaskProgressSnapshotsForKeyResults = vi.fn();
 const listCheckInsInRange = vi.fn();
 const listKeyResultsByIds = vi.fn();
 
@@ -87,6 +88,7 @@ const tx = {
 vi.mock('@/lib/services/task-service', () => ({
   ensureTodayRecurringTasks: (...args: unknown[]) => ensureTodayRecurringTasks(...args),
   listCompletedTasksBetween: (...args: unknown[]) => listCompletedTasksBetween(...args),
+  listTaskProgressSnapshotsForKeyResults: (...args: unknown[]) => listTaskProgressSnapshotsForKeyResults(...args),
   listOpenTodayDueTasks: (...args: unknown[]) => listOpenTodayDueTasks(...args),
   listTodayTaskCounts: vi.fn(),
 }));
@@ -131,6 +133,7 @@ describe('review service', () => {
     ensureTodayRecurringTasks.mockResolvedValue(undefined);
     listCompletedTasksBetween.mockResolvedValue([]);
     listOpenTodayDueTasks.mockResolvedValue([]);
+    listTaskProgressSnapshotsForKeyResults.mockResolvedValue([]);
     listCheckInsInRange.mockResolvedValue([]);
     listKeyResultsByIds.mockResolvedValue([]);
 
@@ -161,7 +164,56 @@ describe('review service', () => {
     expect(draft.structuredSummary).toMatchObject({
       completedTaskCount: 0,
       openTodayDueCount: 0,
+      keyResultTaskProgress: [],
     });
+  });
+
+  it('includes task progress summaries alongside latest check-ins', async () => {
+    listCompletedTasksBetween.mockResolvedValue([
+      {
+        id: 'task_1',
+        title: 'Ship review loop',
+        keyResultLinks: [{ keyResult: { id: 'kr_1', title: 'Ship review loop' } }],
+      },
+    ]);
+    listTaskProgressSnapshotsForKeyResults.mockResolvedValue([
+      {
+        keyResultId: 'kr_1',
+        committedTaskCount: 3,
+        completedCommittedTaskCount: 1,
+        openCommittedTaskCount: 2,
+        hasCommittedTasks: true,
+        lastTaskProgressAt: new Date('2026-05-10T00:00:00.000Z'),
+      },
+    ]);
+    listCheckInsInRange.mockResolvedValue([
+      {
+        keyResultId: 'kr_1',
+        confidence: 'medium',
+        summary: 'On track',
+        blockers: null,
+        nextActions: null,
+        createdAt: new Date('2026-05-09T00:00:00.000Z'),
+      },
+    ]);
+    listKeyResultsByIds.mockResolvedValue([
+      { id: 'kr_1', title: 'Ship review loop' },
+    ]);
+
+    const draft = await buildWeeklyReviewDraft('2026-05-05', '2026-05-11');
+
+    expect(draft.structuredSummary).toMatchObject({
+      keyResultTaskProgress: [
+        expect.objectContaining({
+          keyResultId: 'kr_1',
+          committedTaskCount: 3,
+          completedCommittedTaskCount: 1,
+          openCommittedTaskCount: 2,
+        }),
+      ],
+    });
+    expect(draft.body).toContain('任务 1/3');
+    expect(draft.body).toContain('On track');
   });
 
   it('saves a draft and writes KR snapshots', async () => {
@@ -187,6 +239,22 @@ describe('review service', () => {
         title: 'Ship review loop',
         status: 'active',
         currentValue: 0.5,
+        taskProgress: {
+          committedTaskCount: 3,
+          completedCommittedTaskCount: 1,
+          openCommittedTaskCount: 2,
+          hasCommittedTasks: true,
+          lastTaskProgressAt: new Date('2026-05-10T00:00:00.000Z'),
+        },
+        latestCheckIn: {
+          hasCheckIn: true,
+          progressValue: 0.5,
+          confidence: 'medium',
+          summary: null,
+          blockers: null,
+          nextActions: null,
+          updatedAt: new Date('2026-05-09T00:00:00.000Z'),
+        },
         checkIns: [{ confidence: 'medium', createdAt: new Date('2026-05-09T00:00:00.000Z') }],
       },
     ]);
@@ -209,6 +277,9 @@ describe('review service', () => {
         keyResultId: 'kr_1',
         snapshot: expect.objectContaining({
           title: 'Ship review loop',
+          committedTaskCount: 3,
+          completedCommittedTaskCount: 1,
+          openCommittedTaskCount: 2,
           confidence: 'medium',
         }),
       }),

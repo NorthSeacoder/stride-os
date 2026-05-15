@@ -66,7 +66,29 @@ import { GET as currentOkrGet } from '@/app/api/v1/okr/current/route';
 
 describe('okr automation api routes', () => {
   beforeEach(() => {
-    getCurrentPeriodSummary.mockResolvedValue({ period: { id: 'period_1', name: '2026 Q2' } });
+    getCurrentPeriodSummary.mockResolvedValue({
+      period: {
+        id: 'period_1',
+        name: '2026 Q2',
+        objectives: [{
+          id: 'obj_1',
+          keyResults: [{
+            id: 'kr_1',
+            taskProgress: {
+              committedTaskCount: 3,
+              completedCommittedTaskCount: 1,
+              openCommittedTaskCount: 2,
+              hasCommittedTasks: true,
+            },
+            latestCheckIn: {
+              hasCheckIn: true,
+              confidence: 'medium',
+              progressValue: 0.7,
+            },
+          }],
+        }],
+      },
+    });
   });
 
   it('returns 401 for protected OKR routes without auth', async () => {
@@ -114,13 +136,38 @@ describe('okr automation api routes', () => {
 
   it('handles key result create, detail, update, archive, and check-ins', async () => {
     createKeyResult.mockResolvedValue({ id: 'kr_1', title: 'Revenue' });
-    getKeyResultDetail.mockResolvedValue({ id: 'kr_1', title: 'Revenue' });
+    getKeyResultDetail.mockResolvedValue({
+      id: 'kr_1',
+      title: 'Revenue',
+      taskProgress: {
+        committedTaskCount: 3,
+        completedCommittedTaskCount: 1,
+        openCommittedTaskCount: 2,
+        hasCommittedTasks: true,
+      },
+      latestCheckIn: {
+        hasCheckIn: true,
+        confidence: 'medium',
+        progressValue: 0.7,
+      },
+    });
     updateKeyResult.mockResolvedValue({ id: 'kr_1', status: 'at_risk' });
     listKeyResultCheckIns.mockResolvedValue([{ id: 'checkin_1' }]);
     createKrCheckIn.mockResolvedValue({ id: 'checkin_1', keyResultId: 'kr_1' });
 
     expect((await keyResultsPost(jsonRequest('http://localhost/api/v1/okr/key-results', { auth: 'ok', body: { objectiveId: 'obj_1', title: 'Revenue', type: 'numeric' } }))).status).toBe(201);
-    expect((await keyResultGet(new NextRequest('http://localhost/api/v1/okr/key-results/kr_1', { headers: { authorization: 'Bearer ok' } }), { params: Promise.resolve({ id: 'kr_1' }) })).status).toBe(200);
+    const detailResponse = await keyResultGet(new NextRequest('http://localhost/api/v1/okr/key-results/kr_1', { headers: { authorization: 'Bearer ok' } }), { params: Promise.resolve({ id: 'kr_1' }) });
+    expect(detailResponse.status).toBe(200);
+    await expect(detailResponse.json()).resolves.toMatchObject({
+      taskProgress: {
+        committedTaskCount: 3,
+        completedCommittedTaskCount: 1,
+      },
+      latestCheckIn: {
+        hasCheckIn: true,
+        confidence: 'medium',
+      },
+    });
     expect((await keyResultPatch(jsonRequest('http://localhost/api/v1/okr/key-results/kr_1', { auth: 'ok', method: 'PATCH', body: { status: 'at_risk' } }), { params: Promise.resolve({ id: 'kr_1' }) })).status).toBe(200);
     expect((await keyResultArchivePost(jsonRequest('http://localhost/api/v1/okr/key-results/kr_1/archive', { auth: 'ok' }), { params: Promise.resolve({ id: 'kr_1' }) })).status).toBe(200);
     expect((await checkInsGet(new NextRequest('http://localhost/api/v1/okr/key-results/kr_1/check-ins', { headers: { authorization: 'Bearer ok' } }), { params: Promise.resolve({ id: 'kr_1' }) })).status).toBe(200);
@@ -144,5 +191,19 @@ describe('okr automation api routes', () => {
       headers: { authorization: 'Bearer ok' },
     }));
     expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      period: {
+        objectives: [{
+          keyResults: [{
+            taskProgress: {
+              committedTaskCount: 3,
+            },
+            latestCheckIn: {
+              hasCheckIn: true,
+            },
+          }],
+        }],
+      },
+    });
   });
 });

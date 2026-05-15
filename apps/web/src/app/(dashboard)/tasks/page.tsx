@@ -15,12 +15,12 @@ export default async function TasksPage() {
     listTaskSources(),
   ]);
 
-  const keyResults = periods.flatMap((period: { objectives: Array<{ title: string; keyResults: Array<{ id: string; title: string }> }> }) =>
-    period.objectives.flatMap((objective: { title: string; keyResults: Array<{ id: string; title: string }> }) =>
-      objective.keyResults.map((keyResult: { id: string; title: string }) => ({
+  const keyResults = periods.flatMap((period) =>
+    period.objectives.flatMap((objective) =>
+      objective.keyResults.map((keyResult) => ({
         id: keyResult.id,
-        title: keyResult.title,
-        objectiveTitle: objective.title,
+        title: keyResult.title ?? keyResult.id,
+        objectiveTitle: objective.title ?? '未命名目标',
       })),
     ),
   );

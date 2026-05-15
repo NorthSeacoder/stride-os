@@ -107,6 +107,7 @@ import {
   listTaskDashboardCounts,
   listTaskListsWithCounts,
   listTaskSources,
+  listTasksForKeyResult,
   listTasksForSource,
   moveTaskToQuadrant,
   moveTaskToQuadrantList,
@@ -195,13 +196,17 @@ describe('task service rules', () => {
       { taskId: 'task_1', keyResultId: 'kr_2' },
     ]);
 
-    await expect(replaceTaskKeyResultLinks('task_1', ['kr_1', 'kr_1', 'kr_2'])).resolves.toHaveLength(2);
+    await expect(replaceTaskKeyResultLinks('task_1', [
+      { keyResultId: 'kr_1', countsTowardCommitment: true },
+      { keyResultId: 'kr_1', countsTowardCommitment: true },
+      { keyResultId: 'kr_2', countsTowardCommitment: false },
+    ])).resolves.toHaveLength(2);
 
     expect(transaction).toHaveBeenCalledTimes(1);
     expect(txDelete).toHaveBeenCalled();
     expect(txInsertValues).toHaveBeenCalledWith([
-      { taskId: 'task_1', keyResultId: 'kr_1' },
-      { taskId: 'task_1', keyResultId: 'kr_2' },
+      { taskId: 'task_1', keyResultId: 'kr_1', countsTowardCommitment: true, committedAt: expect.any(Date) },
+      { taskId: 'task_1', keyResultId: 'kr_2', countsTowardCommitment: false, committedAt: null },
     ]);
     expect(findManyTaskKrLinks).toHaveBeenCalledTimes(2);
   });
@@ -223,6 +228,52 @@ describe('task service rules', () => {
     expect(txDelete).toHaveBeenCalled();
     expect(txInsert).not.toHaveBeenCalled();
     expect(findManyTaskKrLinks).toHaveBeenCalledTimes(1);
+  });
+
+  it('returns linked tasks with the current key result commitment metadata', async () => {
+    const committedAt = new Date('2026-05-12T08:00:00.000Z');
+    findManyTaskKrLinks.mockResolvedValue([
+      {
+        keyResultId: 'kr_1',
+        countsTowardCommitment: true,
+        committedAt,
+        task: {
+          id: 'task_1',
+          title: 'Committed task',
+          keyResultLinks: [],
+        },
+      },
+      {
+        keyResultId: 'kr_1',
+        countsTowardCommitment: false,
+        committedAt: null,
+        task: {
+          id: 'task_2',
+          title: 'Linked task',
+        },
+      },
+    ]);
+
+    await expect(listTasksForKeyResult('kr_1')).resolves.toEqual([
+      expect.objectContaining({
+        id: 'task_1',
+        keyResultLinks: [expect.objectContaining({
+          keyResultId: 'kr_1',
+          countsTowardCommitment: true,
+          committedAt,
+          keyResult: { id: 'kr_1' },
+        })],
+      }),
+      expect.objectContaining({
+        id: 'task_2',
+        keyResultLinks: [expect.objectContaining({
+          keyResultId: 'kr_1',
+          countsTowardCommitment: false,
+          committedAt: null,
+          keyResult: { id: 'kr_1' },
+        })],
+      }),
+    ]);
   });
 
   it('builds dashboard counts from due date and completion state', async () => {
@@ -612,13 +663,17 @@ describe('task service rules', () => {
       { definitionId: 'def_1', keyResultId: 'kr_2' },
     ]);
 
-    await expect(replaceTaskDefinitionKeyResultLinks('def_1', ['kr_1', 'kr_2', 'kr_2'])).resolves.toHaveLength(2);
+    await expect(replaceTaskDefinitionKeyResultLinks('def_1', [
+      { keyResultId: 'kr_1', countsTowardCommitment: true },
+      { keyResultId: 'kr_2', countsTowardCommitment: false },
+      { keyResultId: 'kr_2', countsTowardCommitment: false },
+    ])).resolves.toHaveLength(2);
 
     expect(transaction).toHaveBeenCalledTimes(1);
     expect(txDelete).toHaveBeenCalled();
     expect(txInsertValues).toHaveBeenCalledWith([
-      { definitionId: 'def_1', keyResultId: 'kr_1' },
-      { definitionId: 'def_1', keyResultId: 'kr_2' },
+      { definitionId: 'def_1', keyResultId: 'kr_1', countsTowardCommitment: true, committedAt: expect.any(Date) },
+      { definitionId: 'def_1', keyResultId: 'kr_2', countsTowardCommitment: false, committedAt: null },
     ]);
   });
 
@@ -637,7 +692,18 @@ describe('task service rules', () => {
         endDate: null,
         occurrenceCount: null,
         createdAt: new Date('2026-05-10T12:00:00.000Z'),
-        keyResultLinks: [{ keyResultId: 'kr_1' }],
+        keyResultLinks: [
+          {
+            keyResultId: 'kr_1',
+            countsTowardCommitment: true,
+            committedAt: new Date('2026-05-10T12:00:00.000Z'),
+          },
+          {
+            keyResultId: 'kr_2',
+            countsTowardCommitment: false,
+            committedAt: null,
+          },
+        ],
       },
     ]);
     findManyTasks.mockResolvedValueOnce([]);
@@ -656,7 +722,20 @@ describe('task service rules', () => {
       occurrenceDate: '2026-05-12',
       dueDate: '2026-05-12',
     }));
-    expect(insertValues).toHaveBeenNthCalledWith(2, [{ taskId: 'task_1', keyResultId: 'kr_1' }]);
+    expect(insertValues).toHaveBeenNthCalledWith(2, [
+      {
+        taskId: 'task_1',
+        keyResultId: 'kr_1',
+        countsTowardCommitment: true,
+        committedAt: new Date('2026-05-10T12:00:00.000Z'),
+      },
+      {
+        taskId: 'task_1',
+        keyResultId: 'kr_2',
+        countsTowardCommitment: false,
+        committedAt: null,
+      },
+    ]);
 
     vi.useRealTimers();
   });

@@ -16,9 +16,5 @@ export default async function TokensPage() {
   const tokens = await listApiTokens(user.id);
   const createdToken = cookieStore.get(CREATED_TOKEN_COOKIE)?.value ?? null;
 
-  if (createdToken) {
-    cookieStore.delete(CREATED_TOKEN_COOKIE);
-  }
-
   return <TokensClient tokens={tokens} createdToken={createdToken} />;
 }

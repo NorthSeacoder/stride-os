@@ -15,6 +15,7 @@ import {
 } from './okr-service';
 import {
   ensureTodayRecurringTasks,
+  listTaskProgressSnapshotsForKeyResults,
   listCompletedTasksBetween,
   listTaskDashboardCounts,
   listOpenTodayDueTasks,
@@ -161,16 +162,32 @@ export async function buildWeeklyReviewDraft(periodStart: string, periodEnd: str
     }
   }
 
-  const keyResultIds = Array.from(latestCheckInsByKr.keys());
+  const keyResultIds = Array.from(new Set([
+    ...Array.from(latestCheckInsByKr.keys()),
+    ...completedTasks.flatMap((task: { keyResultLinks?: Array<{ keyResult: { id: string } }> }) =>
+      (task.keyResultLinks ?? []).map((link) => link.keyResult.id),
+    ),
+  ]));
   const keyResults = await listKeyResultsByIds(keyResultIds);
-  const keyedResults = new Map<string, { id: string; title: string }>(
-    keyResults.map((item: { id: string; title: string }) => [item.id, item]),
+  const taskProgressByKr = new Map(
+    (await listTaskProgressSnapshotsForKeyResults(keyResultIds)).map((snapshot) => [snapshot.keyResultId, snapshot]),
+  );
+  const keyedResults = new Map<string, { id: string; title?: string | null }>(
+    keyResults.map((item) => [item.id, item]),
   );
 
-  const keyResultSummaries = Array.from(latestCheckInsByKr.values()).map((checkIn) => {
-    const keyResult = keyedResults.get(checkIn.keyResultId);
-    const title = keyResult?.title ?? checkIn.keyResultId;
-    return `${title}: ${checkIn.summary || '无总结'}（信心：${getConfidenceLabel(checkIn.confidence)}）`;
+  const keyResultSummaries = keyResultIds.map((keyResultId) => {
+    const keyResult = keyedResults.get(keyResultId);
+    const taskProgress = taskProgressByKr.get(keyResultId);
+    const latestCheckIn = latestCheckInsByKr.get(keyResultId);
+    const title = keyResult?.title ?? keyResultId;
+    const taskSummary = taskProgress?.hasCommittedTasks
+      ? `任务 ${taskProgress.completedCommittedTaskCount}/${taskProgress.committedTaskCount}`
+      : '暂无承诺任务';
+    const checkInSummary = latestCheckIn
+      ? `${latestCheckIn.summary || '无总结'}（信心：${getConfidenceLabel(latestCheckIn.confidence)}）`
+      : '暂无 check-in';
+    return `${title}: ${taskSummary}；${checkInSummary}`;
   });
 
   const structuredSummary = {
@@ -188,6 +205,15 @@ export async function buildWeeklyReviewDraft(periodStart: string, periodEnd: str
       nextActions: item.nextActions,
       createdAt: item.createdAt.toISOString(),
     })),
+    keyResultTaskProgress: keyResultIds.map((keyResultId) => {
+      const taskProgress = taskProgressByKr.get(keyResultId);
+      return {
+        keyResultId,
+        committedTaskCount: taskProgress?.committedTaskCount ?? 0,
+        completedCommittedTaskCount: taskProgress?.completedCommittedTaskCount ?? 0,
+        openCommittedTaskCount: taskProgress?.openCommittedTaskCount ?? 0,
+      };
+    }),
   } satisfies Record<string, unknown>;
 
   const body = buildReviewBody({
@@ -260,15 +286,35 @@ export async function saveReviewDraft(input: ReviewDraftPayload, _options?: Revi
       });
 
       await tx.insert(schema.reviewKrSnapshots).values(
-        keyResults.map((keyResult: { id: string; title: string; status: string; currentValue: number | null; checkIns: Array<{ confidence: string; createdAt: Date }> }) => ({
+        keyResults.map((keyResult: {
+          id: string;
+          title: string;
+          status: string;
+          currentValue: number | null;
+          taskProgress?: {
+            committedTaskCount: number;
+            completedCommittedTaskCount: number;
+            openCommittedTaskCount: number;
+          };
+          latestCheckIn?: {
+            confidence: string | null;
+            updatedAt: Date | string | null;
+          };
+          checkIns: Array<{ confidence: string; createdAt: Date }>;
+        }) => ({
           reviewId: review.id,
           keyResultId: keyResult.id,
           snapshot: {
             title: keyResult.title,
             status: keyResult.status,
+            committedTaskCount: keyResult.taskProgress?.committedTaskCount ?? null,
+            completedCommittedTaskCount: keyResult.taskProgress?.completedCommittedTaskCount ?? null,
+            openCommittedTaskCount: keyResult.taskProgress?.openCommittedTaskCount ?? null,
             currentValue: keyResult.currentValue,
-            confidence: keyResult.checkIns[0]?.confidence ?? null,
-            latestCheckInAt: keyResult.checkIns[0]?.createdAt.toISOString() ?? null,
+            confidence: keyResult.latestCheckIn?.confidence ?? keyResult.checkIns[0]?.confidence ?? null,
+            latestCheckInAt: keyResult.latestCheckIn?.updatedAt
+              ? new Date(keyResult.latestCheckIn.updatedAt).toISOString()
+              : (keyResult.checkIns[0]?.createdAt.toISOString() ?? null),
           },
         })),
       );

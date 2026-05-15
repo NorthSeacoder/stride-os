@@ -26,7 +26,7 @@ const changedFieldOptions = [
   { value: 'dueDate', label: '截止日期' },
   { value: 'priority', label: '优先级' },
   { value: 'title', label: '标题' },
-  { value: 'currentValue', label: '当前值' },
+  { value: 'currentValue', label: '手工当前值' },
   { value: 'confidence', label: '信心' },
 ];
 

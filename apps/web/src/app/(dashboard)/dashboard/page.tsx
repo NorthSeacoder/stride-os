@@ -32,7 +32,7 @@ export default async function DashboardPage() {
       key: 'risk',
       label: '风险 KR',
       value: summary.riskKeyResults.length,
-      detail: summary.riskKeyResults.length > 0 ? '需要补充 check-in 或恢复信心' : '当前没有明显风险',
+      detail: summary.riskKeyResults.length > 0 ? '低信心、缺少 check-in 或任务停滞' : '当前没有明显风险',
     },
     {
       key: 'closure',
@@ -88,7 +88,7 @@ export default async function DashboardPage() {
           <StatusTile
             eyebrow="风险 KR"
             title={`${summary.riskKeyResults.length} 项`}
-            description={summary.riskKeyResults.length > 0 ? '需要补充 check-in 或恢复信心' : '当前没有明显风险'}
+            description={summary.riskKeyResults.length > 0 ? '低信心、缺少 check-in 或任务停滞' : '当前没有明显风险'}
             href="/okr"
           />
           <StatusTile
@@ -137,7 +137,14 @@ export default async function DashboardPage() {
           {summary.riskKeyResults.length === 0 ? (
             <Empty text="当前没有风险 KR。" />
           ) : (
-            summary.riskKeyResults.map((kr: { id: string; title: string; status: string; objective: { title: string; period: { name: string } }; checkIns: Array<{ confidence: string; createdAt: Date }> }) => (
+            summary.riskKeyResults.map((kr: {
+              id: string;
+              title: string;
+              status: string;
+              objective: { title: string; period: { name: string } };
+              latestCheckIn: { hasCheckIn: boolean; confidence: string | null };
+              taskProgress: { hasCommittedTasks: boolean; completedCommittedTaskCount: number; committedTaskCount: number };
+            }) => (
               <Link
                 key={kr.id}
                 href={`/okr/${kr.id}`}
@@ -149,7 +156,16 @@ export default async function DashboardPage() {
                 </div>
                 <p className="mt-2 text-sm font-medium text-(--text-primary)">{kr.title}</p>
                 <p className="mt-1 text-sm text-(--text-secondary)">{kr.objective.title}</p>
-                <p className="mt-2 text-xs text-(--text-muted)">最新信心: {getConfidenceLabel(kr.checkIns[0]?.confidence)}</p>
+                <p className="mt-2 text-xs text-(--text-muted)">
+                  {kr.taskProgress.hasCommittedTasks
+                    ? `任务 ${kr.taskProgress.completedCommittedTaskCount}/${kr.taskProgress.committedTaskCount}`
+                    : '暂无承诺任务'}
+                </p>
+                <p className="mt-1 text-xs text-(--text-muted)">
+                  {kr.latestCheckIn.hasCheckIn
+                    ? `最新信心: ${getConfidenceLabel(kr.latestCheckIn.confidence)}`
+                    : '暂无 check-in'}
+                </p>
               </Link>
             ))
           )}

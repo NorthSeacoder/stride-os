@@ -14,13 +14,13 @@ export function CheckInForm({ keyResultId }: { keyResultId: string }) {
       <SectionHeader
         eyebrow="Progress Source"
         title="新增 Check-in"
-        description="进展的真实来源在这里，不在任务完成数量里。"
+        description="Check-in 记录主观判断、信心和推进说明；任务摘要继续按承诺任务自动计算。"
       />
       <form action={action} className="mt-3 space-y-3">
         <input type="hidden" name="keyResultId" value={keyResultId} />
         {state.error && <ErrorAlert message={state.error} />}
         <div className="grid gap-3 md:grid-cols-2">
-          <TextField name="progressValue" label="进度值" type="number" step="0.01" />
+          <TextField name="progressValue" label="主观判断值" type="number" step="0.01" />
           <SelectField
             name="confidence"
             label="信心"

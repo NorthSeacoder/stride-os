@@ -34,6 +34,10 @@ describe('task form bridge', () => {
       endDate: '',
       occurrenceCount: '',
       keyResultIds: ['kr_1'],
+      keyResultLinks: [{
+        keyResultId: 'kr_1',
+        countsTowardCommitment: false,
+      }],
     });
   });
 
@@ -53,6 +57,10 @@ describe('task form bridge', () => {
       endDate: '',
       occurrenceCount: '8',
       keyResultIds: ['kr_1', 'kr_2'],
+      keyResultLinks: [
+        { keyResultId: 'kr_1', countsTowardCommitment: true },
+        { keyResultId: 'kr_2', countsTowardCommitment: false },
+      ],
     });
 
     expect(formData.get('id')).toBe('task_1');
@@ -67,6 +75,62 @@ describe('task form bridge', () => {
     expect(formData.get('frequency')).toBe('weekly');
     expect(formData.get('endType')).toBe('after_count');
     expect(formData.get('occurrenceCount')).toBe('8');
-    expect(formData.getAll('keyResultIds')).toEqual(['kr_1', 'kr_2']);
+    expect(formData.getAll('keyResultLinks')).toEqual([
+      JSON.stringify({ keyResultId: 'kr_1', countsTowardCommitment: true }),
+      JSON.stringify({ keyResultId: 'kr_2', countsTowardCommitment: false }),
+    ]);
+  });
+
+  it('falls back to plain key result ids as non-committed links', () => {
+    const formData = buildTaskFormData({
+      id: '',
+      taskId: '',
+      definitionId: '',
+      title: 'Bridge fallback',
+      description: '',
+      dueDate: '',
+      priority: '',
+      listId: '',
+      isRecurring: false,
+      frequency: 'daily',
+      endType: 'never',
+      endDate: '',
+      occurrenceCount: '',
+      keyResultIds: ['kr_1', 'kr_2'],
+      keyResultLinks: [],
+    });
+
+    expect(formData.getAll('keyResultLinks')).toEqual([
+      JSON.stringify({ keyResultId: 'kr_1', countsTowardCommitment: false }),
+      JSON.stringify({ keyResultId: 'kr_2', countsTowardCommitment: false }),
+    ]);
+  });
+
+  it('serializes only currently selected key results while preserving existing commitment flags', () => {
+    const formData = buildTaskFormData({
+      id: 'task_1',
+      taskId: 'task_1',
+      definitionId: '',
+      title: 'Bridge sync',
+      description: '',
+      dueDate: '',
+      priority: '',
+      listId: '',
+      isRecurring: false,
+      frequency: 'daily',
+      endType: 'never',
+      endDate: '',
+      occurrenceCount: '',
+      keyResultIds: ['kr_2', 'kr_3'],
+      keyResultLinks: [
+        { keyResultId: 'kr_1', countsTowardCommitment: true },
+        { keyResultId: 'kr_2', countsTowardCommitment: true },
+      ],
+    });
+
+    expect(formData.getAll('keyResultLinks')).toEqual([
+      JSON.stringify({ keyResultId: 'kr_2', countsTowardCommitment: true }),
+      JSON.stringify({ keyResultId: 'kr_3', countsTowardCommitment: false }),
+    ]);
   });
 });

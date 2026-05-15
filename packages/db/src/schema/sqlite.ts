@@ -274,10 +274,13 @@ export const taskKrLinks = sqliteTable('task_kr_links', {
   keyResultId: text('key_result_id')
     .notNull()
     .references(() => keyResults.id, { onDelete: 'cascade' }),
+  countsTowardCommitment: integer('counts_toward_commitment', { mode: 'boolean' }).notNull().default(false),
+  committedAt: timestampColumn('committed_at'),
   createdAt: timestampColumn('created_at').notNull().$defaultFn(() => new Date()),
 }, (table) => [
   primaryKey({ columns: [table.taskId, table.keyResultId] }),
   index('idx_task_kr_links_key_result_id').on(table.keyResultId),
+  index('idx_task_kr_links_commitment').on(table.keyResultId, table.countsTowardCommitment),
 ]);
 
 export const taskKrLinksRelations = relations(taskKrLinks, ({ one }) => ({
@@ -292,10 +295,13 @@ export const taskDefinitionKrLinks = sqliteTable('task_definition_kr_links', {
   keyResultId: text('key_result_id')
     .notNull()
     .references(() => keyResults.id, { onDelete: 'cascade' }),
+  countsTowardCommitment: integer('counts_toward_commitment', { mode: 'boolean' }).notNull().default(false),
+  committedAt: timestampColumn('committed_at'),
   createdAt: timestampColumn('created_at').notNull().$defaultFn(() => new Date()),
 }, (table) => [
   primaryKey({ columns: [table.definitionId, table.keyResultId] }),
   index('idx_task_definition_kr_links_key_result_id').on(table.keyResultId),
+  index('idx_task_definition_kr_links_commitment').on(table.keyResultId, table.countsTowardCommitment),
 ]);
 
 export const taskDefinitionKrLinksRelations = relations(taskDefinitionKrLinks, ({ one }) => ({

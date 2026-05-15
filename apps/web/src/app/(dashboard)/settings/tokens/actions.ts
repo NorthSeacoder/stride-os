@@ -43,6 +43,11 @@ export async function createTokenAction(
   redirect('/settings/tokens');
 }
 
+export async function clearCreatedTokenAction() {
+  const cookieStore = await cookies();
+  cookieStore.delete(CREATED_TOKEN_COOKIE);
+}
+
 export async function revokeTokenAction(id: string) {
   const user = await getSessionUser();
   if (!user) {

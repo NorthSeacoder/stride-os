@@ -12,6 +12,9 @@ const txInsertValues = vi.fn();
 const txUpdateSet = vi.fn();
 const txUpdateWhere = vi.fn();
 const txUpdateReturning = vi.fn();
+const listTasksForKeyResult = vi.fn();
+const getTaskProgressSnapshotForKeyResult = vi.fn();
+const listTaskProgressSnapshotsForKeyResults = vi.fn();
 
 vi.mock('@/lib/services/activity-service', async () => {
   const actual = await vi.importActual<typeof import('@/lib/services/activity-service')>('@/lib/services/activity-service');
@@ -20,6 +23,12 @@ vi.mock('@/lib/services/activity-service', async () => {
     recordActivity: (...args: unknown[]) => recordActivity(...args),
   };
 });
+
+vi.mock('@/lib/services/task-service', () => ({
+  listTasksForKeyResult: (...args: unknown[]) => listTasksForKeyResult(...args),
+  getTaskProgressSnapshotForKeyResult: (...args: unknown[]) => getTaskProgressSnapshotForKeyResult(...args),
+  listTaskProgressSnapshotsForKeyResults: (...args: unknown[]) => listTaskProgressSnapshotsForKeyResults(...args),
+}));
 
 vi.mock('@stride-os/db', () => ({
   db: {
@@ -92,6 +101,16 @@ describe('okr period rules', () => {
     txUpdateWhere.mockReturnValue({
       returning: (...args: unknown[]) => txUpdateReturning(...args),
     });
+    listTasksForKeyResult.mockResolvedValue([]);
+    getTaskProgressSnapshotForKeyResult.mockResolvedValue({
+      keyResultId: 'kr_1',
+      committedTaskCount: 0,
+      completedCommittedTaskCount: 0,
+      openCommittedTaskCount: 0,
+      hasCommittedTasks: false,
+      lastTaskProgressAt: null,
+    });
+    listTaskProgressSnapshotsForKeyResults.mockResolvedValue([]);
   });
 
   it('supports month as a period type', () => {
@@ -203,5 +222,77 @@ describe('okr period rules', () => {
         confidence: 'high',
       }),
     }));
+  });
+
+  it('treats stale check-ins with fresh committed-task progress as non-risk', async () => {
+    const staleDate = new Date('2026-05-01T00:00:00.000Z');
+    keyResultsFindFirst.mockResolvedValue(null);
+    periodsFindFirst.mockResolvedValue(null);
+    objectivesFindFirst.mockResolvedValue(null);
+    (await import('@stride-os/db')).db.query.keyResults.findMany = vi.fn().mockResolvedValue([
+      {
+        id: 'kr_1',
+        title: 'Grow',
+        status: 'active',
+        objective: { period: { name: '2026 Q2' } },
+        checkIns: [{ confidence: 'medium', createdAt: staleDate }],
+      },
+    ]);
+    listTaskProgressSnapshotsForKeyResults.mockResolvedValue([
+      {
+        keyResultId: 'kr_1',
+        committedTaskCount: 3,
+        completedCommittedTaskCount: 1,
+        openCommittedTaskCount: 2,
+        hasCommittedTasks: true,
+        lastTaskProgressAt: new Date('2026-05-14T00:00:00.000Z'),
+      },
+    ]);
+
+    const { listRiskKeyResults } = await import('@/lib/services/okr-service');
+    const result = await listRiskKeyResults({ staleSince: new Date('2026-05-10T00:00:00.000Z') });
+
+    expect(result).toEqual([]);
+  });
+
+  it('returns task progress and latest check-in metadata for risk results', async () => {
+    const staleDate = new Date('2026-05-01T00:00:00.000Z');
+    (await import('@stride-os/db')).db.query.keyResults.findMany = vi.fn().mockResolvedValue([
+      {
+        id: 'kr_1',
+        title: 'Grow',
+        status: 'at_risk',
+        objective: { period: { name: '2026 Q2' } },
+        checkIns: [{ confidence: 'low', createdAt: staleDate, progressValue: 2, summary: 'Blocked', blockers: null, nextActions: null }],
+      },
+    ]);
+    listTaskProgressSnapshotsForKeyResults.mockResolvedValue([
+      {
+        keyResultId: 'kr_1',
+        committedTaskCount: 4,
+        completedCommittedTaskCount: 1,
+        openCommittedTaskCount: 3,
+        hasCommittedTasks: true,
+        lastTaskProgressAt: new Date('2026-05-03T00:00:00.000Z'),
+      },
+    ]);
+
+    const { listRiskKeyResults } = await import('@/lib/services/okr-service');
+    const [risk] = await listRiskKeyResults({ staleSince: new Date('2026-05-10T00:00:00.000Z') });
+
+    expect(risk).toMatchObject({
+      id: 'kr_1',
+      taskProgress: {
+        committedTaskCount: 4,
+        completedCommittedTaskCount: 1,
+        openCommittedTaskCount: 3,
+      },
+      latestCheckIn: {
+        hasCheckIn: true,
+        confidence: 'low',
+        progressValue: 2,
+        summary: 'Blocked',
+      },
+    });
   });
 });

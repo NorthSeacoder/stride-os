@@ -1,6 +1,10 @@
 import { and, asc, desc, eq, inArray, isNull, lte, gte, ne } from 'drizzle-orm';
 import { db, schema } from '@stride-os/db';
-import { listTasksForKeyResult } from './task-service';
+import {
+  getTaskProgressSnapshotForKeyResult,
+  listTaskProgressSnapshotsForKeyResults,
+  listTasksForKeyResult,
+} from './task-service';
 import {
   buildActivityDiff,
   recordActivity,
@@ -67,6 +71,18 @@ export type OkrMutationOptions = {
   activityContext?: ActivityContext;
 };
 
+type TaskProgressSnapshot = Awaited<ReturnType<typeof getTaskProgressSnapshotForKeyResult>>;
+
+type LatestCheckInSummary = {
+  hasCheckIn: boolean;
+  progressValue: number | null;
+  confidence: CheckInConfidence | null;
+  summary: string | null;
+  blockers: string | null;
+  nextActions: string | null;
+  updatedAt: Date | null;
+};
+
 function withActivityContextMetadata(options?: OkrMutationOptions, metadata?: ActivityMetadata | null) {
   return {
     actorLabel: options?.activityContext?.actorLabel ?? undefined,
@@ -124,6 +140,126 @@ function validateDateRange(startDate: string, endDate: string) {
   if (endDate < startDate) {
     throw new Error('结束日期不能早于开始日期。');
   }
+}
+
+function buildEmptyTaskProgress(keyResultId: string): TaskProgressSnapshot {
+  return {
+    keyResultId,
+    committedTaskCount: 0,
+    completedCommittedTaskCount: 0,
+    openCommittedTaskCount: 0,
+    hasCommittedTasks: false,
+    lastTaskProgressAt: null,
+  };
+}
+
+function buildLatestCheckInSummary(checkIn?: {
+  progressValue?: number | null;
+  confidence?: CheckInConfidence | null;
+  summary?: string | null;
+  blockers?: string | null;
+  nextActions?: string | null;
+  createdAt?: Date | null;
+} | null): LatestCheckInSummary {
+  return {
+    hasCheckIn: Boolean(checkIn),
+    progressValue: checkIn?.progressValue ?? null,
+    confidence: checkIn?.confidence ?? null,
+    summary: checkIn?.summary ?? null,
+    blockers: checkIn?.blockers ?? null,
+    nextActions: checkIn?.nextActions ?? null,
+    updatedAt: checkIn?.createdAt ?? null,
+  };
+}
+
+async function enrichKeyResultsWithProgress<
+  T extends {
+    id: string;
+    title?: string;
+    checkIns?: Array<{
+      progressValue?: number | null;
+      confidence?: CheckInConfidence | null;
+      summary?: string | null;
+      blockers?: string | null;
+      nextActions?: string | null;
+      createdAt: Date;
+    }>;
+  },
+>(keyResults: T[]) {
+  if (keyResults.length === 0) {
+    return [];
+  }
+
+  const taskProgressByKeyResult = new Map(
+    (await listTaskProgressSnapshotsForKeyResults(keyResults.map((keyResult) => keyResult.id)))
+      .map((snapshot) => [snapshot.keyResultId, snapshot]),
+  );
+
+  return keyResults.map((keyResult) => ({
+    ...keyResult,
+    taskProgress: taskProgressByKeyResult.get(keyResult.id) ?? buildEmptyTaskProgress(keyResult.id),
+    latestCheckIn: buildLatestCheckInSummary(keyResult.checkIns?.[0] ?? null),
+  }));
+}
+
+async function enrichObjectivesWithProgress<
+  T extends {
+    title?: string;
+    keyResults: Array<{
+      id: string;
+      title?: string;
+      checkIns?: Array<{
+        progressValue?: number | null;
+        confidence?: CheckInConfidence | null;
+        summary?: string | null;
+        blockers?: string | null;
+        nextActions?: string | null;
+        createdAt: Date;
+      }>;
+    }>;
+  },
+>(objectives: T[]) {
+  const keyResults = objectives.flatMap((objective) => objective.keyResults);
+  const enrichedKeyResults = await enrichKeyResultsWithProgress(keyResults);
+  const enrichedById = new Map(enrichedKeyResults.map((keyResult) => [keyResult.id, keyResult]));
+
+  return objectives.map((objective) => ({
+    ...objective,
+    keyResults: objective.keyResults.map((keyResult) => enrichedById.get(keyResult.id) ?? keyResult),
+  }));
+}
+
+async function enrichPeriodsWithProgress<
+  T extends {
+    objectives: Array<{
+      id?: string;
+      title?: string;
+      keyResults: Array<{
+        id: string;
+        title?: string;
+        checkIns?: Array<{
+          progressValue?: number | null;
+          confidence?: CheckInConfidence | null;
+          summary?: string | null;
+          blockers?: string | null;
+          nextActions?: string | null;
+          createdAt: Date;
+        }>;
+      }>;
+    }>;
+  },
+>(periods: T[]) {
+  const objectiveLists = await enrichObjectivesWithProgress(periods.flatMap((period) => period.objectives));
+  let index = 0;
+
+  return periods.map((period) => {
+    const nextObjectives = period.objectives.map(() => objectiveLists[index]).filter(Boolean);
+    index += period.objectives.length;
+    return {
+      ...period,
+      objectives: nextObjectives,
+    };
+  });
 }
 
 function normalizePeriodBounds(input: PeriodWriteInput) {
@@ -201,16 +337,24 @@ function normalizeCheckInInput(input: CheckInWriteInput) {
 }
 
 export async function listPeriods() {
-  return db.query.periods.findMany({
+  const periods = await db.query.periods.findMany({
     orderBy: [desc(schema.periods.startDate), desc(schema.periods.createdAt)],
     with: {
       objectives: {
         with: {
-          keyResults: true,
+          keyResults: {
+            with: {
+              checkIns: {
+                orderBy: [desc(schema.krCheckIns.createdAt)],
+              },
+            },
+          },
         },
       },
     },
   });
+
+  return enrichPeriodsWithProgress(periods);
 }
 
 export async function getCurrentPeriod() {
@@ -225,31 +369,51 @@ export async function getCurrentPeriod() {
     with: {
       objectives: {
         with: {
-          keyResults: true,
+          keyResults: {
+            with: {
+              checkIns: {
+                orderBy: [desc(schema.krCheckIns.createdAt)],
+              },
+            },
+          },
         },
       },
     },
   });
 
   if (active) {
-    return active;
+    const [enriched] = await enrichPeriodsWithProgress([active]);
+    return enriched ?? active;
   }
 
-  return db.query.periods.findFirst({
+  const fallback = await db.query.periods.findFirst({
     where: eq(schema.periods.status, 'active'),
     orderBy: [desc(schema.periods.startDate)],
     with: {
       objectives: {
         with: {
-          keyResults: true,
+          keyResults: {
+            with: {
+              checkIns: {
+                orderBy: [desc(schema.krCheckIns.createdAt)],
+              },
+            },
+          },
         },
       },
     },
   });
+
+  if (!fallback) {
+    return null;
+  }
+
+  const [enriched] = await enrichPeriodsWithProgress([fallback]);
+  return enriched ?? fallback;
 }
 
 export async function getPeriod(periodId: string) {
-  return db.query.periods.findFirst({
+  const period = await db.query.periods.findFirst({
     where: eq(schema.periods.id, periodId),
     with: {
       objectives: {
@@ -266,6 +430,13 @@ export async function getPeriod(periodId: string) {
       },
     },
   });
+
+  if (!period) {
+    return null;
+  }
+
+  const [enriched] = await enrichPeriodsWithProgress([period]);
+  return enriched ?? period;
 }
 
 export async function createPeriod(input: PeriodWriteInput, _options?: OkrMutationOptions) {
@@ -342,7 +513,7 @@ export async function archivePeriod(periodId: string, options?: OkrMutationOptio
 }
 
 export async function listObjectives(periodId: string) {
-  return db.query.objectives.findMany({
+  const objectives = await db.query.objectives.findMany({
     where: and(eq(schema.objectives.periodId, periodId), ne(schema.objectives.status, 'archived')),
     orderBy: [asc(schema.objectives.sortOrder), asc(schema.objectives.createdAt)],
     with: {
@@ -355,10 +526,12 @@ export async function listObjectives(periodId: string) {
       },
     },
   });
+
+  return enrichObjectivesWithProgress(objectives);
 }
 
 export async function getObjective(objectiveId: string) {
-  return db.query.objectives.findFirst({
+  const objective = await db.query.objectives.findFirst({
     where: eq(schema.objectives.id, objectiveId),
     with: {
       period: true,
@@ -371,6 +544,13 @@ export async function getObjective(objectiveId: string) {
       },
     },
   });
+
+  if (!objective) {
+    return null;
+  }
+
+  const [enriched] = await enrichObjectivesWithProgress([objective]);
+  return enriched ?? objective;
 }
 
 export async function createObjective(input: ObjectiveWriteInput, _options?: OkrMutationOptions) {
@@ -598,16 +778,12 @@ export async function getKeyResultProgressSnapshot(keyResultId: string) {
     where: eq(schema.krCheckIns.keyResultId, keyResultId),
     orderBy: [desc(schema.krCheckIns.createdAt)],
   });
+  const taskProgress = await getTaskProgressSnapshotForKeyResult(keyResultId);
 
   return {
     keyResultId,
-    hasCheckIn: Boolean(latestCheckIn),
-    progressValue: latestCheckIn?.progressValue ?? null,
-    confidence: latestCheckIn?.confidence ?? null,
-    summary: latestCheckIn?.summary ?? null,
-    blockers: latestCheckIn?.blockers ?? null,
-    nextActions: latestCheckIn?.nextActions ?? null,
-    updatedAt: latestCheckIn?.createdAt ?? null,
+    taskProgress,
+    ...buildLatestCheckInSummary(latestCheckIn),
     fallbackCurrentValue: keyResult.currentValue,
   };
 }
@@ -627,14 +803,30 @@ export async function listRiskKeyResults(options?: { staleSince?: Date }) {
       },
     },
   });
+  const taskProgressByKeyResult = new Map(
+    (await listTaskProgressSnapshotsForKeyResults(
+      keyResults.map((keyResult: { id: string }) => keyResult.id),
+    )).map((snapshot) => [snapshot.keyResultId, snapshot]),
+  );
 
-  return keyResults.filter((keyResult: { status: string; checkIns: Array<{ confidence: string; createdAt: Date }> }) => {
-    const latest = keyResult.checkIns[0];
-    return keyResult.status === 'at_risk'
-      || latest?.confidence === 'low'
-      || !latest
-      || latest.createdAt < staleSince;
-  });
+  type RiskKeyResult = (typeof keyResults)[number];
+
+  return keyResults
+    .filter((keyResult: RiskKeyResult) => {
+      const latest = keyResult.checkIns[0];
+      const taskProgress = taskProgressByKeyResult.get(keyResult.id);
+      const hasRecentTaskProgress = Boolean(
+        taskProgress?.lastTaskProgressAt && taskProgress.lastTaskProgressAt >= staleSince,
+      );
+      return keyResult.status === 'at_risk'
+        || latest?.confidence === 'low'
+        || ((!latest || latest.createdAt < staleSince) && !hasRecentTaskProgress);
+    })
+    .map((keyResult: RiskKeyResult) => ({
+      ...keyResult,
+      taskProgress: taskProgressByKeyResult.get(keyResult.id) ?? buildEmptyTaskProgress(keyResult.id),
+      latestCheckIn: buildLatestCheckInSummary(keyResult.checkIns[0] ?? null),
+    }));
 }
 
 export async function listCurrentPeriodObjectives() {
@@ -679,6 +871,17 @@ export async function getKeyResultDetail(keyResultId: string) {
     ...keyResult,
     tasks: taskList,
     progress,
+    taskProgress: progress?.taskProgress ?? null,
+    latestCheckIn: progress
+      ? buildLatestCheckInSummary({
+          progressValue: progress.progressValue,
+          confidence: progress.confidence,
+          summary: progress.summary,
+          blockers: progress.blockers,
+          nextActions: progress.nextActions,
+          createdAt: progress.updatedAt,
+        })
+      : buildLatestCheckInSummary(null),
   };
 }
 
@@ -712,7 +915,7 @@ export async function listKeyResultsByIds(keyResultIds: string[]) {
     return [];
   }
 
-  return db.query.keyResults.findMany({
+  const keyResults = await db.query.keyResults.findMany({
     where: inArray(schema.keyResults.id, keyResultIds),
     orderBy: [asc(schema.keyResults.createdAt)],
     with: {
@@ -722,4 +925,6 @@ export async function listKeyResultsByIds(keyResultIds: string[]) {
       },
     },
   });
+
+  return enrichKeyResultsWithProgress(keyResults);
 }

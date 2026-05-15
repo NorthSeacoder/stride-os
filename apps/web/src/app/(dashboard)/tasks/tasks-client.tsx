@@ -58,6 +58,7 @@ type TaskItem = {
     slug?: string;
   } | null;
   keyResultLinks?: Array<{
+    countsTowardCommitment?: boolean | null;
     keyResult: LinkedKeyResult;
   }>;
 };
@@ -796,6 +797,48 @@ function TaskForm({
           />
         )}
       </form.Field>
+
+      <form.Subscribe selector={(state) => ({
+        keyResultIds: state.values.keyResultIds,
+        keyResultLinks: state.values.keyResultLinks,
+      })}>
+        {({ keyResultIds, keyResultLinks }) => keyResultIds.length > 0 ? (
+          <div className="space-y-3 rounded-[10px] border border-(--border-hairline) bg-[color:rgba(255,255,255,0.03)] p-4">
+            <div>
+              <p className="text-sm text-(--text-secondary)">KR 承诺范围</p>
+              <p className="mt-1 text-xs text-(--text-muted)">只有勾选“纳入本期承诺”的关联，才会进入 KR 自动任务完成摘要。</p>
+            </div>
+            {keyResultIds.map((keyResultId) => {
+              const option = keyResultOptions.find((item) => item.value === keyResultId);
+              const committed = keyResultLinks.find((item) => item.keyResultId === keyResultId)?.countsTowardCommitment ?? false;
+              return (
+                <label key={keyResultId} className="flex items-start justify-between gap-3 rounded-[8px] border border-(--border-hairline) px-3 py-2.5">
+                  <div className="min-w-0">
+                    <p className="text-sm text-(--text-primary)">{option?.label ?? keyResultId}</p>
+                    <p className="mt-1 text-xs text-(--text-muted)">
+                      {committed ? '会计入本期 KR 承诺摘要' : '仅建立关联，不计入承诺摘要'}
+                    </p>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={committed}
+                    onChange={(event) => {
+                      const nextLinks = keyResultIds.map((id) => ({
+                        keyResultId: id,
+                        countsTowardCommitment: id === keyResultId
+                          ? event.target.checked
+                          : (keyResultLinks.find((item) => item.keyResultId === id)?.countsTowardCommitment ?? false),
+                      }));
+                      form.setFieldValue('keyResultLinks', nextLinks);
+                    }}
+                    className="mt-1 h-4 w-4"
+                  />
+                </label>
+              );
+            })}
+          </div>
+        ) : null}
+      </form.Subscribe>
 
       <div className="flex justify-end gap-2">
         <Button type="button" variant="secondary" onClick={onCancel}>

@@ -1,8 +1,8 @@
 'use client';
 
 import { Button, Empty, ErrorAlert, FeedbackAlert, PageIntro, SectionHeader, SurfacePanel, TextField } from '@/components/ui';
-import { useActionState } from 'react';
-import { createTokenAction, revokeTokenAction, type TokenActionState } from './actions';
+import { useActionState, useEffect, useTransition } from 'react';
+import { clearCreatedTokenAction, createTokenAction, revokeTokenAction, type TokenActionState } from './actions';
 import { SettingsNav } from '../settings-nav';
 
 type Token = {
@@ -26,6 +26,14 @@ export function TokensClient({
   createdToken: string | null;
 }) {
   const [state, createAction] = useActionState(createTokenAction, initialState);
+  const [, startClearTransition] = useTransition();
+
+  useEffect(() => {
+    if (!createdToken) return;
+    startClearTransition(() => {
+      void clearCreatedTokenAction();
+    });
+  }, [createdToken, startClearTransition]);
 
   return (
     <div className="space-y-3">
