@@ -1,7 +1,7 @@
 'use client';
 
 import { Button, Empty, ErrorAlert, FeedbackAlert, PageIntro, SectionHeader, SurfacePanel, TextField } from '@/components/ui';
-import { useActionState, useEffect, useTransition } from 'react';
+import { useActionState, useEffect, useState, useTransition } from 'react';
 import { clearCreatedTokenAction, createTokenAction, revokeTokenAction, type TokenActionState } from './actions';
 import { SettingsNav } from '../settings-nav';
 
@@ -26,14 +26,41 @@ export function TokensClient({
   createdToken: string | null;
 }) {
   const [state, createAction] = useActionState(createTokenAction, initialState);
-  const [, startClearTransition] = useTransition();
+  const [isCreatedTokenVisible, setIsCreatedTokenVisible] = useState(Boolean(createdToken));
+  const [copyState, setCopyState] = useState<'idle' | 'copied' | 'failed'>('idle');
+  const [clearError, setClearError] = useState('');
+  const [isClearPending, startClearTransition] = useTransition();
 
   useEffect(() => {
+    setIsCreatedTokenVisible(Boolean(createdToken));
+    setCopyState('idle');
+    setClearError('');
+  }, [createdToken]);
+
+  async function copyCreatedToken() {
     if (!createdToken) return;
+
+    try {
+      await navigator.clipboard.writeText(createdToken);
+      setCopyState('copied');
+    } catch {
+      setCopyState('failed');
+    }
+  }
+
+  function dismissCreatedToken() {
+    setClearError('');
     startClearTransition(() => {
-      void clearCreatedTokenAction();
+      void (async () => {
+        try {
+          await clearCreatedTokenAction();
+          setIsCreatedTokenVisible(false);
+        } catch {
+          setClearError('关闭失败，请稍后重试。');
+        }
+      })();
     });
-  }, [createdToken, startClearTransition]);
+  }
 
   return (
     <div className="space-y-3">
@@ -54,12 +81,26 @@ export function TokensClient({
         </SurfacePanel>
 
         <div className="space-y-3">
-          {createdToken && (
+          {createdToken && isCreatedTokenVisible && (
             <SurfacePanel className="metal-frame instrument-surface p-3.5">
-              <FeedbackAlert tone="success" message="令牌已创建，请立即复制。关闭后不会再次显示：" />
+              <FeedbackAlert tone="success" message="令牌已创建。请复制并妥善保存，关闭后不会再次显示：" />
               <code className="mt-3 block rounded-[var(--radius-compact)] border border-(--border-hairline) bg-[color:rgba(255,255,255,0.03)] p-3 text-xs break-all text-(--text-primary)">
                 {createdToken}
               </code>
+              <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
+                <Button type="button" variant="primary" size="sm" onClick={copyCreatedToken}>
+                  {copyState === 'copied' ? '已复制' : '复制令牌'}
+                </Button>
+                <Button type="button" variant="secondary" size="sm" pending={isClearPending} onClick={dismissCreatedToken}>
+                  关闭
+                </Button>
+                {copyState === 'failed' && (
+                  <p className="text-xs text-(--danger-text)">复制失败，请手动选中令牌复制。</p>
+                )}
+                {clearError && (
+                  <p className="text-xs text-(--danger-text)">{clearError}</p>
+                )}
+              </div>
             </SurfacePanel>
           )}
 

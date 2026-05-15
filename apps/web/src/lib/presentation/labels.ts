@@ -74,6 +74,7 @@ const activityTargetTypeLabels = {
   key_result: '关键结果',
   period: '周期',
   review: '复盘',
+  api_token: 'API 令牌',
   system: '系统',
 } as const;
 

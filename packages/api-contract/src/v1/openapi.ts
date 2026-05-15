@@ -559,7 +559,7 @@ export const v1Spec = {
         parameters: [
           { name: 'start', in: 'query', schema: { type: 'string', format: 'date-time' } },
           { name: 'end', in: 'query', schema: { type: 'string', format: 'date-time' } },
-          { name: 'targetType', in: 'query', schema: { type: 'string', enum: ['task', 'objective', 'key_result', 'period', 'review', 'system'] } },
+          { name: 'targetType', in: 'query', schema: { type: 'string', enum: ['task', 'objective', 'key_result', 'period', 'review', 'api_token', 'system'] } },
           { name: 'targetId', in: 'query', schema: { type: 'string' } },
           { name: 'actorType', in: 'query', schema: { type: 'string', enum: ['user', 'api_token', 'agent', 'system', 'unknown'] } },
           { name: 'actorId', in: 'query', schema: { type: 'string' } },
@@ -624,7 +624,7 @@ export const v1Spec = {
           actorId: { type: ['string', 'null'] },
           actorLabel: { type: ['string', 'null'] },
           action: { type: 'string' },
-          targetType: { type: ['string', 'null'], enum: ['task', 'objective', 'key_result', 'period', 'review', 'system', null] },
+          targetType: { type: ['string', 'null'], enum: ['task', 'objective', 'key_result', 'period', 'review', 'api_token', 'system', null] },
           targetId: { type: ['string', 'null'] },
           targetTitle: { type: ['string', 'null'] },
           source: { type: ['string', 'null'], enum: ['web', 'api', 'cli', 'hermes', 'agent', 'system', 'unknown', null] },

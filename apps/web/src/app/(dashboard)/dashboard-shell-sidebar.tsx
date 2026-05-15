@@ -22,12 +22,21 @@ type DashboardShellSidebarProps = {
     name: string | null;
     email: string;
   };
+  version: string;
   children: React.ReactNode;
 };
 
-export function DashboardShellSidebar({ user, children }: DashboardShellSidebarProps) {
+function formatVersionLabel(version: string) {
+  const commit = process.env.NEXT_PUBLIC_GIT_SHA;
+  const shortCommit = commit ? commit.slice(0, 7) : '';
+
+  return shortCommit ? `${version} · ${shortCommit}` : version;
+}
+
+export function DashboardShellSidebar({ user, version, children }: DashboardShellSidebarProps) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
+  const versionLabel = formatVersionLabel(version);
 
   useEffect(() => {
     try {
@@ -122,7 +131,13 @@ export function DashboardShellSidebar({ user, children }: DashboardShellSidebarP
           </div>
         </nav>
 
-        <div className={`mt-auto pt-2 ${collapsed ? 'flex justify-center' : ''}`}>
+        <div className={`mt-auto space-y-2 pt-2 ${collapsed ? 'flex flex-col items-center' : ''}`}>
+          <div
+            className={`text-[11px] text-(--text-muted) ${collapsed ? 'max-w-10 truncate text-center' : 'px-2.5'}`}
+            title={`版本 ${versionLabel}`}
+          >
+            {collapsed ? version : `版本 ${versionLabel}`}
+          </div>
           <form action="/api/auth/logout" method="POST" className={collapsed ? '' : 'w-full'}>
             <Button
               type="submit"

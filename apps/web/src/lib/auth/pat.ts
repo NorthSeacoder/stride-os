@@ -1,6 +1,11 @@
 import { randomBytes, createHash } from 'crypto';
 import { db, schema } from '@stride-os/db';
 import { eq, and, isNull, desc } from 'drizzle-orm';
+import { buildWebActivityContext, type ActivityContext } from '@/lib/services/activity-service';
+
+type ApiTokenMutationOptions = {
+  activityContext?: ActivityContext;
+};
 
 function hashToken(token: string): string {
   return createHash('sha256').update(token).digest('hex');
@@ -10,20 +15,41 @@ function generateToken(): string {
   return `tpl_${randomBytes(32).toString('hex')}`;
 }
 
-export async function createApiToken(userId: string, name: string) {
+function webContext(userId: string) {
+  return buildWebActivityContext({
+    userId,
+    actorLabel: 'You',
+  });
+}
+
+export async function createApiToken(userId: string, name: string, options: ApiTokenMutationOptions = {}) {
   const plainToken = generateToken();
   const tokenHash = hashToken(plainToken);
 
-  await db.insert(schema.apiTokens).values({
+  const [tokenRecord] = await db.insert(schema.apiTokens).values({
     userId,
     name,
     tokenHash,
-  });
+  }).returning({ id: schema.apiTokens.id });
+
+  const tokenId = tokenRecord?.id ?? null;
+  const activityContext = options.activityContext ?? webContext(userId);
 
   await db.insert(schema.auditLogs).values({
-    actorType: 'user',
-    actorId: userId,
+    actorType: activityContext.actorType,
+    actorId: activityContext.actorId ?? userId,
     action: 'token.create',
+    targetType: 'api_token',
+    targetId: tokenId,
+    targetTitle: name,
+    source: activityContext.source,
+    summary: `Created API token ${name}`,
+    metadata: {
+      actorLabel: activityContext.actorLabel ?? undefined,
+      sourceLabel: activityContext.sourceLabel ?? undefined,
+      requestId: activityContext.requestId ?? undefined,
+      command: activityContext.command ?? undefined,
+    },
   });
 
   return { plainToken };
@@ -47,7 +73,7 @@ export async function listApiTokens(userId: string) {
   });
 }
 
-export async function revokeApiToken(userId: string, tokenId: string) {
+export async function revokeApiToken(userId: string, tokenId: string, options: ApiTokenMutationOptions = {}) {
   const token = await db.query.apiTokens.findFirst({
     where: and(
       eq(schema.apiTokens.id, tokenId),
@@ -56,6 +82,7 @@ export async function revokeApiToken(userId: string, tokenId: string) {
   });
 
   if (!token) return false;
+  const activityContext = options.activityContext ?? webContext(userId);
 
   await db
     .update(schema.apiTokens)
@@ -63,11 +90,20 @@ export async function revokeApiToken(userId: string, tokenId: string) {
     .where(eq(schema.apiTokens.id, tokenId));
 
   await db.insert(schema.auditLogs).values({
-    actorType: 'user',
-    actorId: userId,
+    actorType: activityContext.actorType,
+    actorId: activityContext.actorId ?? userId,
     action: 'token.revoke',
     targetType: 'api_token',
     targetId: tokenId,
+    targetTitle: token.name,
+    source: activityContext.source,
+    summary: `Revoked API token ${token.name}`,
+    metadata: {
+      actorLabel: activityContext.actorLabel ?? undefined,
+      sourceLabel: activityContext.sourceLabel ?? undefined,
+      requestId: activityContext.requestId ?? undefined,
+      command: activityContext.command ?? undefined,
+    },
   });
 
   return true;
