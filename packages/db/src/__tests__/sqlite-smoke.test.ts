@@ -144,9 +144,8 @@ describe('sqlite smoke', () => {
     const [keyResult] = await sqliteDb.insert(sqliteSchema.keyResults).values({
       objectiveId: objective.id,
       title: 'Recurring task flow online',
-      type: 'milestone',
+      description: 'Keep recurring task support usable in daily workflow.',
       status: 'active',
-      confidence: 'medium',
     }).returning();
 
     const [definition] = await sqliteDb.insert(sqliteSchema.taskDefinitions).values({
@@ -195,17 +194,12 @@ describe('sqlite smoke', () => {
     const [keyResult] = await sqliteDb.insert(sqliteSchema.keyResults).values({
       objectiveId: objective.id,
       title: 'Weekly review loop working',
-      type: 'hybrid',
-      targetValue: 1,
-      currentValue: 0.5,
+      description: 'Review loop can be driven through tasks and periodic check-ins.',
       status: 'active',
-      confidence: 'medium',
     }).returning();
 
     const [checkIn] = await sqliteDb.insert(sqliteSchema.krCheckIns).values({
       keyResultId: keyResult.id,
-      progressValue: 0.5,
-      confidence: 'high',
       summary: 'Halfway there',
       blockers: 'None',
       nextActions: 'Ship review screen',
@@ -239,8 +233,9 @@ describe('sqlite smoke', () => {
       reviewId: review.id,
       keyResultId: keyResult.id,
       snapshot: {
-        confidence: 'medium',
-        currentValue: 0.5,
+        summary: 'Advanced the result',
+        blockers: null,
+        nextActions: 'Finish remaining tasks',
         committedTaskCount: 0,
         completedCommittedTaskCount: 0,
         openCommittedTaskCount: 0,

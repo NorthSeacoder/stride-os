@@ -137,20 +137,14 @@ export const keyResults = sqliteTable('key_results', {
     .notNull()
     .references(() => objectives.id, { onDelete: 'cascade' }),
   title: text('title').notNull(),
-  type: text('type').notNull(),
-  targetValue: real('target_value'),
-  currentValue: real('current_value'),
-  unit: text('unit'),
+  description: text('description'),
   status: text('status').notNull().default('active'),
-  confidence: text('confidence'),
   createdAt: timestampColumn('created_at').notNull().$defaultFn(() => new Date()),
   updatedAt: timestampColumn('updated_at').notNull().$defaultFn(() => new Date()),
 }, (table) => [
   index('idx_key_results_objective_id').on(table.objectiveId),
   index('idx_key_results_status').on(table.status),
-  check('key_results_type_check', sql`${table.type} in ('numeric', 'milestone', 'hybrid')`),
   check('key_results_status_check', sql`${table.status} in ('active', 'at_risk', 'done', 'archived')`),
-  check('key_results_confidence_check', sql`${table.confidence} is null or ${table.confidence} in ('low', 'medium', 'high')`),
 ]);
 
 export const keyResultsRelations = relations(keyResults, ({ one, many }) => ({
@@ -165,8 +159,6 @@ export const krCheckIns = sqliteTable('kr_check_ins', {
   keyResultId: text('key_result_id')
     .notNull()
     .references(() => keyResults.id, { onDelete: 'cascade' }),
-  progressValue: real('progress_value'),
-  confidence: text('confidence').notNull(),
   summary: text('summary'),
   blockers: text('blockers'),
   nextActions: text('next_actions'),
@@ -174,7 +166,6 @@ export const krCheckIns = sqliteTable('kr_check_ins', {
 }, (table) => [
   index('idx_kr_check_ins_key_result_id').on(table.keyResultId),
   index('idx_kr_check_ins_created_at').on(table.createdAt),
-  check('kr_check_ins_confidence_check', sql`${table.confidence} in ('low', 'medium', 'high')`),
 ]);
 
 export const krCheckInsRelations = relations(krCheckIns, ({ one }) => ({

@@ -16,6 +16,9 @@
     "db:migrate": "node --import tsx scripts/migrate.ts",
     "db:seed": "node --import tsx src/seed.ts",
     "db:setup": "node --import tsx scripts/prepare-sqlite.ts && pnpm db:migrate && pnpm db:seed",
+    "db:cleanup-business-data": "node --import tsx scripts/cleanup-business-data.ts --dry-run",
+    "db:import-okr": "node --import tsx scripts/import-2026-okr.ts --validate-only",
+    "db:validate-okr-import": "node --import tsx scripts/validate-okr-import.ts",
     "db:studio": "node --import tsx scripts/drizzle.ts studio",
     "lint": "eslint ."
   },

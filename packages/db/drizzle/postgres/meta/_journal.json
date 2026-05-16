@@ -57,6 +57,13 @@
       "when": 1778720400000,
       "tag": "0007_add_kr_commitment_fields",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1778904000000,
+      "tag": "0008_lightweight_okr",
+      "breakpoints": true
     }
   ]
 }

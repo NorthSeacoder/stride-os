@@ -35,6 +35,10 @@ describe('v1 openapi contract', () => {
     expect(v1Spec.paths['/okr/key-results/{id}/check-ins']?.post.operationId).toBe('createOkrKeyResultCheckIn');
     expect(v1Spec.paths['/key-results/{id}/check-ins']?.post.operationId).toBe('createKeyResultCheckIn');
     expect(v1Spec.components.schemas.OkrKeyResultWriteRequest).toBeTruthy();
+    expect(v1Spec.components.schemas.OkrPeriod.properties.type.enum).toEqual(['year', 'quarter', 'month', 'custom']);
+    expect(v1Spec.components.schemas.OkrPeriod.properties.status.enum).toEqual(['active', 'archived']);
+    expect(v1Spec.components.schemas.OkrPeriodWriteRequest.properties.type.enum).toEqual(['year', 'quarter', 'month', 'custom']);
+    expect(v1Spec.components.schemas.OkrPeriodWriteRequest.properties.status.enum).toEqual(['active', 'archived']);
   });
 
   it('includes review and context endpoints without relying on examples', () => {

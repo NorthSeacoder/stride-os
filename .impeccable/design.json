@@ -1,165 +1,223 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-05-07T13:09:05.979Z",
-  "title": "Design System: Next.js Template",
+  "generatedAt": "2026-05-16T02:33:30Z",
+  "title": "Design System: Stride OS",
   "extensions": {
-    "overview": {
-      "creativeNorthStar": "The Quiet Control Console",
-      "philosophy": "A monochrome management interface for continuous use: quiet, legible, and fast to operate at depth.",
-      "antiReferences": "saturated accent-driven branding, decorative gradients, glossy surfaces, and excessive marketing-style visuals."
-    },
     "colorMeta": {
-      "primary": {
+      "ice-signal": {
         "role": "primary",
-        "displayName": "Primary Gray",
-        "canonical": "#e5e7eb",
-        "tonalRamp": [
-          "#020617",
-          "#111827",
-          "#374151",
-          "#e5e7eb",
-          "#f9fafb"
-        ]
+        "displayName": "Ice Signal",
+        "canonical": "#b4ccff",
+        "tonalRamp": ["#162033", "#243654", "#314d75", "#42689b", "#5f85c1", "#83a7de", "#b4ccff", "#e6f1ff"]
       },
-      "neutralSurface": {
+      "ice-signal-strong": {
+        "role": "primary",
+        "displayName": "Ice Signal Strong",
+        "canonical": "#d7e5ff",
+        "tonalRamp": ["#1b2436", "#2b3958", "#3c507d", "#5369a1", "#7087c3", "#9fb4e0", "#d7e5ff", "#f3f8ff"]
+      },
+      "graphite-canvas": {
         "role": "neutral",
-        "displayName": "Canvas",
-        "canonical": "#0b0f15",
-        "tonalRamp": [
-          "#020617",
-          "#0b0f15",
-          "#111827",
-          "#1f2937",
-          "#374151"
-        ]
+        "displayName": "Carbon Canvas",
+        "canonical": "#101010",
+        "tonalRamp": ["#050505", "#0b0b0b", "#101010", "#181818", "#232323", "#393939", "#686868", "#bdbdbd"]
       },
-      "neutralText": {
+      "graphite-shell": {
         "role": "neutral",
-        "displayName": "Ink",
-        "canonical": "#e5e7eb",
-        "tonalRamp": [
-          "#9ca3af",
-          "#9ca3af",
-          "#e5e7eb",
-          "#f9fafb"
-        ]
+        "displayName": "Shell Graphite",
+        "canonical": "#0b0d10",
+        "tonalRamp": ["#040506", "#0b0d10", "#13161b", "#1c2127", "#29303a", "#3a4553", "#69778a", "#bec8d6"]
       },
-      "success": {
-        "role": "success",
-        "displayName": "Success Green",
-        "canonical": "#86efac",
-        "tonalRamp": [
-          "#052e16",
-          "#166534",
-          "#22c55e",
-          "#86efac"
-        ]
+      "graphite-surface-1": {
+        "role": "neutral",
+        "displayName": "Instrument Surface I",
+        "canonical": "#1c1f25e6",
+        "tonalRamp": ["#0a0c0f", "#121418", "#1c1f25", "#252930", "#303640", "#434c59", "#707c8f", "#c8d2e0"]
       },
-      "warning": {
-        "role": "warning",
-        "displayName": "Warning Gold",
-        "canonical": "#fcd34d",
-        "tonalRamp": [
-          "#422006",
-          "#d97706",
-          "#f59e0b",
-          "#fcd34d"
-        ]
+      "graphite-surface-2": {
+        "role": "neutral",
+        "displayName": "Instrument Surface II",
+        "canonical": "#262a31f0",
+        "tonalRamp": ["#0d1014", "#171b20", "#262a31", "#2f353d", "#3c4550", "#515d6d", "#7f90a6", "#d4dde8"]
       },
-      "error": {
-        "role": "error",
-        "displayName": "Error Red",
-        "canonical": "#fca5a5",
-        "tonalRamp": [
-          "#450a0a",
-          "#991b1b",
-          "#ef4444",
-          "#fca5a5"
-        ]
+      "graphite-surface-3": {
+        "role": "neutral",
+        "displayName": "Instrument Surface III",
+        "canonical": "#323842fa",
+        "tonalRamp": ["#12151a", "#1c2128", "#323842", "#3f4754", "#4f5b6c", "#687890", "#93a4bd", "#dde5ef"]
+      },
+      "success-text": {
+        "role": "semantic",
+        "displayName": "Resolved Moss",
+        "canonical": "#9bc9a7",
+        "tonalRamp": ["#0f1c12", "#19311f", "#27482e", "#3b6344", "#5a8462", "#7eaa86", "#9bc9a7", "#e7f3ea"]
+      },
+      "warning-text": {
+        "role": "semantic",
+        "displayName": "Aged Brass",
+        "canonical": "#d8bf8a",
+        "tonalRamp": ["#231b10", "#3d311b", "#5b4729", "#7b6039", "#9e7d4b", "#c19e65", "#d8bf8a", "#f4ead6"]
+      },
+      "danger-text": {
+        "role": "semantic",
+        "displayName": "Muted Oxide",
+        "canonical": "#d7a3a7",
+        "tonalRamp": ["#231215", "#3d2024", "#5e3238", "#80464d", "#a26068", "#c07f87", "#d7a3a7", "#f5e4e6"]
       }
     },
     "typographyMeta": {
       "display": {
         "displayName": "Display",
-        "purpose": "Top-level route headings and landing headers."
+        "purpose": "Home title, large numeric payloads, and the most prominent dashboard headings."
       },
       "headline": {
         "displayName": "Headline",
-        "purpose": "Primary page titles."
+        "purpose": "Page intros and top-level task surfaces."
       },
       "title": {
         "displayName": "Title",
-        "purpose": "Section headers and panel labels."
+        "purpose": "Section headers, module titles, and compact high-importance labels."
       },
       "body": {
         "displayName": "Body",
-        "purpose": "Forms, metadata, and operation copy."
+        "purpose": "Primary reading text, buttons, descriptions, and default UI copy."
       },
       "label": {
         "displayName": "Label",
-        "purpose": "Inputs and compact UI controls."
+        "purpose": "Uppercase metadata, nav codes, and structural framing text."
       }
     },
-    "components": {
-      "button": {
-        "html": "button",
-        "variants": [
-          "button-primary",
-          "button-primary-hover",
-          "button-primary-disabled",
-          "button-secondary",
-          "button-ghost"
-        ]
+    "shadows": [
+      {
+        "name": "panel-lift",
+        "value": "0 12px 36px rgba(0, 0, 0, 0.34)",
+        "purpose": "Promoted panels such as strong surfaces and high-value callouts."
       },
-      "input": {
-        "html": "input",
-        "variants": [
-          "input",
-          "select",
-          "textarea"
-        ]
-      },
-      "nav": {
-        "html": "nav, a",
-        "variants": [
-          "nav-link",
-          "nav-brand",
-          "nav-logout"
-        ]
-      },
-      "card": {
-        "html": "section, div",
-        "variants": [
-          "card",
-          "card-elevated",
-          "list-item"
-        ]
-      },
-      "feedback": {
-        "html": "div",
-        "variants": [
-          "error-alert",
-          "empty-state",
-          "success-strip"
-        ]
+      {
+        "name": "shell-lift",
+        "value": "0 18px 60px rgba(0, 0, 0, 0.42)",
+        "purpose": "Modal-scale surfaces that detach from the dashboard plane."
       }
-    },
-    "elevation": {
-      "philosophy": "Flat by default. Depth is conveyed through border contrast and background layering.",
-      "shadowTokens": {},
-      "motion": {
-        "defaults": "0.2s",
-        "timing": "ease-out"
+    ],
+    "motion": [
+      {
+        "name": "state-fast",
+        "value": "150ms ease-out",
+        "purpose": "Default button, nav item, and field state changes."
+      },
+      {
+        "name": "layout-medium",
+        "value": "200ms ease-out",
+        "purpose": "Sidebar width and shell-level transitions."
       }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "md", "value": "768px" },
+      { "name": "lg", "value": "1024px" },
+      { "name": "xl", "value": "1280px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Powered control for primary actions and promoted next steps.",
+      "html": "<button class=\"ds-btn-primary\">打开任务</button>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; justify-content: center; min-height: 40px; padding: 10px 16px; border: 1px solid var(--border-glow); border-radius: var(--radius-compact); background: var(--bg-surface-3); color: var(--accent-ice-strong); font: 400 14px/1.429 Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08); transition: background-color 150ms ease-out, border-color 150ms ease-out, color 150ms ease-out, transform 150ms ease-out, box-shadow 150ms ease-out; } .ds-btn-primary:hover { background: rgba(69, 77, 91, 0.98); } .ds-btn-primary:focus-visible { outline: none; box-shadow: 0 0 0 2px rgba(216, 216, 216, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.08); } .ds-btn-primary:active { transform: translateY(1px); }"
     },
-    "componentsHtml": {
-      "buttonPrimary": "<button class=\"rounded-md bg-[#111827] px-4 py-2 text-sm font-medium text-[#e5e7eb] hover:bg-[#0b0f15]\">",
-      "buttonSecondary": "<button class=\"rounded-md text-gray-200\">",
-      "input": "<input class=\"w-full rounded-md border border-[#374151] bg-[#111827] px-3 py-2 text-sm text-[#e5e7eb] focus:outline-none focus:ring-2 focus:ring-[#e5e7eb]\">",
-      "select": "<select class=\"w-full rounded-md border border-[#374151] bg-[#111827] px-3 py-2 text-sm text-[#e5e7eb] focus:outline-none focus:ring-2 focus:ring-[#e5e7eb]\">",
-      "textarea": "<textarea class=\"w-full rounded-md border border-[#374151] bg-[#111827] px-3 py-2 text-sm text-[#e5e7eb] focus:outline-none focus:ring-2 focus:ring-[#e5e7eb]\"></textarea>",
-      "feedback": "<div class=\"rounded-md bg-[#450a0a] p-3 text-sm text-[#fca5a5]\">Example message</div>",
-      "card": "<div class=\"rounded-lg border border-[#374151] bg-[#111827] p-4\">...</div>"
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Neutral shell action for standard navigation and secondary commands.",
+      "html": "<button class=\"ds-btn-secondary\">取消</button>",
+      "css": ".ds-btn-secondary { display: inline-flex; align-items: center; justify-content: center; min-height: 40px; padding: 10px 16px; border: 1px solid var(--border-hairline); border-radius: var(--radius-compact); background: var(--bg-surface-1); color: var(--text-secondary); font: 400 14px/1.429 Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04); transition: background-color 150ms ease-out, border-color 150ms ease-out, color 150ms ease-out, box-shadow 150ms ease-out; } .ds-btn-secondary:hover { border-color: var(--border-glow); background: var(--bg-surface-2); color: var(--text-primary); } .ds-btn-secondary:focus-visible { outline: none; box-shadow: 0 0 0 2px rgba(216, 216, 216, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.04); }"
+    },
+    {
+      "name": "Text Field",
+      "kind": "input",
+      "refersTo": "input-default",
+      "description": "Default single-line field for forms and inline editing surfaces.",
+      "html": "<label class=\"ds-field\"><span class=\"ds-field-label\">邮箱</span><input class=\"ds-input\" type=\"email\" placeholder=\"name@example.com\" /></label>",
+      "css": ".ds-field { display: grid; gap: 4px; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; } .ds-field-label { color: var(--text-secondary); font-size: 12px; line-height: 1.333; } .ds-input { width: 100%; min-height: 40px; padding: 8px 12px; border: 1px solid var(--border-hairline); border-radius: var(--radius-compact); background: rgba(255, 255, 255, 0.03); color: var(--text-primary); font: 400 14px/1.429 Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; transition: border-color 150ms ease-out, box-shadow 150ms ease-out, background-color 150ms ease-out; } .ds-input::placeholder { color: var(--text-muted); } .ds-input:focus-visible { outline: none; border-color: var(--border-glow); box-shadow: 0 0 0 2px rgba(216, 216, 216, 0.3); }"
+    },
+    {
+      "name": "Sidebar Nav Item",
+      "kind": "nav",
+      "refersTo": "nav-item-active",
+      "description": "Active dashboard navigation cell with icon, label, and code marker.",
+      "html": "<a class=\"ds-nav-item\" href=\"#\"><span class=\"ds-nav-main\"><span class=\"ds-nav-icon\" aria-hidden=\"true\"><svg viewBox=\"0 0 20 20\" fill=\"none\"><rect x=\"3\" y=\"3\" width=\"5\" height=\"5\" rx=\"1\" stroke=\"currentColor\" stroke-width=\"1.4\"></rect><rect x=\"12\" y=\"3\" width=\"5\" height=\"5\" rx=\"1\" stroke=\"currentColor\" stroke-width=\"1.4\"></rect><rect x=\"3\" y=\"12\" width=\"5\" height=\"5\" rx=\"1\" stroke=\"currentColor\" stroke-width=\"1.4\"></rect><rect x=\"12\" y=\"12\" width=\"5\" height=\"5\" rx=\"1\" stroke=\"currentColor\" stroke-width=\"1.4\"></rect></svg></span><span class=\"ds-nav-label\">工作台</span></span><span class=\"ds-nav-code\">01</span></a>",
+      "css": ".ds-nav-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 38px; padding: 9px 10px; border: 1px solid var(--border-glow); border-radius: 8px; background: rgba(180, 204, 255, 0.08); color: var(--text-primary); text-decoration: none; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; transition: background-color 150ms ease-out, border-color 150ms ease-out, color 150ms ease-out; } .ds-nav-main { display: inline-flex; align-items: center; gap: 12px; } .ds-nav-icon { width: 16px; height: 16px; color: var(--accent-ice); display: inline-flex; } .ds-nav-icon svg { width: 16px; height: 16px; } .ds-nav-label { font-size: 14px; line-height: 1.429; font-weight: 500; } .ds-nav-code { color: var(--accent-ice); font-size: 11px; line-height: 1.2; letter-spacing: 0.18em; text-transform: uppercase; } .ds-nav-item:hover { background: rgba(180, 204, 255, 0.1); }"
+    },
+    {
+      "name": "Surface Panel",
+      "kind": "card",
+      "refersTo": "surface-panel",
+      "description": "Default structured container for dashboard blocks and reusable work surfaces.",
+      "html": "<section class=\"ds-panel\"><p class=\"ds-panel-eyebrow\">执行负载</p><h3 class=\"ds-panel-title\">今日快照</h3><p class=\"ds-panel-copy\">快速查看今天到期任务与当日完成情况。</p></section>",
+      "css": ".ds-panel { min-width: 0; padding: 14px; border: 1px solid var(--border-hairline); border-radius: 14px; background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.008)), var(--bg-surface-1); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03); font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: var(--text-primary); } .ds-panel-eyebrow { margin: 0; color: var(--text-muted); font-size: 11px; line-height: 1.2; letter-spacing: 0.18em; text-transform: uppercase; } .ds-panel-title { margin: 8px 0 0; font-size: 15px; line-height: 1.4; font-weight: 600; letter-spacing: -0.01em; } .ds-panel-copy { margin: 6px 0 0; color: var(--text-secondary); font-size: 12px; line-height: 1.667; }"
+    },
+    {
+      "name": "Status Badge",
+      "kind": "chip",
+      "refersTo": "badge-neutral",
+      "description": "Compact pill for neutral and semantic status framing.",
+      "html": "<span class=\"ds-badge-success\">已归档</span>",
+      "css": ".ds-badge-success { display: inline-flex; align-items: center; border: 1px solid var(--success-border); border-radius: 999px; background: var(--success-bg); color: var(--success-text); padding: 4px 8px; font: 500 11px/1.2 Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; letter-spacing: 0.14em; text-transform: uppercase; }"
     }
+  ],
+  "narrative": {
+    "northStar": "The Closed-Loop Command Deck",
+    "overview": "Stride OS should feel like a personal control deck for one disciplined operator, late at night, moving from intent to execution to review without leaving the shell. The visual system is cold, sharp, and restrained: dark graphite infrastructure, pale ice highlights, compact geometry, and surfaces that read like instruments instead of cards from a SaaS kit.\n\nThis system is not trying to feel friendly, lifestyle-oriented, or decorative. It should never drift toward a soft productivity app, a marketing-first SaaS page, or a fake-futurist dashboard that stacks blur, neon, and spectacle to signal \"tech.\" The interface must stay operational. Every highlight should imply status, priority, or movement inside the execution loop.",
+    "keyCharacteristics": [
+      "Dark graphite shell with cold ice highlights.",
+      "Dense but legible single-family typography.",
+      "Tonal layering first, shadow second.",
+      "Compact 8px, 10px, and 14px geometry with crisp edges.",
+      "Semantic status colors reserved for execution meaning, never decoration."
+    ],
+    "rules": [
+      {
+        "name": "The One Glow Rule",
+        "body": "#b4ccff and #d7e5ff are reserved for primary actions, current selection, chart emphasis, and promoted borders. If a screen reads mostly blue, the screen is wrong.",
+        "section": "colors"
+      },
+      {
+        "name": "The Signal-Only Rule",
+        "body": "Success, warning, and danger colors may describe execution state. They may not be used as decorative accents, section themes, or mood setters.",
+        "section": "colors"
+      },
+      {
+        "name": "The One-Family Rule",
+        "body": "Inter carries every layer of the interface. Hierarchy comes from weight, size, and tracking discipline, never from swapping into decorative or display faces.",
+        "section": "typography"
+      },
+      {
+        "name": "The Quiet-Meta Rule",
+        "body": "If text is framing content rather than carrying the message, demote it to the 11px to 12px uppercase label band and keep it in the low-text lane.",
+        "section": "typography"
+      },
+      {
+        "name": "The Metal Frame Rule",
+        "body": "Start depth with tint, hairline, and one controlled highlight stroke. Reach for shadow only after the surface has earned separation. If it looks like glass, it is wrong.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do keep the shell inside the dark graphite ladder: #101010, #0b0d10, #14171ce6, #1c1f25e6, #262a31f0, #323842fa.",
+      "Do reserve #b4ccff and #d7e5ff for primary action, current selection, chart emphasis, and promoted borders.",
+      "Do keep the geometry disciplined: 8px nav cells, 10px controls, 14px promoted panels, and 999px pills.",
+      "Do use semantic green, amber, and oxide only when the interface is describing execution state, risk, or closure.",
+      "Do keep copy terse and operational. Labels frame action; they do not narrate the product."
+    ],
+    "donts": [
+      "Don't make Stride OS look like a soft or lifestyle-oriented productivity app.",
+      "Don't borrow from illustration-led, emotion-value task apps that trade on warmth instead of control.",
+      "Don't stack decorative future-tech effects, neon flourishes, or glass-heavy treatments to fake technology.",
+      "Don't let any screen read like a marketing page, a habit-building toy, or a conceptual SaaS template.",
+      "Don't use accent blue as an inactive fill, a page wash, or a decorative border stripe."
+    ]
   }
 }

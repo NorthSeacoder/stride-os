@@ -162,12 +162,8 @@ const keyResultsColumns = {
     .notNull()
     .references(() => objectives.id, { onDelete: 'cascade' }),
   title: varchar('title', { length: 255 }).notNull(),
-  type: varchar('type', { length: 32 }).notNull(),
-  targetValue: doublePrecision('target_value'),
-  currentValue: doublePrecision('current_value'),
-  unit: varchar('unit', { length: 64 }),
+  description: text('description'),
   status: varchar('status', { length: 32 }).notNull().default('active'),
-  confidence: varchar('confidence', { length: 16 }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 };
@@ -175,9 +171,7 @@ const keyResultsColumns = {
 export const keyResults = pgTable('key_results', keyResultsColumns, (table) => [
   index('idx_key_results_objective_id').on(table.objectiveId),
   index('idx_key_results_status').on(table.status),
-  check('key_results_type_check', sql`${table.type} in ('numeric', 'milestone', 'hybrid')`),
   check('key_results_status_check', sql`${table.status} in ('active', 'at_risk', 'done', 'archived')`),
-  check('key_results_confidence_check', sql`${table.confidence} is null or ${table.confidence} in ('low', 'medium', 'high')`),
 ]);
 
 export const keyResultsRelations = relations(keyResults, ({ one, many }) => ({
@@ -192,8 +186,6 @@ const krCheckInsColumns = {
   keyResultId: uuid('key_result_id')
     .notNull()
     .references(() => keyResults.id, { onDelete: 'cascade' }),
-  progressValue: doublePrecision('progress_value'),
-  confidence: varchar('confidence', { length: 16 }).notNull(),
   summary: text('summary'),
   blockers: text('blockers'),
   nextActions: text('next_actions'),
@@ -203,7 +195,6 @@ const krCheckInsColumns = {
 export const krCheckIns = pgTable('kr_check_ins', krCheckInsColumns, (table) => [
   index('idx_kr_check_ins_key_result_id').on(table.keyResultId),
   index('idx_kr_check_ins_created_at').on(table.createdAt),
-  check('kr_check_ins_confidence_check', sql`${table.confidence} in ('low', 'medium', 'high')`),
 ]);
 
 export const krCheckInsRelations = relations(krCheckIns, ({ one }) => ({
