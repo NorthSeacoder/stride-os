@@ -8,9 +8,12 @@ import {
   createKrCheckIn,
   createObjective,
   createPeriod,
-  type CheckInConfidence,
-  type KeyResultType,
+  updateKeyResult,
+  updateObjective,
+  updatePeriod,
+  type KeyResultStatus,
   type ObjectiveStatus,
+  type PeriodStatus,
   type PeriodType,
 } from '@/lib/services/okr-service';
 
@@ -47,16 +50,6 @@ function nullable(formData: FormData, key: string) {
   return value || null;
 }
 
-function nullableNumber(formData: FormData, key: string) {
-  const value = trimmed(formData, key);
-  if (!value) {
-    return null;
-  }
-
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : null;
-}
-
 export async function createPeriodAction(
   _prevState: OkrActionState,
   formData: FormData,
@@ -78,6 +71,50 @@ export async function createPeriodAction(
     return { error: '' };
   } catch (error) {
     return { error: error instanceof Error ? error.message : '创建周期失败' };
+  }
+}
+
+export async function updatePeriodAction(
+  _prevState: OkrActionState,
+  formData: FormData,
+): Promise<OkrActionState> {
+  const user = await requireOkrUser();
+  if (!user) {
+    return { error: '未授权' };
+  }
+
+  try {
+    await updatePeriod(trimmed(formData, 'periodId'), {
+      name: trimmed(formData, 'name'),
+      type: trimmed(formData, 'type') as PeriodType,
+      startDate: trimmed(formData, 'startDate'),
+      endDate: trimmed(formData, 'endDate'),
+      status: trimmed(formData, 'status') as PeriodStatus,
+    }, { activityContext: user.activityContext });
+    revalidateOkr();
+    return { error: '' };
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : '更新周期失败' };
+  }
+}
+
+export async function archivePeriodAction(
+  _prevState: OkrActionState,
+  formData: FormData,
+): Promise<OkrActionState> {
+  const user = await requireOkrUser();
+  if (!user) {
+    return { error: '未授权' };
+  }
+
+  try {
+    await updatePeriod(trimmed(formData, 'periodId'), {
+      status: 'archived',
+    }, { activityContext: user.activityContext });
+    revalidateOkr();
+    return { error: '' };
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : '归档周期失败' };
   }
 }
 
@@ -105,6 +142,49 @@ export async function createObjectiveAction(
   }
 }
 
+export async function updateObjectiveAction(
+  _prevState: OkrActionState,
+  formData: FormData,
+): Promise<OkrActionState> {
+  const user = await requireOkrUser();
+  if (!user) {
+    return { error: '未授权' };
+  }
+
+  try {
+    await updateObjective(trimmed(formData, 'objectiveId'), {
+      title: trimmed(formData, 'title'),
+      description: nullable(formData, 'description'),
+      status: trimmed(formData, 'status') as ObjectiveStatus,
+      sortOrder: Number(trimmed(formData, 'sortOrder') || '0'),
+    }, { activityContext: user.activityContext });
+    revalidateOkr();
+    return { error: '' };
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : '更新目标失败' };
+  }
+}
+
+export async function archiveObjectiveAction(
+  _prevState: OkrActionState,
+  formData: FormData,
+): Promise<OkrActionState> {
+  const user = await requireOkrUser();
+  if (!user) {
+    return { error: '未授权' };
+  }
+
+  try {
+    await updateObjective(trimmed(formData, 'objectiveId'), {
+      status: 'archived',
+    }, { activityContext: user.activityContext });
+    revalidateOkr();
+    return { error: '' };
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : '归档目标失败' };
+  }
+}
+
 export async function createKeyResultAction(
   _prevState: OkrActionState,
   formData: FormData,
@@ -118,17 +198,61 @@ export async function createKeyResultAction(
     await createKeyResult({
       objectiveId: trimmed(formData, 'objectiveId'),
       title: trimmed(formData, 'title'),
-      type: trimmed(formData, 'type') as KeyResultType,
-      targetValue: nullableNumber(formData, 'targetValue'),
-      currentValue: nullableNumber(formData, 'currentValue'),
-      unit: nullable(formData, 'unit'),
+      description: nullable(formData, 'description'),
       status: 'active',
-      confidence: null,
     }, { activityContext: user.activityContext });
     revalidateOkr();
     return { error: '' };
   } catch (error) {
     return { error: error instanceof Error ? error.message : '创建关键结果失败' };
+  }
+}
+
+export async function updateKeyResultAction(
+  _prevState: OkrActionState,
+  formData: FormData,
+): Promise<OkrActionState> {
+  const user = await requireOkrUser();
+  if (!user) {
+    return { error: '未授权' };
+  }
+
+  const keyResultId = trimmed(formData, 'keyResultId');
+
+  try {
+    await updateKeyResult(keyResultId, {
+      title: trimmed(formData, 'title'),
+      description: nullable(formData, 'description'),
+      status: trimmed(formData, 'status') as KeyResultStatus,
+    }, { activityContext: user.activityContext });
+    revalidateOkr();
+    revalidatePath(`/okr/${keyResultId}`);
+    return { error: '' };
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : '更新关键结果失败' };
+  }
+}
+
+export async function archiveKeyResultAction(
+  _prevState: OkrActionState,
+  formData: FormData,
+): Promise<OkrActionState> {
+  const user = await requireOkrUser();
+  if (!user) {
+    return { error: '未授权' };
+  }
+
+  const keyResultId = trimmed(formData, 'keyResultId');
+
+  try {
+    await updateKeyResult(keyResultId, {
+      status: 'archived',
+    }, { activityContext: user.activityContext });
+    revalidateOkr();
+    revalidatePath(`/okr/${keyResultId}`);
+    return { error: '' };
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : '归档关键结果失败' };
   }
 }
 
@@ -144,8 +268,6 @@ export async function createKrCheckInAction(
   try {
     await createKrCheckIn({
       keyResultId: trimmed(formData, 'keyResultId'),
-      progressValue: nullableNumber(formData, 'progressValue'),
-      confidence: trimmed(formData, 'confidence') as CheckInConfidence,
       summary: nullable(formData, 'summary'),
       blockers: nullable(formData, 'blockers'),
       nextActions: nullable(formData, 'nextActions'),

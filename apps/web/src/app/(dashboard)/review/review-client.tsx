@@ -91,7 +91,6 @@ export function ReviewClient({
       <PageIntro
         eyebrow="复盘闭环"
         title="复盘"
-        description="基于已完成任务、未关闭的必做事项和 KR check-in 自动生成周复盘。先保存草稿，确认无误后再归档定稿。"
       />
 
       <div className="grid gap-3 xl:grid-cols-3">
@@ -106,7 +105,6 @@ export function ReviewClient({
             <SectionHeader
               eyebrow="Review Window"
               title="生成区间"
-              description="先确定复盘周期，再生成新的周复盘草稿。"
             />
             <form
               className="mt-3"
@@ -157,7 +155,6 @@ export function ReviewClient({
             <SectionHeader
               eyebrow="Draft Editor"
               title="草稿正文"
-              description="整理标题、正文和关键观察，再决定是否归档定稿。"
             />
             <div className="mt-3 space-y-3">
               <form
@@ -227,16 +224,7 @@ export function ReviewClient({
           <SectionHeader
             eyebrow="Archive"
             title="历史记录"
-            description="最近的周复盘草稿与已定稿记录。"
           />
-          <div className="mt-3 rounded-[var(--radius-compact)] border border-(--border-hairline) bg-[color:rgba(255,255,255,0.03)] p-3">
-            <p className="text-[11px] uppercase tracking-[0.22em] text-(--text-muted)">状态提示</p>
-            <p className="mt-2 text-xs leading-5 text-(--text-secondary)">
-              {savedReviewId
-                ? '当前草稿已保存，可继续编辑，或在确认内容后直接归档定稿。'
-                : '当前草稿尚未保存，建议先确认标题与正文，再执行保存。'}
-            </p>
-          </div>
           <div className="mt-3 space-y-2">
             {reviews.length === 0 ? (
               <p className="text-sm text-(--text-secondary)">还没有保存任何复盘。</p>

@@ -50,10 +50,9 @@ export function DashboardTaskStatusChart({
       <SectionHeader
         eyebrow="状态切片"
         title="任务分布"
-        description="按收件箱、已过期、今天到期和已完成查看当前任务结构。"
         action={
           <Link href="/tasks" className="text-sm text-(--text-secondary) transition-colors hover:text-(--text-primary)">
-            打开任务
+            任务
           </Link>
         }
       />

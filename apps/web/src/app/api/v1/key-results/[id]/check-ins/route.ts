@@ -32,16 +32,8 @@ export async function POST(
   const body = await parseJsonBody(request);
   if (body instanceof NextResponse) return body;
 
-  const confidence = getTrimmedString(body.confidence);
-  if (!confidence) return NextResponse.json({ error: 'Confidence is required' }, { status: 400 });
-
-  const progressRaw = body.progressValue;
-  const progressValue = typeof progressRaw === 'number' ? progressRaw : undefined;
-
   const checkIn = await createKrCheckIn({
     keyResultId: id,
-    progressValue,
-    confidence: confidence as 'low' | 'medium' | 'high',
     summary: getTrimmedString(body.summary) || undefined,
     blockers: getTrimmedString(body.blockers) || undefined,
     nextActions: getTrimmedString(body.nextActions) || undefined,

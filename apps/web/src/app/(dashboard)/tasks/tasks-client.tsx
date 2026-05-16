@@ -275,7 +275,6 @@ export function TasksClient({
           }
         }}
         title="新建清单"
-        description="先用最小字段把清单建起来。"
       >
         <CreateListForm
           action={(formData) => {
@@ -299,7 +298,6 @@ export function TasksClient({
           }
         }}
         title={taskModal?.mode === 'edit' ? '编辑任务' : '新建任务'}
-        description="先记录最小可执行信息，需要时再补充上下文。"
       >
         {taskModal?.mode === 'create' && (
           <TaskForm
@@ -437,9 +435,6 @@ export function TasksClient({
                     新建任务
                   </Button>
                 </div>
-              </div>
-              <div className="mt-2.5 rounded-[8px] border border-(--border-hairline) bg-[color:rgba(255,255,255,0.03)] px-3 py-2 text-sm text-(--text-muted)">
-                + 添加任务至「{selectedSource?.title ?? '收集箱'}」
               </div>
             </div>
 
@@ -669,7 +664,6 @@ function TaskForm({
             <div className="rounded-[10px] border border-(--border-hairline) bg-[color:rgba(255,255,255,0.03)] p-4">
               <div className="mb-3">
                 <p className="text-sm text-(--text-secondary)">日期</p>
-                <p className="mt-1 text-xs text-(--text-muted)">先选常用日期，特殊时间再展开日历。</p>
               </div>
               <div className="mb-4 grid gap-2 sm:grid-cols-3">
                 <QuickDateButton label="今日" active={field.state.value === today} onClick={() => field.handleChange(today)} />
@@ -712,9 +706,7 @@ function TaskForm({
               label="重复"
               checked={field.state.value}
               disabled={!recurrenceEditable}
-              description={recurrenceEditable
-                ? '启用后保存为重复定义，并确保今天应出现的实例可见。'
-                : '编辑时暂不支持普通任务与重复任务之间互转。'}
+              description={recurrenceEditable ? undefined : '编辑时不可切换'}
               onCheckedChange={field.handleChange}
             />
           )}
@@ -788,7 +780,6 @@ function TaskForm({
           <SelectField
             name={field.name}
             label="关联关键结果"
-            description="把执行动作绑到 KR，后续 dashboard 与 review 才能复用这条上下文。"
             multiple
             size={3}
             value={field.state.value.join(',')}
@@ -806,7 +797,6 @@ function TaskForm({
           <div className="space-y-3 rounded-[10px] border border-(--border-hairline) bg-[color:rgba(255,255,255,0.03)] p-4">
             <div>
               <p className="text-sm text-(--text-secondary)">KR 承诺范围</p>
-              <p className="mt-1 text-xs text-(--text-muted)">只有勾选“纳入本期承诺”的关联，才会进入 KR 自动任务完成摘要。</p>
             </div>
             {keyResultIds.map((keyResultId) => {
               const option = keyResultOptions.find((item) => item.value === keyResultId);
@@ -815,9 +805,6 @@ function TaskForm({
                 <label key={keyResultId} className="flex items-start justify-between gap-3 rounded-[8px] border border-(--border-hairline) px-3 py-2.5">
                   <div className="min-w-0">
                     <p className="text-sm text-(--text-primary)">{option?.label ?? keyResultId}</p>
-                    <p className="mt-1 text-xs text-(--text-muted)">
-                      {committed ? '会计入本期 KR 承诺摘要' : '仅建立关联，不计入承诺摘要'}
-                    </p>
                   </div>
                   <input
                     type="checkbox"

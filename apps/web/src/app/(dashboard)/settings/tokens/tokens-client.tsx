@@ -67,7 +67,6 @@ export function TokensClient({
       <PageIntro
         eyebrow="系统控制"
         title="API 令牌"
-        description="在这里创建和吊销用于集成与自动化访问的令牌。"
       />
 
       <div className="grid gap-3 xl:grid-cols-[240px_minmax(0,1fr)]">
@@ -75,7 +74,6 @@ export function TokensClient({
           <SectionHeader
             eyebrow="Control Index"
             title="设置分组"
-            description="账户与令牌共享同一套控制台导航。"
           />
           <SettingsNav />
         </SurfacePanel>
@@ -108,7 +106,6 @@ export function TokensClient({
             <SectionHeader
               eyebrow="Create Token"
               title="创建令牌"
-              description="用明确名称区分不同集成来源。"
             />
             <form action={createAction} className="mt-3 flex flex-col gap-2 sm:flex-row">
               <TextField
@@ -130,7 +127,6 @@ export function TokensClient({
             <SectionHeader
               eyebrow="Token List"
               title="现有令牌"
-              description="已创建令牌的状态与最近使用信息。"
             />
             <div className="mt-3 space-y-2">
               {tokens.length === 0 ? (

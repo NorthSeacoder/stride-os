@@ -64,7 +64,7 @@ describe('okr/review api routes', () => {
     }));
   });
 
-  it('returns 400 when check-in confidence is missing', async () => {
+  it('accepts lightweight check-in payloads without confidence', async () => {
     const request = new NextRequest('http://localhost/api/v1/key-results/kr_1/check-ins', {
       method: 'POST',
       headers: { 'content-type': 'application/json', authorization: 'Bearer ok' },
@@ -75,8 +75,7 @@ describe('okr/review api routes', () => {
       params: Promise.resolve({ id: 'kr_1' }),
     });
 
-    expect(response.status).toBe(400);
-    expect(await response.json()).toEqual({ error: 'Confidence is required' });
+    expect(response.status).toBe(201);
   });
 
   it('returns 400 when weekly draft dates are missing', async () => {

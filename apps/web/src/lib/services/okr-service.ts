@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray, isNull, lte, gte, ne } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, lte, gte, ne } from 'drizzle-orm';
 import { db, schema } from '@stride-os/db';
 import {
   getTaskProgressSnapshotForKeyResult,
@@ -20,16 +20,12 @@ type TransactionLike = {
 export const PERIOD_TYPES = ['year', 'quarter', 'month', 'custom'] as const;
 export const PERIOD_STATUSES = ['active', 'archived'] as const;
 export const OBJECTIVE_STATUSES = ['active', 'done', 'archived'] as const;
-export const KEY_RESULT_TYPES = ['numeric', 'milestone', 'hybrid'] as const;
 export const KEY_RESULT_STATUSES = ['active', 'at_risk', 'done', 'archived'] as const;
-export const CHECK_IN_CONFIDENCE = ['low', 'medium', 'high'] as const;
 
 export type PeriodType = typeof PERIOD_TYPES[number];
 export type PeriodStatus = typeof PERIOD_STATUSES[number];
 export type ObjectiveStatus = typeof OBJECTIVE_STATUSES[number];
-export type KeyResultType = typeof KEY_RESULT_TYPES[number];
 export type KeyResultStatus = typeof KEY_RESULT_STATUSES[number];
-export type CheckInConfidence = typeof CHECK_IN_CONFIDENCE[number];
 
 export type PeriodWriteInput = {
   name: string;
@@ -50,18 +46,12 @@ export type ObjectiveWriteInput = {
 export type KeyResultWriteInput = {
   objectiveId: string;
   title: string;
-  type: KeyResultType;
-  targetValue?: number | null;
-  currentValue?: number | null;
-  unit?: string | null;
+  description?: string | null;
   status?: KeyResultStatus;
-  confidence?: CheckInConfidence | null;
 };
 
 export type CheckInWriteInput = {
   keyResultId: string;
-  progressValue?: number | null;
-  confidence: CheckInConfidence;
   summary?: string | null;
   blockers?: string | null;
   nextActions?: string | null;
@@ -75,8 +65,6 @@ type TaskProgressSnapshot = Awaited<ReturnType<typeof getTaskProgressSnapshotFor
 
 type LatestCheckInSummary = {
   hasCheckIn: boolean;
-  progressValue: number | null;
-  confidence: CheckInConfidence | null;
   summary: string | null;
   blockers: string | null;
   nextActions: string | null;
@@ -154,8 +142,6 @@ function buildEmptyTaskProgress(keyResultId: string): TaskProgressSnapshot {
 }
 
 function buildLatestCheckInSummary(checkIn?: {
-  progressValue?: number | null;
-  confidence?: CheckInConfidence | null;
   summary?: string | null;
   blockers?: string | null;
   nextActions?: string | null;
@@ -163,8 +149,6 @@ function buildLatestCheckInSummary(checkIn?: {
 } | null): LatestCheckInSummary {
   return {
     hasCheckIn: Boolean(checkIn),
-    progressValue: checkIn?.progressValue ?? null,
-    confidence: checkIn?.confidence ?? null,
     summary: checkIn?.summary ?? null,
     blockers: checkIn?.blockers ?? null,
     nextActions: checkIn?.nextActions ?? null,
@@ -177,8 +161,6 @@ async function enrichKeyResultsWithProgress<
     id: string;
     title?: string;
     checkIns?: Array<{
-      progressValue?: number | null;
-      confidence?: CheckInConfidence | null;
       summary?: string | null;
       blockers?: string | null;
       nextActions?: string | null;
@@ -209,8 +191,6 @@ async function enrichObjectivesWithProgress<
       id: string;
       title?: string;
       checkIns?: Array<{
-        progressValue?: number | null;
-        confidence?: CheckInConfidence | null;
         summary?: string | null;
         blockers?: string | null;
         nextActions?: string | null;
@@ -238,8 +218,6 @@ async function enrichPeriodsWithProgress<
         id: string;
         title?: string;
         checkIns?: Array<{
-          progressValue?: number | null;
-          confidence?: CheckInConfidence | null;
           summary?: string | null;
           blockers?: string | null;
           nextActions?: string | null;
@@ -253,7 +231,7 @@ async function enrichPeriodsWithProgress<
   let index = 0;
 
   return periods.map((period) => {
-    const nextObjectives = period.objectives.map(() => objectiveLists[index]).filter(Boolean);
+    const nextObjectives = objectiveLists.slice(index, index + period.objectives.length);
     index += period.objectives.length;
     return {
       ...period,
@@ -314,22 +292,14 @@ function normalizeKeyResultInput(input: KeyResultWriteInput) {
   return {
     objectiveId: input.objectiveId,
     title: ensureTrimmed(input.title, '关键结果标题'),
-    type: validateInSet(input.type, KEY_RESULT_TYPES, '关键结果类型'),
-    targetValue: input.targetValue ?? null,
-    currentValue: input.currentValue ?? null,
-    unit: input.unit?.trim() || null,
+    description: input.description?.trim() || null,
     status: validateInSet(input.status ?? 'active', KEY_RESULT_STATUSES, '关键结果状态'),
-    confidence: input.confidence === undefined || input.confidence === null
-      ? null
-      : validateInSet(input.confidence, CHECK_IN_CONFIDENCE, 'check-in 信心'),
   };
 }
 
 function normalizeCheckInInput(input: CheckInWriteInput) {
   return {
     keyResultId: input.keyResultId,
-    progressValue: input.progressValue ?? null,
-    confidence: validateInSet(input.confidence, CHECK_IN_CONFIDENCE, 'check-in 信心'),
     summary: input.summary?.trim() || null,
     blockers: input.blockers?.trim() || null,
     nextActions: input.nextActions?.trim() || null,
@@ -672,26 +642,14 @@ export async function updateKeyResult(
     updatedAt: new Date(),
   } as {
     title?: string;
-    type?: KeyResultType;
-    targetValue?: number | null;
-    currentValue?: number | null;
-    unit?: string | null;
+    description?: string | null;
     status?: KeyResultStatus;
-    confidence?: CheckInConfidence | null;
     updatedAt: Date;
   };
 
   if (input.title !== undefined) patch.title = ensureTrimmed(input.title, 'Key result title');
-  if (input.type !== undefined) patch.type = validateInSet(input.type, KEY_RESULT_TYPES, 'key result type');
-  if (input.targetValue !== undefined) patch.targetValue = input.targetValue ?? null;
-  if (input.currentValue !== undefined) patch.currentValue = input.currentValue ?? null;
-  if (input.unit !== undefined) patch.unit = input.unit?.trim() || null;
+  if (input.description !== undefined) patch.description = input.description?.trim() || null;
   if (input.status !== undefined) patch.status = validateInSet(input.status, KEY_RESULT_STATUSES, 'key result status');
-  if (input.confidence !== undefined) {
-    patch.confidence = input.confidence === null
-      ? null
-      : validateInSet(input.confidence, CHECK_IN_CONFIDENCE, 'check-in confidence');
-  }
 
   const [keyResult] = await db
     .update(schema.keyResults)
@@ -709,7 +667,7 @@ export async function updateKeyResult(
       summary: input.status === 'archived'
         ? `Archived key result ${keyResult.title}`
         : `Updated key result ${keyResult.title}`,
-      metadata: buildActivityDiff(existing, keyResult, ['title', 'type', 'targetValue', 'currentValue', 'unit', 'status', 'confidence']),
+      metadata: buildActivityDiff(existing, keyResult, ['title', 'description', 'status']),
     });
   }
 
@@ -720,33 +678,20 @@ export async function createKrCheckIn(input: CheckInWriteInput, _options?: OkrMu
   const normalized = normalizeCheckInInput(input);
 
   return db.transaction(async (tx: TransactionLike) => {
-    const existingKeyResult = await db.query.keyResults.findFirst({
+    const [checkIn] = await tx.insert(schema.krCheckIns).values(normalized).returning();
+    const keyResult = await db.query.keyResults.findFirst({
       where: eq(schema.keyResults.id, normalized.keyResultId),
     });
-    const [checkIn] = await tx.insert(schema.krCheckIns).values(normalized).returning();
 
-    const [updatedKeyResult] = await tx
-      .update(schema.keyResults)
-      .set({
-        currentValue: normalized.progressValue,
-        confidence: normalized.confidence,
-        updatedAt: new Date(),
-      })
-      .where(eq(schema.keyResults.id, normalized.keyResultId))
-      .returning();
-
-    if (updatedKeyResult && existingKeyResult) {
+    if (keyResult) {
       await recordOkrActivity({
         options: _options,
         action: 'okr.key_result.check_in',
         targetType: 'key_result',
-        targetId: updatedKeyResult.id,
-        targetTitle: updatedKeyResult.title,
-        summary: `Checked in key result ${updatedKeyResult.title}`,
+        targetId: keyResult.id,
+        targetTitle: keyResult.title,
+        summary: `Checked in key result ${keyResult.title}`,
         metadata: {
-          ...buildActivityDiff(existingKeyResult, updatedKeyResult, ['currentValue', 'confidence']),
-          progressValue: normalized.progressValue,
-          confidence: normalized.confidence,
           summary: normalized.summary,
           blockers: normalized.blockers,
           nextActions: normalized.nextActions,
@@ -784,7 +729,6 @@ export async function getKeyResultProgressSnapshot(keyResultId: string) {
     keyResultId,
     taskProgress,
     ...buildLatestCheckInSummary(latestCheckIn),
-    fallbackCurrentValue: keyResult.currentValue,
   };
 }
 
@@ -819,7 +763,6 @@ export async function listRiskKeyResults(options?: { staleSince?: Date }) {
         taskProgress?.lastTaskProgressAt && taskProgress.lastTaskProgressAt >= staleSince,
       );
       return keyResult.status === 'at_risk'
-        || latest?.confidence === 'low'
         || ((!latest || latest.createdAt < staleSince) && !hasRecentTaskProgress);
     })
     .map((keyResult: RiskKeyResult) => ({
@@ -874,8 +817,6 @@ export async function getKeyResultDetail(keyResultId: string) {
     taskProgress: progress?.taskProgress ?? null,
     latestCheckIn: progress
       ? buildLatestCheckInSummary({
-          progressValue: progress.progressValue,
-          confidence: progress.confidence,
           summary: progress.summary,
           blockers: progress.blockers,
           nextActions: progress.nextActions,
@@ -887,9 +828,13 @@ export async function getKeyResultDetail(keyResultId: string) {
 
 export async function listKeyResultsWithoutCheckIns() {
   return db.query.keyResults.findMany({
-    where: isNull(schema.keyResults.confidence),
+    with: {
+      checkIns: {
+        orderBy: [desc(schema.krCheckIns.createdAt)],
+      },
+    },
     orderBy: [asc(schema.keyResults.createdAt)],
-  });
+  }).then((items: Array<{ checkIns: unknown[] }>) => items.filter((item: { checkIns: unknown[] }) => item.checkIns.length === 0));
 }
 
 export async function listCheckInsInRange(periodStart: string, periodEnd: string) {

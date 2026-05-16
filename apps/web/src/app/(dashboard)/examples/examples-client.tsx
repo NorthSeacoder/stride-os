@@ -64,7 +64,6 @@ export function ExamplesClient({ items }: { items: ExampleItem[] }) {
       <PageIntro
         eyebrow="Examples"
         title="示例"
-        description="用于验证基础增删改流程的轻量数据集。"
         action={
           <Button type="button" variant="primary" onClick={startCreate}>
             新增条目

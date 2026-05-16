@@ -1,6 +1,5 @@
 import { and, desc, eq, inArray, isNull } from 'drizzle-orm';
 import { db, schema } from '@stride-os/db';
-import { getConfidenceLabel } from '@/lib/presentation/labels';
 import {
   buildActivityDiff,
   recordActivity,
@@ -185,7 +184,7 @@ export async function buildWeeklyReviewDraft(periodStart: string, periodEnd: str
       ? `任务 ${taskProgress.completedCommittedTaskCount}/${taskProgress.committedTaskCount}`
       : '暂无承诺任务';
     const checkInSummary = latestCheckIn
-      ? `${latestCheckIn.summary || '无总结'}（信心：${getConfidenceLabel(latestCheckIn.confidence)}）`
+      ? `${latestCheckIn.summary || '无总结'}${latestCheckIn.blockers ? `；阻塞：${latestCheckIn.blockers}` : ''}${latestCheckIn.nextActions ? `；下一步：${latestCheckIn.nextActions}` : ''}`
       : '暂无 check-in';
     return `${title}: ${taskSummary}；${checkInSummary}`;
   });
@@ -198,8 +197,6 @@ export async function buildWeeklyReviewDraft(periodStart: string, periodEnd: str
     keyResultIds,
     keyResultCheckIns: Array.from(latestCheckInsByKr.values()).map((item) => ({
       keyResultId: item.keyResultId,
-      confidence: item.confidence,
-      progressValue: item.progressValue,
       summary: item.summary,
       blockers: item.blockers,
       nextActions: item.nextActions,
@@ -290,17 +287,23 @@ export async function saveReviewDraft(input: ReviewDraftPayload, _options?: Revi
           id: string;
           title: string;
           status: string;
-          currentValue: number | null;
           taskProgress?: {
             committedTaskCount: number;
             completedCommittedTaskCount: number;
             openCommittedTaskCount: number;
           };
           latestCheckIn?: {
-            confidence: string | null;
+            summary: string | null;
+            blockers: string | null;
+            nextActions: string | null;
             updatedAt: Date | string | null;
           };
-          checkIns: Array<{ confidence: string; createdAt: Date }>;
+          checkIns: Array<{
+            summary: string | null;
+            blockers: string | null;
+            nextActions: string | null;
+            createdAt: Date;
+          }>;
         }) => ({
           reviewId: review.id,
           keyResultId: keyResult.id,
@@ -310,8 +313,9 @@ export async function saveReviewDraft(input: ReviewDraftPayload, _options?: Revi
             committedTaskCount: keyResult.taskProgress?.committedTaskCount ?? null,
             completedCommittedTaskCount: keyResult.taskProgress?.completedCommittedTaskCount ?? null,
             openCommittedTaskCount: keyResult.taskProgress?.openCommittedTaskCount ?? null,
-            currentValue: keyResult.currentValue,
-            confidence: keyResult.latestCheckIn?.confidence ?? keyResult.checkIns[0]?.confidence ?? null,
+            summary: keyResult.latestCheckIn?.summary ?? keyResult.checkIns[0]?.summary ?? null,
+            blockers: keyResult.latestCheckIn?.blockers ?? keyResult.checkIns[0]?.blockers ?? null,
+            nextActions: keyResult.latestCheckIn?.nextActions ?? keyResult.checkIns[0]?.nextActions ?? null,
             latestCheckInAt: keyResult.latestCheckIn?.updatedAt
               ? new Date(keyResult.latestCheckIn.updatedAt).toISOString()
               : (keyResult.checkIns[0]?.createdAt.toISOString() ?? null),

@@ -7,7 +7,7 @@ import {
   SurfacePanel,
 } from '@/components/ui';
 import { getDashboardSummary } from '@/lib/services/review-service';
-import { getConfidenceLabel, getKeyResultStatusLabel, getReviewStatusLabel } from '@/lib/presentation/labels';
+import { getKeyResultStatusLabel, getReviewStatusLabel } from '@/lib/presentation/labels';
 import {
   DashboardReviewClosureChart,
   DashboardTaskStatusChart,
@@ -32,7 +32,7 @@ export default async function DashboardPage() {
       key: 'risk',
       label: '风险 KR',
       value: summary.riskKeyResults.length,
-      detail: summary.riskKeyResults.length > 0 ? '低信心、缺少 check-in 或任务停滞' : '当前没有明显风险',
+      detail: summary.riskKeyResults.length > 0 ? '状态异常、缺少 check-in 或任务停滞' : '当前没有明显风险',
     },
     {
       key: 'closure',
@@ -47,7 +47,6 @@ export default async function DashboardPage() {
       <PageIntro
         eyebrow="系统总览"
         title="工作台"
-        description="当前周期、今日执行负载、风险 KR 与复盘闭环，被重组到一张更清晰的操作台上。"
         action={
           <div className="flex flex-wrap gap-2">
             <Link
@@ -105,10 +104,9 @@ export default async function DashboardPage() {
           <SectionHeader
             eyebrow="执行负载"
             title="今日快照"
-            description="快速查看今天到期任务与当日完成情况。"
             action={
               <Link href="/tasks" className="text-sm text-(--text-secondary) transition-colors hover:text-(--text-primary)">
-                打开任务
+                任务
               </Link>
             }
           />
@@ -126,10 +124,9 @@ export default async function DashboardPage() {
         <SectionHeader
           eyebrow="战略焦点"
           title="风险关键结果"
-          description="低信心、长期未更新，或明确标记为有风险的 KR。"
           action={
             <Link href="/okr" className="text-sm text-(--text-secondary) transition-colors hover:text-(--text-primary)">
-              打开 OKR
+              OKR
             </Link>
           }
         />
@@ -142,7 +139,7 @@ export default async function DashboardPage() {
               title: string;
               status: string;
               objective: { title: string; period: { name: string } };
-              latestCheckIn: { hasCheckIn: boolean; confidence: string | null };
+              latestCheckIn: { hasCheckIn: boolean; updatedAt?: string | Date | null };
               taskProgress: { hasCommittedTasks: boolean; completedCommittedTaskCount: number; committedTaskCount: number };
             }) => (
               <Link
@@ -163,7 +160,7 @@ export default async function DashboardPage() {
                 </p>
                 <p className="mt-1 text-xs text-(--text-muted)">
                   {kr.latestCheckIn.hasCheckIn
-                    ? `最新信心: ${getConfidenceLabel(kr.latestCheckIn.confidence)}`
+                    ? `最近 check-in: ${String((kr.latestCheckIn as { updatedAt?: string | Date | null }).updatedAt ?? '').slice(0, 10)}`
                     : '暂无 check-in'}
                 </p>
               </Link>
@@ -177,10 +174,9 @@ export default async function DashboardPage() {
           <SectionHeader
             eyebrow="闭环摘要"
             title="最近复盘"
-            description="最近保存的草稿或已归档复盘。"
             action={
               <Link href="/review" className="text-sm text-(--text-secondary) transition-colors hover:text-(--text-primary)">
-                打开复盘
+                复盘
               </Link>
             }
           />
@@ -205,10 +201,9 @@ export default async function DashboardPage() {
           <SectionHeader
             eyebrow="闭环信号"
             title="风险与复盘"
-            description="把风险 KR 与最近一次复盘放在同一张图里，快速判断系统是否形成闭环。"
             action={
               <Link href="/review" className="text-sm text-(--text-secondary) transition-colors hover:text-(--text-primary)">
-                打开复盘
+                复盘
               </Link>
             }
           />

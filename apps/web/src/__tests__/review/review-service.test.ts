@@ -189,7 +189,6 @@ describe('review service', () => {
     listCheckInsInRange.mockResolvedValue([
       {
         keyResultId: 'kr_1',
-        confidence: 'medium',
         summary: 'On track',
         blockers: null,
         nextActions: null,
@@ -238,7 +237,6 @@ describe('review service', () => {
         id: 'kr_1',
         title: 'Ship review loop',
         status: 'active',
-        currentValue: 0.5,
         taskProgress: {
           committedTaskCount: 3,
           completedCommittedTaskCount: 1,
@@ -248,14 +246,17 @@ describe('review service', () => {
         },
         latestCheckIn: {
           hasCheckIn: true,
-          progressValue: 0.5,
-          confidence: 'medium',
-          summary: null,
+          summary: 'On track',
           blockers: null,
-          nextActions: null,
+          nextActions: 'Finish remaining tasks',
           updatedAt: new Date('2026-05-09T00:00:00.000Z'),
         },
-        checkIns: [{ confidence: 'medium', createdAt: new Date('2026-05-09T00:00:00.000Z') }],
+        checkIns: [{
+          summary: 'On track',
+          blockers: null,
+          nextActions: 'Finish remaining tasks',
+          createdAt: new Date('2026-05-09T00:00:00.000Z'),
+        }],
       },
     ]);
 
@@ -280,7 +281,8 @@ describe('review service', () => {
           committedTaskCount: 3,
           completedCommittedTaskCount: 1,
           openCommittedTaskCount: 2,
-          confidence: 'medium',
+          summary: 'On track',
+          nextActions: 'Finish remaining tasks',
         }),
       }),
     ]);

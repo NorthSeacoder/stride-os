@@ -3,16 +3,12 @@ import { getAuthUser } from '@/lib/auth/api-auth';
 import { badRequest, getTrimmedString, parseJsonBody, requireParam, unauthorized } from '../../_lib/validation';
 import { type ActivityAuthenticatedUser, type ActivityContext } from '@/lib/services/activity-service';
 import {
-  CHECK_IN_CONFIDENCE,
   KEY_RESULT_STATUSES,
-  KEY_RESULT_TYPES,
   OBJECTIVE_STATUSES,
   PERIOD_STATUSES,
   PERIOD_TYPES,
-  type CheckInConfidence,
   type CheckInWriteInput,
   type KeyResultStatus,
-  type KeyResultType,
   type KeyResultWriteInput,
   type ObjectiveStatus,
   type ObjectiveWriteInput,
@@ -115,41 +111,23 @@ export async function parseKeyResultInput(request: NextRequest, mode: 'create' |
   if (title instanceof NextResponse) return title;
   const objectiveId = textValue(body.objectiveId, 'objectiveId', mode === 'create');
   if (objectiveId instanceof NextResponse) return objectiveId;
-  const type = enumValue<KeyResultType>(body.type, KEY_RESULT_TYPES, 'type', mode === 'create');
-  if (type instanceof NextResponse) return type;
   const status = enumValue<KeyResultStatus>(body.status, KEY_RESULT_STATUSES, 'status');
   if (status instanceof NextResponse) return status;
-  const confidence = enumValue<CheckInConfidence>(body.confidence, CHECK_IN_CONFIDENCE, 'confidence');
-  if (confidence instanceof NextResponse) return confidence;
-  const targetValue = numberValue(body.targetValue, 'targetValue');
-  if (targetValue instanceof NextResponse) return targetValue;
-  const currentValue = numberValue(body.currentValue, 'currentValue');
-  if (currentValue instanceof NextResponse) return currentValue;
 
   return {
     ...(objectiveId !== undefined ? { objectiveId } : {}),
     ...(title !== undefined ? { title } : {}),
-    ...(type !== undefined ? { type } : {}),
-    ...(targetValue !== undefined ? { targetValue } : {}),
-    ...(currentValue !== undefined ? { currentValue } : {}),
-    ...(body.unit !== undefined ? { unit: textValue(body.unit, 'unit') } : {}),
+    ...(body.description !== undefined ? { description: textValue(body.description, 'description') } : {}),
     ...(status !== undefined ? { status } : {}),
-    ...(confidence !== undefined ? { confidence } : {}),
   } as KeyResultWriteInput | Partial<KeyResultWriteInput>;
 }
 
 export async function parseCheckInInput(request: NextRequest, keyResultId: string) {
   const body = await parseBody(request);
   if (body instanceof NextResponse) return body;
-  const confidence = enumValue<CheckInConfidence>(body.confidence, CHECK_IN_CONFIDENCE, 'confidence', true);
-  if (confidence instanceof NextResponse) return confidence;
-  const progressValue = numberValue(body.progressValue, 'progressValue');
-  if (progressValue instanceof NextResponse) return progressValue;
 
   return {
     keyResultId,
-    ...(progressValue !== undefined ? { progressValue } : {}),
-    confidence,
     summary: textValue(body.summary, 'summary') ?? null,
     blockers: textValue(body.blockers, 'blockers') ?? null,
     nextActions: textValue(body.nextActions, 'nextActions') ?? null,

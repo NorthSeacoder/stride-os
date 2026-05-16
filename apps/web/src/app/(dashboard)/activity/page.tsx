@@ -48,7 +48,6 @@ export default async function ActivityPage({
       <PageIntro
         eyebrow="Activity"
         title="活动记录"
-        description="汇总任务、OKR 和复盘的关键变更，方便快速回看最近发生了什么。"
       />
 
       <ActivityFilters values={filters} />
@@ -57,7 +56,6 @@ export default async function ActivityPage({
         <SectionHeader
           eyebrow="Table"
           title="最近活动"
-          description="按时间倒序展示，支持来源、对象、动作和字段变更筛选。展开行内明细即可查看字段 diff。"
         />
         <div className="mt-4">
           <ActivityTable items={activity.items} />

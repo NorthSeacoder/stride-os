@@ -1,21 +1,65 @@
 'use client';
 
-import { Badge, Button, Empty, ErrorAlert, PageIntro, SectionHeader, SelectField, SurfacePanel, TextareaField, TextField } from '@/components/ui';
-import { useActionState, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useActionState, useEffect, useMemo, useState } from 'react';
 import {
-  getConfidenceLabel,
+  Badge,
+  Button,
+  DatePickerField,
+  Empty,
+  ErrorAlert,
+  Modal,
+  PageIntro,
+  SectionHeader,
+  SelectField,
+  SurfacePanel,
+  TextareaField,
+  TextField,
+} from '@/components/ui';
+import {
   getKeyResultStatusLabel,
-  getKeyResultTypeLabel,
   getPeriodStatusLabel,
   getPeriodTypeLabel,
 } from '@/lib/presentation/labels';
 import {
-  createKeyResultAction,
-  createObjectiveAction,
-  createPeriodAction,
+  archiveObjectiveAction,
+  archivePeriodAction,
+  createKeyResultAction as createKeyResultServerAction,
+  createObjectiveAction as createObjectiveServerAction,
+  createPeriodAction as createPeriodServerAction,
+  updateObjectiveAction,
+  updatePeriodAction,
   type OkrActionState,
 } from './actions';
+
+type KeyResultView = {
+  id: string;
+  title: string;
+  description: string | null;
+  status: string;
+  taskProgress: {
+    committedTaskCount: number;
+    completedCommittedTaskCount: number;
+    openCommittedTaskCount: number;
+    hasCommittedTasks: boolean;
+  };
+  latestCheckIn: {
+    hasCheckIn: boolean;
+    summary: string | null;
+    blockers: string | null;
+    nextActions: string | null;
+    updatedAt: string | Date | null;
+  };
+};
+
+type ObjectiveView = {
+  id: string;
+  title: string;
+  description: string | null;
+  sortOrder: number;
+  status?: string;
+  keyResults: KeyResultView[];
+};
 
 type PeriodView = {
   id: string;
@@ -24,291 +68,342 @@ type PeriodView = {
   status: string;
   startDate: string;
   endDate: string;
-  objectives: Array<{
-    id: string;
-    title: string;
-    description: string | null;
-    sortOrder: number;
-    keyResults: Array<{
-      id: string;
-      title: string;
-      type: string;
-      status: string;
-      currentValue: number | null;
-      targetValue: number | null;
-      confidence: string | null;
-      taskProgress: {
-        committedTaskCount: number;
-        completedCommittedTaskCount: number;
-        openCommittedTaskCount: number;
-        hasCommittedTasks: boolean;
-      };
-      latestCheckIn: {
-        hasCheckIn: boolean;
-        progressValue: number | null;
-        confidence: string | null;
-        updatedAt: string | Date | null;
-      };
-    }>;
-  }>;
+  objectives: ObjectiveView[];
 };
 
 const initialState: OkrActionState = { error: '' };
 
-type PeriodType = 'year' | 'quarter' | 'month' | 'custom';
-type Quarter = 'q1' | 'q2' | 'q3' | 'q4';
-
 export function OkrClient({ periods }: { periods: PeriodView[] }) {
-  const [showPeriodForm, setShowPeriodForm] = useState(false);
-  const [objectivePeriodId, setObjectivePeriodId] = useState<string | null>(null);
-  const [krObjectiveId, setKrObjectiveId] = useState<string | null>(null);
-  const [activePeriodId, setActivePeriodId] = useState<string | null>(periods[0]?.id ?? null);
-  const [periodType, setPeriodType] = useState<PeriodType>('quarter');
-  const [periodQuarter, setPeriodQuarter] = useState<Quarter>('q1');
-  const [periodMonth, setPeriodMonth] = useState('01');
-  const [customStartMonth, setCustomStartMonth] = useState('01');
-  const [customEndMonth, setCustomEndMonth] = useState('12');
-  const [periodState, periodAction] = useActionState(createPeriodAction, initialState);
-  const [objectiveState, objectiveAction] = useActionState(createObjectiveAction, initialState);
-  const [krState, krAction] = useActionState(createKeyResultAction, initialState);
+  const [activePeriodId, setActivePeriodId] = useState<string>(periods[0]?.id ?? '');
+  const [activeObjectiveId, setActiveObjectiveId] = useState<string>('');
+  const [createPeriodOpen, setCreatePeriodOpen] = useState(false);
+  const [editPeriodOpen, setEditPeriodOpen] = useState(false);
+  const [archivePeriodOpen, setArchivePeriodOpen] = useState(false);
+  const [createObjectiveOpen, setCreateObjectiveOpen] = useState(false);
+  const [editObjectiveOpen, setEditObjectiveOpen] = useState(false);
+  const [archiveObjectiveOpen, setArchiveObjectiveOpen] = useState(false);
+  const [createKrOpen, setCreateKrOpen] = useState(false);
+
+  const [createPeriodState, createPeriodAction] = useActionState(createPeriodServerAction, initialState);
+  const [editPeriodState, runEditPeriodAction] = useActionState(updatePeriodAction, initialState);
+  const [archivePeriodState, runArchivePeriodAction] = useActionState(archivePeriodAction, initialState);
+  const [createObjectiveState, runCreateObjectiveAction] = useActionState(createObjectiveServerAction, initialState);
+  const [editObjectiveState, runEditObjectiveAction] = useActionState(updateObjectiveAction, initialState);
+  const [archiveObjectiveState, runArchiveObjectiveAction] = useActionState(archiveObjectiveAction, initialState);
+  const [createKrState, runCreateKrAction] = useActionState(createKeyResultServerAction, initialState);
 
   useEffect(() => {
-    if (!periodState.error) setShowPeriodForm(false);
-  }, [periodState]);
-  useEffect(() => {
-    if (!objectiveState.error) setObjectivePeriodId(null);
-  }, [objectiveState]);
-  useEffect(() => {
-    if (!krState.error) setKrObjectiveId(null);
-  }, [krState]);
-
-  useEffect(() => {
-    setActivePeriodId((current) => {
-      if (!periods.length) return null;
-      if (current && periods.some((period) => period.id === current)) return current;
-      return periods[0]?.id ?? null;
-    });
-  }, [periods]);
+    if (periods.length && !periods.some((period) => period.id === activePeriodId)) {
+      setActivePeriodId(periods[0]?.id ?? '');
+    }
+  }, [periods, activePeriodId]);
 
   const activePeriod = periods.find((period) => period.id === activePeriodId) ?? periods[0] ?? null;
 
-  return (
-    <div className="flex h-full min-h-0 flex-col gap-3">
-      <PageIntro
-        eyebrow="目标体系"
-        title="OKR"
-        description="在这里搭建周期、目标和关键结果。每个 KR 的 check-in 仍在详情页完成。"
-        action={
-          <Button
-            type="button"
-            variant="primary"
-            onClick={() => {
-              setPeriodType('quarter');
-              setShowPeriodForm((value) => !value);
-            }}
-          >
-            {showPeriodForm ? '收起周期表单' : '新建周期'}
-          </Button>
-        }
-      />
+  useEffect(() => {
+    const objectiveId = activePeriod?.objectives[0]?.id ?? '';
+    if (!activePeriod) {
+      setActiveObjectiveId('');
+      return;
+    }
+    if (!activePeriod.objectives.some((objective) => objective.id === activeObjectiveId)) {
+      setActiveObjectiveId(objectiveId);
+    }
+  }, [activePeriod, activeObjectiveId]);
 
-      {showPeriodForm && (
-        <PeriodForm
-          periodType={periodType}
-          periodQuarter={periodQuarter}
-          periodMonth={periodMonth}
-          customStartMonth={customStartMonth}
-          customEndMonth={customEndMonth}
-          onPeriodTypeChange={setPeriodType}
-          onPeriodQuarterChange={setPeriodQuarter}
-          onPeriodMonthChange={setPeriodMonth}
-          onCustomStartMonthChange={setCustomStartMonth}
-          onCustomEndMonthChange={setCustomEndMonth}
-          action={periodAction}
-          error={periodState.error}
-        />
+  const activeObjective = activePeriod?.objectives.find((objective) => objective.id === activeObjectiveId)
+    ?? activePeriod?.objectives[0]
+    ?? null;
+
+  useEffect(() => {
+    if (!createPeriodState.error) setCreatePeriodOpen(false);
+  }, [createPeriodState]);
+  useEffect(() => {
+    if (!editPeriodState.error) setEditPeriodOpen(false);
+  }, [editPeriodState]);
+  useEffect(() => {
+    if (!archivePeriodState.error) setArchivePeriodOpen(false);
+  }, [archivePeriodState]);
+  useEffect(() => {
+    if (!createObjectiveState.error) setCreateObjectiveOpen(false);
+  }, [createObjectiveState]);
+  useEffect(() => {
+    if (!editObjectiveState.error) setEditObjectiveOpen(false);
+  }, [editObjectiveState]);
+  useEffect(() => {
+    if (!archiveObjectiveState.error) setArchiveObjectiveOpen(false);
+  }, [archiveObjectiveState]);
+  useEffect(() => {
+    if (!createKrState.error) setCreateKrOpen(false);
+  }, [createKrState]);
+
+  const periodOptions = useMemo(() => periods.map((period) => ({
+    value: period.id,
+    label: `${period.name} · ${getPeriodTypeLabel(period.type)}`,
+  })), [periods]);
+
+  return (
+    <div className="flex h-full min-h-0 flex-col gap-2.5">
+      <PageIntro title="OKR" />
+
+      {activePeriod && (
+        <SurfacePanel className="metal-frame instrument-surface px-3 py-2">
+          <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+            <div className="w-full min-w-0 lg:max-w-[360px]">
+              <SelectField
+                name="activePeriod"
+                label="当前周期"
+                value={activePeriod.id}
+                onValueChange={setActivePeriodId}
+                options={periodOptions}
+              />
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button type="button" variant="primary" onClick={() => setCreatePeriodOpen(true)}>
+                新建周期
+              </Button>
+              <div className="px-1 text-xs text-(--text-muted)">
+                {activePeriod.startDate} 至 {activePeriod.endDate}
+              </div>
+              <Button type="button" variant="secondary" onClick={() => setEditPeriodOpen(true)}>
+                编辑周期
+              </Button>
+              <Button type="button" variant="ghost" onClick={() => setArchivePeriodOpen(true)}>
+                归档周期
+              </Button>
+            </div>
+          </div>
+        </SurfacePanel>
       )}
 
-      {periods.length === 0 ? (
-        <Empty text="还没有周期。先创建第一个周期，开始搭建 OKR 结构。" />
+      {!activePeriod && (
+        <SurfacePanel className="metal-frame instrument-surface px-3 py-2">
+          <div className="flex justify-end">
+            <Button type="button" variant="primary" onClick={() => setCreatePeriodOpen(true)}>
+              新建周期
+            </Button>
+          </div>
+        </SurfacePanel>
+      )}
+
+      {!activePeriod ? (
+        <Empty text="还没有周期。先创建一个周期。" />
       ) : (
-        <div className="grid min-h-0 flex-1 gap-3 xl:grid-cols-[280px_minmax(0,1fr)]">
-          <SurfacePanel className="metal-frame instrument-surface flex min-h-0 flex-col p-3.5">
+        <div className="grid min-h-0 flex-1 gap-3 xl:grid-cols-[320px_minmax(0,1fr)]">
+          <SurfacePanel className="metal-frame instrument-surface flex min-h-0 flex-col p-3">
             <SectionHeader
-              eyebrow="Period Index"
-              title="周期列表"
-              description="先锁定当前周期，再在右侧展开目标和关键结果。"
-            />
-            <div className="mt-3 min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
-              {periods.map((period) => {
-                const active = activePeriod?.id === period.id;
-
-                return (
-                  <button
-                    key={period.id}
-                    type="button"
-                    onClick={() => setActivePeriodId(period.id)}
-                    className={`metal-frame block w-full rounded-[var(--radius-compact)] border p-3 text-left transition-colors ${
-                      active
-                        ? 'border-(--border-glow) bg-[color:rgba(180,204,255,0.08)]'
-                        : 'border-(--border-hairline) bg-[color:rgba(255,255,255,0.03)] hover:border-(--border-glow) hover:bg-[color:rgba(255,255,255,0.05)]'
-                    }`}
-                  >
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Badge>{getPeriodTypeLabel(period.type)}</Badge>
-                      <Badge>{getPeriodStatusLabel(period.status)}</Badge>
-                    </div>
-                    <p className="mt-2 text-base font-semibold text-(--text-primary)">{period.name}</p>
-                    <p className="mt-2 text-sm text-(--text-secondary)">
-                      {period.startDate} 至 {period.endDate}
-                    </p>
-                    <p className="mt-3 text-xs text-(--text-muted)">
-                      {period.objectives.length} 个目标 /{' '}
-                      {period.objectives.reduce((count, objective) => count + objective.keyResults.length, 0)} 个 KR
-                    </p>
-                  </button>
-                );
-              })}
-            </div>
-          </SurfacePanel>
-
-          {activePeriod ? (
-            <SurfacePanel className="metal-frame instrument-surface flex min-h-0 flex-col p-3.5">
-              <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                <div>
-                  <p className="text-[11px] uppercase tracking-[0.22em] text-(--text-muted)">
-                    {getPeriodTypeLabel(activePeriod.type)} / {getPeriodStatusLabel(activePeriod.status)}
-                  </p>
-                  <h2 className="mt-1.5 text-xl font-semibold tracking-[-0.02em] text-(--text-primary)">{activePeriod.name}</h2>
-                  <p className="mt-2 text-sm text-(--text-secondary)">
-                    {activePeriod.startDate} 至 {activePeriod.endDate}
-                  </p>
-                </div>
+              title="目标列表"
+              description={`${activePeriod.name} · ${activePeriod.startDate} 至 ${activePeriod.endDate}`}
+              action={
                 <Button
                   type="button"
                   variant="secondary"
-                  onClick={() => setObjectivePeriodId(objectivePeriodId === activePeriod.id ? null : activePeriod.id)}
+                  size="sm"
+                  onClick={() => setCreateObjectiveOpen(true)}
+                  className="h-10 min-h-10 w-10 min-w-10 rounded-full border-(--border-hairline) bg-[color:rgba(255,255,255,0.04)] px-0 text-(--text-primary) hover:bg-[color:rgba(255,255,255,0.08)]"
+                  aria-label="新增目标"
+                  title="新增目标"
                 >
-                  {objectivePeriodId === activePeriod.id ? '收起目标表单' : '新增目标'}
+                  <PlusIcon />
                 </Button>
-              </div>
-
-              <div className="mt-3 grid gap-2 md:grid-cols-3">
-                <InspectorMetric label="目标数" value={String(activePeriod.objectives.length)} />
-                <InspectorMetric
-                  label="关键结果数"
-                  value={String(activePeriod.objectives.reduce((count, objective) => count + objective.keyResults.length, 0))}
-                />
-                <InspectorMetric
-                  label="活跃信心"
-                  value={
-                    activePeriod.objectives.some((objective) =>
-                      objective.keyResults.some((keyResult) => keyResult.confidence),
-                    )
-                      ? '已记录'
-                      : '待补充'
-                  }
-                />
-              </div>
-
-              <div className="mt-3 min-h-0 flex-1 overflow-y-auto pr-1">
-                {objectivePeriodId === activePeriod.id && (
-                  <form action={objectiveAction} className="grid gap-3 rounded-[var(--radius-compact)] border border-(--border-hairline) bg-[color:rgba(255,255,255,0.03)] p-3">
-                    <input type="hidden" name="periodId" value={activePeriod.id} />
-                    {objectiveState.error && <ErrorAlert message={objectiveState.error} />}
-                    <TextField name="title" label="目标标题" required />
-                    <TextareaField name="description" label="描述" rows={2} />
-                    <div>
-                      <Button type="submit" variant="primary">
-                        创建目标
-                      </Button>
-                    </div>
-                  </form>
-                )}
-
-                <div className={`${objectivePeriodId === activePeriod.id ? 'mt-3' : ''} space-y-3`}>
-                {activePeriod.objectives.length === 0 ? (
-                  <Empty text="这个周期下还没有目标。" />
-                ) : (
-                  activePeriod.objectives.map((objective) => (
-                    <div key={objective.id} className="metal-frame rounded-[var(--radius-compact)] border border-(--border-hairline) bg-[color:rgba(255,255,255,0.03)] p-3">
-                      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                        <div>
-                          <p className="text-[11px] uppercase tracking-[0.22em] text-(--text-muted)">Objective</p>
-                          <h3 className="mt-2 text-xl font-medium text-(--text-primary)">{objective.title}</h3>
-                          {objective.description && <p className="mt-2 text-sm text-(--text-secondary)">{objective.description}</p>}
+              }
+            />
+            <div className="mt-2.5 min-h-0 flex-1 space-y-1.5 border-t border-(--border-hairline) pt-2.5 overflow-y-auto pr-1">
+              {activePeriod.objectives.length === 0 ? (
+                <Empty text="这个周期下还没有目标。" />
+              ) : (
+                activePeriod.objectives.map((objective) => {
+                  const selected = objective.id === activeObjective?.id;
+                  const keyResultCount = objective.keyResults.length;
+                  return (
+                    <button
+                      key={objective.id}
+                      type="button"
+                      onClick={() => setActiveObjectiveId(objective.id)}
+                      className={`metal-frame block w-full rounded-[var(--radius-compact)] border px-3 py-2.5 text-left transition-colors ${
+                        selected
+                          ? 'border-(--border-glow) bg-[color:rgba(180,204,255,0.10)] shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]'
+                          : 'border-(--border-hairline) bg-[color:rgba(255,255,255,0.02)] hover:border-(--border-glow) hover:bg-[color:rgba(255,255,255,0.04)]'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[11px] uppercase tracking-[0.18em] text-(--text-muted)">Objective</p>
+                          <p className="mt-1.5 truncate text-sm font-semibold text-(--text-primary)">{objective.title}</p>
                         </div>
-                        <Button
-                          type="button"
-                          variant="secondary"
-                          onClick={() => setKrObjectiveId(krObjectiveId === objective.id ? null : objective.id)}
-                        >
-                          {krObjectiveId === objective.id ? '收起 KR 表单' : '新增关键结果'}
-                        </Button>
+                        <div className="shrink-0">
+                          <Badge>{keyResultCount} KR</Badge>
+                        </div>
                       </div>
-
-                      {krObjectiveId === objective.id && (
-                        <form action={krAction} className="mt-3 grid gap-3 rounded-[var(--radius-compact)] border border-(--border-hairline) bg-[color:rgba(255,255,255,0.03)] p-3 md:grid-cols-2">
-                          <input type="hidden" name="objectiveId" value={objective.id} />
-                          {krState.error && <div className="md:col-span-2"><ErrorAlert message={krState.error} /></div>}
-                          <div className="md:col-span-2">
-                            <TextField name="title" label="KR 标题" required />
-                          </div>
-                          <SelectField
-                            name="type"
-                            label="类型"
-                            defaultValue="numeric"
-                            options={[
-                              { value: 'numeric', label: '数值型' },
-                              { value: 'milestone', label: '里程碑型' },
-                              { value: 'hybrid', label: '混合型' },
-                            ]}
-                          />
-                          <TextField name="unit" label="单位" />
-                          <TextField name="targetValue" label="目标值" type="number" step="0.01" />
-                          <TextField name="currentValue" label="手工当前值" type="number" step="0.01" />
-                          <div className="md:col-span-2">
-                            <Button type="submit" variant="primary">
-                              创建关键结果
-                            </Button>
-                          </div>
-                        </form>
+                      {objective.description && (
+                        <p className="mt-1.5 line-clamp-1 text-sm leading-5 text-(--text-secondary)">{objective.description}</p>
                       )}
+                    </button>
+                  );
+                })
+              )}
+            </div>
+          </SurfacePanel>
 
-                      <div className="mt-4 space-y-3">
-                        {objective.keyResults.length === 0 ? (
-                          <Empty text="这个目标下还没有关键结果。" />
-                        ) : (
-                          objective.keyResults.map((keyResult) => (
-                            <Link
-                              key={keyResult.id}
-                              href={`/okr/${keyResult.id}`}
-                              className="metal-frame block rounded-[var(--radius-compact)] border border-(--border-hairline) bg-[color:rgba(255,255,255,0.03)] p-3 transition-colors hover:border-(--border-glow) hover:bg-[color:rgba(255,255,255,0.05)]"
-                            >
-                              <p className="font-medium text-(--text-primary)">{keyResult.title}</p>
-                              <div className="mt-3 flex flex-wrap items-center gap-2">
-                                <Badge>{getKeyResultTypeLabel(keyResult.type)}</Badge>
-                                <Badge>{getKeyResultStatusLabel(keyResult.status)}</Badge>
-                                <Badge>{formatTaskProgressBadge(keyResult.taskProgress)}</Badge>
-                                <Badge>
-                                  {keyResult.latestCheckIn.hasCheckIn
-                                    ? `最近判断 ${keyResult.latestCheckIn.progressValue ?? '已记录'}`
-                                    : '暂无 check-in'}
-                                </Badge>
-                                <Badge>信心 {getConfidenceLabel(keyResult.latestCheckIn.confidence ?? keyResult.confidence)}</Badge>
-                              </div>
-                            </Link>
-                          ))
-                        )}
-                      </div>
-                    </div>
-                  ))
-                )}
+          <SurfacePanel className="metal-frame instrument-surface flex min-h-0 flex-col p-3">
+            {!activeObjective ? (
+              <Empty text="请选择一个目标。" />
+            ) : (
+              <>
+                <div className="flex flex-col gap-2.5 lg:flex-row lg:items-start lg:justify-between">
+                  <div>
+                    <p className="text-[11px] uppercase tracking-[0.22em] text-(--text-muted)">
+                      {getPeriodTypeLabel(activePeriod.type)} / {getPeriodStatusLabel(activePeriod.status)}
+                    </p>
+                    <h2 className="mt-1.5 text-xl font-semibold tracking-[-0.02em] text-(--text-primary)">
+                      {activeObjective.title}
+                    </h2>
+                    {activeObjective.description && (
+                      <p className="mt-1.5 text-sm text-(--text-secondary)">{activeObjective.description}</p>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button type="button" variant="secondary" onClick={() => setEditObjectiveOpen(true)}>
+                      编辑
+                    </Button>
+                    <Button type="button" variant="ghost" onClick={() => setArchiveObjectiveOpen(true)}>
+                      归档
+                    </Button>
+                    <Button type="button" variant="primary" onClick={() => setCreateKrOpen(true)}>
+                      新增 KR
+                    </Button>
+                  </div>
                 </div>
-              </div>
-            </SurfacePanel>
-          ) : null}
+
+                <div className="mt-3 grid gap-2 md:grid-cols-3">
+                  <InspectorMetric label="KR 数" value={String(activeObjective.keyResults.length)} />
+                  <InspectorMetric
+                    label="活跃 KR"
+                    value={String(activeObjective.keyResults.filter((item) => item.status === 'active' || item.status === 'at_risk').length)}
+                  />
+                  <InspectorMetric
+                    label="已 check-in"
+                    value={String(activeObjective.keyResults.filter((item) => item.latestCheckIn.hasCheckIn).length)}
+                  />
+                </div>
+
+                <div className="mt-4 min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
+                  {activeObjective.keyResults.length === 0 ? (
+                    <Empty text="这个目标下还没有关键结果。" />
+                  ) : (
+                    activeObjective.keyResults.map((keyResult) => (
+                      <Link
+                        key={keyResult.id}
+                        href={`/okr/${keyResult.id}`}
+                        className="metal-frame block rounded-[var(--radius-compact)] border border-(--border-hairline) bg-[color:rgba(255,255,255,0.025)] px-3 py-3 transition-colors hover:border-(--border-glow) hover:bg-[color:rgba(255,255,255,0.05)]"
+                      >
+                        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                          <div className="min-w-0">
+                            <p className="font-medium text-(--text-primary)">{keyResult.title}</p>
+                            {keyResult.description && (
+                              <p className="mt-1.5 text-sm leading-6 text-(--text-secondary)">{keyResult.description}</p>
+                            )}
+                            <div className="mt-2 flex flex-wrap items-center gap-2">
+                              <Badge>{getKeyResultStatusLabel(keyResult.status)}</Badge>
+                              <Badge>{formatTaskProgressBadge(keyResult.taskProgress)}</Badge>
+                              <Badge>
+                                {keyResult.latestCheckIn.hasCheckIn ? '已 check-in' : '暂无 check-in'}
+                              </Badge>
+                            </div>
+                          </div>
+                          <div className="min-w-[128px] text-sm text-(--text-secondary)">
+                            <p className="text-[11px] uppercase tracking-[0.18em] text-(--text-muted)">最近更新</p>
+                            <p className="mt-2">
+                              {keyResult.latestCheckIn.hasCheckIn
+                                ? String(keyResult.latestCheckIn.updatedAt).slice(0, 10)
+                                : '暂无 check-in'}
+                            </p>
+                            {keyResult.latestCheckIn.hasCheckIn && keyResult.latestCheckIn.summary && (
+                              <p className="mt-1 line-clamp-2 text-xs leading-5 text-(--text-muted)">
+                                {keyResult.latestCheckIn.summary}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </Link>
+                    ))
+                  )}
+                </div>
+              </>
+            )}
+          </SurfacePanel>
         </div>
+      )}
+
+      <PeriodModal
+        mode="create"
+        open={createPeriodOpen}
+        onOpenChange={setCreatePeriodOpen}
+        action={createPeriodAction}
+        error={createPeriodState.error}
+      />
+      {activePeriod && (
+        <>
+          <PeriodModal
+            mode="edit"
+            open={editPeriodOpen}
+            onOpenChange={setEditPeriodOpen}
+            action={runEditPeriodAction}
+            error={editPeriodState.error}
+            period={activePeriod}
+          />
+          <ArchiveModal
+            open={archivePeriodOpen}
+            onOpenChange={setArchivePeriodOpen}
+            title="归档周期"
+            description={`确认归档「${activePeriod.name}」？`}
+            action={runArchivePeriodAction}
+            hiddenName="periodId"
+            hiddenValue={activePeriod.id}
+            error={archivePeriodState.error}
+            confirmLabel="确认归档周期"
+          />
+        </>
+      )}
+      {activePeriod && (
+        <ObjectiveModal
+          mode="create"
+          open={createObjectiveOpen}
+          onOpenChange={setCreateObjectiveOpen}
+          action={runCreateObjectiveAction}
+          error={createObjectiveState.error}
+          periodId={activePeriod.id}
+        />
+      )}
+      {activeObjective && (
+        <>
+          <ObjectiveModal
+            mode="edit"
+            open={editObjectiveOpen}
+            onOpenChange={setEditObjectiveOpen}
+            action={runEditObjectiveAction}
+            error={editObjectiveState.error}
+            objective={activeObjective}
+          />
+          <ArchiveModal
+            open={archiveObjectiveOpen}
+            onOpenChange={setArchiveObjectiveOpen}
+            title="归档目标"
+            description={`确认归档目标「${activeObjective.title}」？`}
+            action={runArchiveObjectiveAction}
+            hiddenName="objectiveId"
+            hiddenValue={activeObjective.id}
+            error={archiveObjectiveState.error}
+            confirmLabel="确认归档目标"
+          />
+          <CreateKeyResultModal
+            open={createKrOpen}
+            onOpenChange={setCreateKrOpen}
+            action={runCreateKrAction}
+            error={createKrState.error}
+            objectiveId={activeObjective.id}
+          />
+        </>
       )}
     </div>
   );
@@ -316,18 +411,14 @@ export function OkrClient({ periods }: { periods: PeriodView[] }) {
 
 function InspectorMetric({ label, value }: { label: string; value: string }) {
   return (
-    <div className="metal-frame rounded-[var(--radius-compact)] border border-(--border-hairline) bg-[color:rgba(255,255,255,0.03)] p-3">
+    <div className="metal-frame rounded-[var(--radius-compact)] border border-(--border-hairline) bg-[color:rgba(255,255,255,0.025)] px-3 py-2.5">
       <p className="text-[11px] uppercase tracking-[0.22em] text-(--text-muted)">{label}</p>
-      <p className="mt-3 text-2xl font-semibold tracking-[-0.02em] text-(--text-primary)">{value}</p>
+      <p className="mt-1.5 text-xl font-semibold tracking-[-0.02em] text-(--text-primary)">{value}</p>
     </div>
   );
 }
 
-function formatTaskProgressBadge(taskProgress: {
-  hasCommittedTasks: boolean;
-  completedCommittedTaskCount: number;
-  committedTaskCount: number;
-}) {
+function formatTaskProgressBadge(taskProgress: KeyResultView['taskProgress']) {
   if (!taskProgress.hasCommittedTasks) {
     return '暂无承诺任务';
   }
@@ -335,217 +426,207 @@ function formatTaskProgressBadge(taskProgress: {
   return `任务 ${taskProgress.completedCommittedTaskCount}/${taskProgress.committedTaskCount}`;
 }
 
-function getQuarterRange(quarter: Quarter) {
-  const year = new Date().getFullYear();
-  const ranges = {
-    q1: { startDate: `${year}-01-01`, endDate: `${year}-03-31` },
-    q2: { startDate: `${year}-04-01`, endDate: `${year}-06-30` },
-    q3: { startDate: `${year}-07-01`, endDate: `${year}-09-30` },
-    q4: { startDate: `${year}-10-01`, endDate: `${year}-12-31` },
-  };
-  return ranges[quarter];
-}
-
-function getMonthRange(month: string) {
-  const year = new Date().getFullYear();
-  const monthIndex = Number(month);
-  const nextMonth = monthIndex === 12 ? 1 : monthIndex + 1;
-  const nextMonthYear = monthIndex === 12 ? year + 1 : year;
-  const endDay = new Date(nextMonthYear, nextMonth - 1, 0).getDate();
-
-  return {
-    startDate: `${year}-${String(monthIndex).padStart(2, '0')}-01`,
-    endDate: `${nextMonthYear}-${String(nextMonth).padStart(2, '0')}-${String(endDay).padStart(2, '0')}`,
-  };
-}
-
-function PeriodForm({
-  periodType,
-  periodQuarter,
-  periodMonth,
-  customStartMonth,
-  customEndMonth,
-  onPeriodTypeChange,
-  onPeriodQuarterChange,
-  onPeriodMonthChange,
-  onCustomStartMonthChange,
-  onCustomEndMonthChange,
-  action,
-  error,
-}: {
-  periodType: PeriodType;
-  periodQuarter: Quarter;
-  periodMonth: string;
-  customStartMonth: string;
-  customEndMonth: string;
-  onPeriodTypeChange: (value: PeriodType) => void;
-  onPeriodQuarterChange: (value: Quarter) => void;
-  onPeriodMonthChange: (value: string) => void;
-  onCustomStartMonthChange: (value: string) => void;
-  onCustomEndMonthChange: (value: string) => void;
-  action: (formData: FormData) => void;
-  error: string;
-}) {
-  const typeOptions = useMemo(() => [
-    { value: 'year', label: '年度' },
-    { value: 'quarter', label: '季度' },
-    { value: 'month', label: '月度' },
-    { value: 'custom', label: '自定义' },
-  ], []);
-
+function PlusIcon() {
   return (
-    <form action={action} className="metal-frame instrument-surface space-y-3 rounded-[var(--radius-compact)] border border-(--border-hairline) p-3.5">
-      {error && <ErrorAlert message={error} />}
-      <div className="grid gap-3 md:grid-cols-2">
-        <TextField name="name" label="名称" required />
-        <SelectField
-          name="type"
-          label="类型"
-          value={periodType}
-          onValueChange={(value) => onPeriodTypeChange(value as PeriodType)}
-          options={typeOptions}
-        />
-      </div>
-
-      <PeriodDateFields
-        type={periodType}
-        quarter={periodQuarter}
-        month={periodMonth}
-        customStartMonth={customStartMonth}
-        customEndMonth={customEndMonth}
-        onQuarterChange={onPeriodQuarterChange}
-        onMonthChange={onPeriodMonthChange}
-        onCustomStartMonthChange={onCustomStartMonthChange}
-        onCustomEndMonthChange={onCustomEndMonthChange}
-      />
-
-      <Button type="submit" variant="primary">
-        创建周期
-      </Button>
-    </form>
+    <svg viewBox="0 0 20 20" fill="none" aria-hidden="true" className="h-[18px] w-[18px]">
+      <path d="M10 4.25v11.5M4.25 10h11.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
   );
 }
 
-function PeriodDateFields({
-  type,
-  quarter,
-  month,
-  customStartMonth,
-  customEndMonth,
-  onQuarterChange,
-  onMonthChange,
-  onCustomStartMonthChange,
-  onCustomEndMonthChange,
+function PeriodModal({
+  mode,
+  open,
+  onOpenChange,
+  action,
+  error,
+  period,
 }: {
-  type: PeriodType;
-  quarter: Quarter;
-  month: string;
-  customStartMonth: string;
-  customEndMonth: string;
-  onQuarterChange: (value: Quarter) => void;
-  onMonthChange: (value: string) => void;
-  onCustomStartMonthChange: (value: string) => void;
-  onCustomEndMonthChange: (value: string) => void;
+  mode: 'create' | 'edit';
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  action: (formData: FormData) => void;
+  error: string;
+  period?: PeriodView;
 }) {
-  if (type === 'year') {
-    const year = new Date().getFullYear();
+  const [type, setType] = useState(period?.type ?? 'year');
+  const [startDate, setStartDate] = useState(period?.startDate ?? '');
+  const [endDate, setEndDate] = useState(period?.endDate ?? '');
 
-    return (
-      <div className="rounded-[14px] border border-(--border-hairline) bg-[color:rgba(255,255,255,0.03)] px-3 py-2 text-sm text-(--text-secondary)">
-        年度周期默认覆盖当前年，不需要单独选开始/结束日期。
-        <input type="hidden" name="startDate" value={`${year}-01-01`} />
-        <input type="hidden" name="endDate" value={`${year}-12-31`} />
-      </div>
-    );
-  }
-
-  if (type === 'quarter') {
-    const options: Array<{ value: Quarter; label: string }> = [
-      { value: 'q1', label: 'Q1' },
-      { value: 'q2', label: 'Q2' },
-      { value: 'q3', label: 'Q3' },
-      { value: 'q4', label: 'Q4' },
-    ];
-    const range = getQuarterRange(quarter);
-
-    return (
-      <div className="grid gap-3 md:grid-cols-2">
-        <SelectField
-          name="quarter"
-          label="季度"
-          value={quarter}
-          onValueChange={(value) => onQuarterChange(value as Quarter)}
-          options={options}
-        />
-        <div className="rounded-[14px] border border-(--border-hairline) bg-[color:rgba(255,255,255,0.03)] px-3 py-2 text-sm text-(--text-secondary)">
-          当前季度会自动展开成具体起止日期。
-          <input type="hidden" name="startDate" value={range.startDate} />
-          <input type="hidden" name="endDate" value={range.endDate} />
-        </div>
-      </div>
-    );
-  }
-
-  if (type === 'month') {
-    const options = Array.from({ length: 12 }, (_, index) => ({
-      value: String(index + 1).padStart(2, '0'),
-      label: `${index + 1} 月`,
-    }));
-    const range = getMonthRange(month);
-
-    return (
-      <div className="grid gap-3 md:grid-cols-2">
-        <SelectField
-          name="month"
-          label="月份"
-          value={month}
-          onValueChange={onMonthChange}
-          options={options}
-        />
-        <div className="rounded-[14px] border border-(--border-hairline) bg-[color:rgba(255,255,255,0.03)] px-3 py-2 text-sm text-(--text-secondary)">
-          月度周期会自动展开成具体起止日期。
-          <input type="hidden" name="startDate" value={range.startDate} />
-          <input type="hidden" name="endDate" value={range.endDate} />
-        </div>
-      </div>
-    );
-  }
-
-  const monthOptions = Array.from({ length: 12 }, (_, index) => {
-    const value = String(index + 1).padStart(2, '0');
-    return { value, label: `${index + 1} 月` };
-  });
-  const startMonth = Math.max(1, Number(customStartMonth) || 1);
-  const endMonth = Math.max(startMonth, Number(customEndMonth) || startMonth);
-  const startRange = getMonthRange(String(startMonth).padStart(2, '0'));
-  const endRange = getMonthRange(String(endMonth).padStart(2, '0'));
+  useEffect(() => {
+    if (open) {
+      setType(period?.type ?? 'year');
+      setStartDate(period?.startDate ?? '');
+      setEndDate(period?.endDate ?? '');
+    }
+  }, [open, period]);
 
   return (
-    <div className="grid gap-3 md:grid-cols-2">
-      <SelectField
-        name="startMonth"
-        label="开始月份"
-        value={String(startMonth).padStart(2, '0')}
-        onValueChange={(nextValue) => {
-          onCustomStartMonthChange(nextValue);
-          if (Number(nextValue) > endMonth) {
-            onCustomEndMonthChange(nextValue);
-          }
-        }}
-        options={monthOptions}
-      />
-      <SelectField
-        name="endMonth"
-        label="结束月份"
-        value={String(endMonth).padStart(2, '0')}
-        onValueChange={onCustomEndMonthChange}
-        options={monthOptions.filter((option) => Number(option.value) >= startMonth)}
-      />
-      <div className="rounded-[14px] border border-(--border-hairline) bg-[color:rgba(255,255,255,0.03)] px-3 py-2 text-sm text-(--text-secondary) md:col-span-2">
-        自定义周期按月份粒度保存，系统会自动展开为具体日期。
-        <input type="hidden" name="startDate" value={startRange.startDate} />
-        <input type="hidden" name="endDate" value={endRange.endDate} />
-      </div>
-    </div>
+    <Modal
+      open={open}
+      onOpenChange={onOpenChange}
+      title={mode === 'create' ? '新建周期' : '编辑周期'}
+    >
+      <form action={action} className="space-y-3">
+        {mode === 'edit' && period && <input type="hidden" name="periodId" value={period.id} />}
+        {error && <ErrorAlert message={error} />}
+        <TextField name="name" label="周期名称" defaultValue={period?.name ?? ''} required />
+        <div className="grid gap-3 md:grid-cols-2">
+          <SelectField
+            name="type"
+            label="类型"
+            value={type}
+            onValueChange={setType}
+            options={[
+              { value: 'year', label: '年度' },
+              { value: 'quarter', label: '季度' },
+              { value: 'month', label: '月度' },
+              { value: 'custom', label: '自定义' },
+            ]}
+          />
+          <SelectField
+            name="status"
+            label="状态"
+            defaultValue={period?.status ?? 'active'}
+            options={[
+              { value: 'active', label: '活跃' },
+              { value: 'archived', label: '归档' },
+            ]}
+          />
+        </div>
+        <div className="grid gap-3 md:grid-cols-2">
+          <DatePickerField name="startDate" label="开始日期" value={startDate} onValueChange={setStartDate} allowClear={false} />
+          <DatePickerField name="endDate" label="结束日期" value={endDate} onValueChange={setEndDate} allowClear={false} />
+        </div>
+        <div className="flex justify-end pt-1">
+          <Button type="submit" variant="primary">{mode === 'create' ? '创建周期' : '保存周期'}</Button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+function ObjectiveModal({
+  mode,
+  open,
+  onOpenChange,
+  action,
+  error,
+  periodId,
+  objective,
+}: {
+  mode: 'create' | 'edit';
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  action: (formData: FormData) => void;
+  error: string;
+  periodId?: string;
+  objective?: ObjectiveView;
+}) {
+  return (
+    <Modal
+      open={open}
+      onOpenChange={onOpenChange}
+      title={mode === 'create' ? '新增目标' : '编辑目标'}
+    >
+      <form action={action} className="space-y-3">
+        {mode === 'create' && periodId && <input type="hidden" name="periodId" value={periodId} />}
+        {mode === 'edit' && objective && <input type="hidden" name="objectiveId" value={objective.id} />}
+        <input type="hidden" name="sortOrder" value={String(objective?.sortOrder ?? 0)} />
+        {error && <ErrorAlert message={error} />}
+        <TextField name="title" label="目标标题" defaultValue={objective?.title ?? ''} required />
+        <TextareaField name="description" label="描述" rows={3} defaultValue={objective?.description ?? ''} />
+        <SelectField
+          name="status"
+          label="状态"
+          defaultValue={objective?.status ?? 'active'}
+          options={[
+            { value: 'active', label: '活跃' },
+            { value: 'done', label: '完成' },
+            { value: 'archived', label: '归档' },
+          ]}
+        />
+        <div className="flex justify-end pt-1">
+          <Button type="submit" variant="primary">{mode === 'create' ? '创建目标' : '保存目标'}</Button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+function CreateKeyResultModal({
+  open,
+  onOpenChange,
+  action,
+  error,
+  objectiveId,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  action: (formData: FormData) => void;
+  error: string;
+  objectiveId: string;
+}) {
+  return (
+    <Modal
+      open={open}
+      onOpenChange={onOpenChange}
+      title="新增 KR"
+    >
+      <form action={action} className="space-y-3">
+        <input type="hidden" name="objectiveId" value={objectiveId} />
+        {error && <ErrorAlert message={error} />}
+        <TextField name="title" label="KR 标题" required />
+        <TextareaField name="description" label="结果描述" rows={3} />
+        <SelectField
+          name="status"
+          label="状态"
+          defaultValue="active"
+          options={[
+            { value: 'active', label: '活跃' },
+            { value: 'at_risk', label: '有风险' },
+            { value: 'done', label: '完成' },
+            { value: 'archived', label: '归档' },
+          ]}
+        />
+        <div className="flex justify-end pt-1">
+          <Button type="submit" variant="primary">创建 KR</Button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+function ArchiveModal({
+  open,
+  onOpenChange,
+  title,
+  description,
+  action,
+  hiddenName,
+  hiddenValue,
+  error,
+  confirmLabel,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  title: string;
+  description: string;
+  action: (formData: FormData) => void;
+  hiddenName: string;
+  hiddenValue: string;
+  error: string;
+  confirmLabel: string;
+}) {
+  return (
+    <Modal open={open} onOpenChange={onOpenChange} title={title} description={description}>
+      <form action={action} className="space-y-3">
+        <input type="hidden" name={hiddenName} value={hiddenValue} />
+        {error && <ErrorAlert message={error} />}
+        <div className="flex justify-end pt-1">
+          <Button type="submit" variant="primary">{confirmLabel}</Button>
+        </div>
+      </form>
+    </Modal>
   );
 }

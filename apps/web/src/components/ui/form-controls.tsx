@@ -35,7 +35,7 @@ export function TextField({ label, error, description, className = '', ...props 
     <FieldShell label={label} error={error} description={description}>
       <Field.Control
         {...props}
-        className={`w-full rounded-[var(--radius-compact)] border border-(--border-hairline) bg-[color:rgba(255,255,255,0.03)] px-3 py-2 text-sm text-(--text-primary) outline-none transition-colors focus:border-(--border-glow) focus:ring-2 focus:ring-(--focus-ring)/30 ${className}`}
+        className={`w-full rounded-[var(--radius-compact)] border border-(--border-hairline) bg-[color:rgba(255,255,255,0.03)] px-3 py-2 text-sm text-(--text-primary) outline-none transition-[background-color,border-color,box-shadow] duration-200 ease-out placeholder:text-(--text-muted) hover:border-(--border-subtle) hover:bg-[color:rgba(255,255,255,0.04)] focus:border-(--border-glow) focus:bg-[color:rgba(255,255,255,0.04)] focus:ring-2 focus:ring-(--focus-ring)/30 disabled:cursor-not-allowed disabled:opacity-60 ${className}`}
       />
     </FieldShell>
   );
@@ -64,7 +64,7 @@ export function TextareaField({ label, error, description, className = '', ...pr
         id={controlId}
         aria-describedby={describedBy}
         aria-invalid={error ? true : undefined}
-        className={`w-full rounded-[var(--radius-compact)] border border-(--border-hairline) bg-[color:rgba(255,255,255,0.03)] px-3 py-2 text-sm text-(--text-primary) outline-none transition-colors focus:border-(--border-glow) focus:ring-2 focus:ring-(--focus-ring)/30 ${className}`}
+        className={`w-full rounded-[var(--radius-compact)] border border-(--border-hairline) bg-[color:rgba(255,255,255,0.03)] px-3 py-2 text-sm text-(--text-primary) outline-none transition-[background-color,border-color,box-shadow] duration-200 ease-out placeholder:text-(--text-muted) hover:border-(--border-subtle) hover:bg-[color:rgba(255,255,255,0.04)] focus:border-(--border-glow) focus:bg-[color:rgba(255,255,255,0.04)] focus:ring-2 focus:ring-(--focus-ring)/30 disabled:cursor-not-allowed disabled:opacity-60 ${className}`}
       />
       {description && <p id={descriptionId} className="mt-1 text-xs text-(--text-muted)">{description}</p>}
       {error && <p id={errorId} className="mt-1 text-xs text-(--danger-text)">{error}</p>}
@@ -168,7 +168,7 @@ export function SelectField({
           onValueChange?.(resolvedValue);
         }}
       >
-        <Select.Trigger className="flex w-full items-center justify-between rounded-[var(--radius-compact)] border border-(--border-hairline) bg-[color:rgba(255,255,255,0.03)] px-3 py-2 text-left text-sm text-(--text-primary) outline-none transition-colors focus:border-(--border-glow) focus:ring-2 focus:ring-(--focus-ring)/30 disabled:cursor-not-allowed disabled:opacity-50">
+        <Select.Trigger className="flex w-full items-center justify-between rounded-[var(--radius-compact)] border border-(--border-hairline) bg-[color:rgba(255,255,255,0.03)] px-3 py-2 text-left text-sm text-(--text-primary) outline-none transition-[background-color,border-color,box-shadow] duration-200 ease-out hover:border-(--border-subtle) hover:bg-[color:rgba(255,255,255,0.04)] focus:border-(--border-glow) focus:bg-[color:rgba(255,255,255,0.04)] focus:ring-2 focus:ring-(--focus-ring)/30 disabled:cursor-not-allowed disabled:opacity-50">
           <Select.Value>{selected?.label ?? placeholder}</Select.Value>
           <Select.Icon className="text-(--text-muted)">⌄</Select.Icon>
         </Select.Trigger>
@@ -179,7 +179,7 @@ export function SelectField({
                 <Select.Item
                   key={option.value}
                   value={option.value}
-                  className="cursor-pointer rounded-[10px] px-3 py-2 text-sm text-(--text-secondary) outline-none hover:bg-[color:rgba(255,255,255,0.05)] hover:text-(--text-primary) data-[highlighted]:bg-[color:rgba(255,255,255,0.05)] data-[highlighted]:text-(--text-primary)"
+                  className="cursor-pointer rounded-[10px] px-3 py-2 text-sm text-(--text-secondary) outline-none transition-[background-color,color] duration-150 ease-out hover:bg-[color:rgba(255,255,255,0.05)] hover:text-(--text-primary) data-[highlighted]:bg-[color:rgba(255,255,255,0.05)] data-[highlighted]:text-(--text-primary)"
                 >
                   <Select.ItemText>{option.label}</Select.ItemText>
                 </Select.Item>
@@ -223,7 +223,7 @@ export function CheckboxField({
         defaultChecked={defaultChecked}
         disabled={disabled}
         onCheckedChange={(nextChecked) => onCheckedChange?.(nextChecked === true)}
-        className="flex size-4 items-center justify-center rounded border border-(--border-hairline) bg-[color:rgba(255,255,255,0.03)] text-(--text-primary) outline-none focus:ring-2 focus:ring-(--focus-ring)/30 data-[checked]:bg-(--bg-panel-contrast) disabled:cursor-not-allowed"
+        className="flex size-4 items-center justify-center rounded border border-(--border-hairline) bg-[color:rgba(255,255,255,0.03)] text-(--text-primary) outline-none transition-[background-color,border-color,box-shadow] duration-200 ease-out hover:border-(--border-subtle) hover:bg-[color:rgba(255,255,255,0.04)] focus:ring-2 focus:ring-(--focus-ring)/30 data-[checked]:bg-(--bg-panel-contrast) disabled:cursor-not-allowed"
       >
         <Checkbox.Indicator className="text-xs leading-none">✓</Checkbox.Indicator>
       </Checkbox.Root>

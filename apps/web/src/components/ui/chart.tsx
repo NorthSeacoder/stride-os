@@ -2,7 +2,6 @@
 
 import * as React from 'react';
 import {
-  ResponsiveContainer,
   Tooltip,
   type TooltipContentProps,
 } from 'recharts';
@@ -37,22 +36,63 @@ export function ChartContainer({
   children: React.ReactNode;
 }) {
   const [mounted, setMounted] = React.useState(false);
+  const containerRef = React.useRef<HTMLDivElement | null>(null);
+  const [size, setSize] = React.useState({ width: 0, height: 0 });
 
   React.useEffect(() => {
     setMounted(true);
   }, []);
 
+  React.useEffect(() => {
+    if (!mounted || !containerRef.current) {
+      return;
+    }
+
+    const element = containerRef.current;
+    const updateSize = () => {
+      const nextWidth = Math.floor(element.clientWidth);
+      const nextHeight = Math.floor(element.clientHeight);
+      setSize((current) => (
+        current.width === nextWidth && current.height === nextHeight
+          ? current
+          : { width: nextWidth, height: nextHeight }
+      ));
+    };
+
+    updateSize();
+
+    const observer = new ResizeObserver(() => {
+      updateSize();
+    });
+
+    observer.observe(element);
+    window.addEventListener('resize', updateSize);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', updateSize);
+    };
+  }, [mounted]);
+
+  const chartChild = React.useMemo(() => {
+    if (!React.isValidElement(children) || size.width <= 0 || size.height <= 0) {
+      return null;
+    }
+
+    return React.cloneElement(children as React.ReactElement<{ width?: number; height?: number }>, {
+      width: size.width,
+      height: size.height,
+    });
+  }, [children, size.height, size.width]);
+
   return (
     <ChartContext.Provider value={config}>
       <div
+        ref={containerRef}
         className={`chart-surface min-h-0 min-w-0 ${className}`.trim()}
-        style={{ width: '100%', height: '100%', minWidth: 0, minHeight: 160, ...buildChartStyle(config) }}
+        style={{ width: '100%', minWidth: 0, minHeight: 160, ...buildChartStyle(config) }}
       >
-        {mounted ? (
-          <ResponsiveContainer width="100%" height="100%">
-            {children}
-          </ResponsiveContainer>
-        ) : null}
+        {mounted ? chartChild : null}
       </div>
     </ChartContext.Provider>
   );

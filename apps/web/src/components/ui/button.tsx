@@ -36,14 +36,14 @@ function buttonClassName({
   className?: string;
 }) {
   const base =
-    'inline-flex items-center justify-center rounded-[var(--radius-compact)] border text-sm outline-none transition-[background-color,border-color,color,box-shadow,transform] duration-150 focus-visible:ring-2 focus-visible:ring-(--focus-ring)/30 disabled:cursor-not-allowed disabled:opacity-50';
+    'inline-flex items-center justify-center gap-2 rounded-[var(--radius-compact)] border text-sm outline-none transition-[background-color,border-color,color,box-shadow,transform] duration-200 ease-out focus-visible:ring-2 focus-visible:ring-(--focus-ring)/30 active:translate-y-px disabled:cursor-not-allowed disabled:opacity-50';
   const sizes = {
-    sm: 'min-h-9 px-3 py-2',
-    md: 'min-h-10 px-4 py-2.5',
+    sm: 'min-h-10 px-3.5 py-2',
+    md: 'min-h-11 px-4 py-2.5',
   };
   const variants = {
     primary:
-      'border-(--border-glow) bg-(--bg-surface-3) font-medium text-(--accent-ice-strong) shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] hover:bg-[color:rgba(69,77,91,0.98)] hover:text-white',
+      'border-(--border-glow) bg-(--bg-surface-3) font-medium text-(--accent-ice-strong) shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] hover:bg-[color:rgba(69,77,91,0.98)] hover:text-(--text-primary)',
     secondary:
       'border-(--border-hairline) bg-(--bg-surface-1) text-(--text-secondary) shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] hover:border-(--border-glow) hover:bg-(--bg-surface-2) hover:text-(--text-primary)',
     ghost:
@@ -81,10 +81,12 @@ export function Button({
     <BaseButton
       {...props}
       disabled={disabled || pending}
+      aria-busy={pending || undefined}
       type={type}
       className={buttonClassName({ variant, size, fullWidth, disabled: disabled || pending, className })}
     >
-      {children}
+      {pending ? <ButtonSpinner /> : null}
+      <span>{children}</span>
     </BaseButton>
   );
 }
@@ -109,5 +111,14 @@ export function LinkButton({
     >
       {children}
     </Link>
+  );
+}
+
+function ButtonSpinner() {
+  return (
+    <span
+      aria-hidden="true"
+      className="inline-block size-3.5 rounded-full border border-current border-r-transparent opacity-80 motion-safe:animate-spin"
+    />
   );
 }

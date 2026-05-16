@@ -30,7 +30,12 @@ export function Modal({ open, onOpenChange, title, description, children, footer
             </div>
             <Dialog.Close
               render={(
-                <Button variant="ghost" size="sm" className="h-9 min-h-9 w-9 min-w-9 px-0" aria-label="关闭">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="h-10 min-h-10 w-10 min-w-10 rounded-full border-(--border-hairline) bg-[color:rgba(255,255,255,0.04)] px-0 text-(--text-primary) hover:bg-[color:rgba(255,255,255,0.08)]"
+                  aria-label="关闭"
+                >
                   <CloseIcon />
                 </Button>
               )}
@@ -46,8 +51,8 @@ export function Modal({ open, onOpenChange, title, description, children, footer
 
 function CloseIcon() {
   return (
-    <svg viewBox="0 0 20 20" fill="none" aria-hidden="true" className="h-[18px] w-[18px]">
-      <path d="M5.5 5.5 14.5 14.5M14.5 5.5 5.5 14.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    <svg viewBox="0 0 20 20" fill="none" aria-hidden="true" className="h-[20px] w-[20px]">
+      <path d="M5.5 5.5 14.5 14.5M14.5 5.5 5.5 14.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
     </svg>
   );
 }

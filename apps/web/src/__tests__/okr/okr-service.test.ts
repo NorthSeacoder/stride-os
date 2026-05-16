@@ -6,6 +6,7 @@ const updateSet = vi.fn();
 const updateWhere = vi.fn();
 const updateReturning = vi.fn();
 const periodsFindFirst = vi.fn();
+const periodsFindMany = vi.fn();
 const objectivesFindFirst = vi.fn();
 const keyResultsFindFirst = vi.fn();
 const txInsertValues = vi.fn();
@@ -40,6 +41,7 @@ vi.mock('@stride-os/db', () => ({
     })),
     query: {
       periods: {
+        findMany: (...args: unknown[]) => periodsFindMany(...args),
         findFirst: (...args: unknown[]) => periodsFindFirst(...args),
       },
       objectives: {
@@ -74,6 +76,7 @@ import {
   createKrCheckIn,
   createObjective,
   createPeriod,
+  listPeriods,
   updateKeyResult,
   updateObjective,
   updatePeriod,
@@ -111,6 +114,7 @@ describe('okr period rules', () => {
       lastTaskProgressAt: null,
     });
     listTaskProgressSnapshotsForKeyResults.mockResolvedValue([]);
+    periodsFindMany.mockResolvedValue([]);
   });
 
   it('supports month as a period type', () => {
@@ -125,19 +129,19 @@ describe('okr period rules', () => {
     insertValues
       .mockReturnValueOnce({ returning: vi.fn().mockResolvedValue([{ id: 'period_1', name: '2026 Q2', type: 'quarter', startDate: '2026-04-01', endDate: '2026-06-30', status: 'active' }]) })
       .mockReturnValueOnce({ returning: vi.fn().mockResolvedValue([{ id: 'obj_1', title: 'Ship it', description: null, status: 'active', sortOrder: 0 }]) })
-      .mockReturnValueOnce({ returning: vi.fn().mockResolvedValue([{ id: 'kr_1', title: 'Grow', type: 'numeric', targetValue: 10, currentValue: 1, unit: '%', status: 'active', confidence: 'low' }]) });
+      .mockReturnValueOnce({ returning: vi.fn().mockResolvedValue([{ id: 'kr_1', title: 'Grow', description: 'desc', status: 'active' }]) });
 
     periodsFindFirst.mockResolvedValue({ id: 'period_1', name: '2026 Q2', type: 'quarter', startDate: '2026-04-01', endDate: '2026-06-30', status: 'active' });
     objectivesFindFirst.mockResolvedValue({ id: 'obj_1', title: 'Ship it', description: null, status: 'active', sortOrder: 0 });
-    keyResultsFindFirst.mockResolvedValue({ id: 'kr_1', title: 'Grow', type: 'numeric', targetValue: 10, currentValue: 1, unit: '%', status: 'active', confidence: 'low' });
+    keyResultsFindFirst.mockResolvedValue({ id: 'kr_1', title: 'Grow', description: 'desc', status: 'active' });
 
     updateReturning
       .mockResolvedValueOnce([{ id: 'period_1', name: '2026 Q2 Updated', type: 'quarter', startDate: '2026-04-01', endDate: '2026-06-30', status: 'active' }])
       .mockResolvedValueOnce([{ id: 'period_1', name: '2026 Q2 Updated', type: 'quarter', startDate: '2026-04-01', endDate: '2026-06-30', status: 'archived' }])
       .mockResolvedValueOnce([{ id: 'obj_1', title: 'Ship better', description: 'desc', status: 'active', sortOrder: 1 }])
       .mockResolvedValueOnce([{ id: 'obj_1', title: 'Ship better', description: 'desc', status: 'archived', sortOrder: 1 }])
-      .mockResolvedValueOnce([{ id: 'kr_1', title: 'Grow more', type: 'numeric', targetValue: 20, currentValue: 5, unit: '%', status: 'active', confidence: 'medium' }])
-      .mockResolvedValueOnce([{ id: 'kr_1', title: 'Grow more', type: 'numeric', targetValue: 20, currentValue: 5, unit: '%', status: 'archived', confidence: 'medium' }]);
+      .mockResolvedValueOnce([{ id: 'kr_1', title: 'Grow more', description: 'desc updated', status: 'active' }])
+      .mockResolvedValueOnce([{ id: 'kr_1', title: 'Grow more', description: 'desc updated', status: 'archived' }]);
 
     await createPeriod({ name: '2026 Q2', type: 'quarter', startDate: '2026-04-01', endDate: '2026-06-30' }, {
       activityContext: { actorType: 'user', actorId: 'user_1', source: 'web' },
@@ -159,10 +163,10 @@ describe('okr period rules', () => {
       activityContext: { actorType: 'user', actorId: 'user_1', source: 'web' },
     });
 
-    await createKeyResult({ objectiveId: 'obj_1', title: 'Grow', type: 'numeric', targetValue: 10, currentValue: 1, unit: '%', confidence: 'low' }, {
+    await createKeyResult({ objectiveId: 'obj_1', title: 'Grow', description: 'desc' }, {
       activityContext: { actorType: 'user', actorId: 'user_1', source: 'web' },
     });
-    await updateKeyResult('kr_1', { title: 'Grow more', targetValue: 20, currentValue: 5, confidence: 'medium' }, {
+    await updateKeyResult('kr_1', { title: 'Grow more', description: 'desc updated' }, {
       activityContext: { actorType: 'user', actorId: 'user_1', source: 'web' },
     });
     await updateKeyResult('kr_1', { status: 'archived' }, {
@@ -183,33 +187,19 @@ describe('okr period rules', () => {
     expect(recordActivity).toHaveBeenCalledWith(expect.objectContaining({ action: 'okr.key_result.archive' }));
   });
 
-  it('records check-in activity transactionally with progress diff', async () => {
+  it('records check-in activity transactionally', async () => {
     keyResultsFindFirst.mockResolvedValue({
       id: 'kr_1',
       title: 'Grow',
-      type: 'numeric',
-      targetValue: 10,
-      currentValue: 1,
-      unit: '%',
       status: 'active',
-      confidence: 'low',
+      description: 'desc',
     });
-    txUpdateReturning.mockResolvedValue([{
-      id: 'kr_1',
-      title: 'Grow',
-      type: 'numeric',
-      targetValue: 10,
-      currentValue: 5,
-      unit: '%',
-      status: 'active',
-      confidence: 'high',
-    }]);
 
     await createKrCheckIn({
       keyResultId: 'kr_1',
-      progressValue: 5,
-      confidence: 'high',
       summary: 'Moved forward',
+      blockers: 'Need review',
+      nextActions: 'Close remaining tasks',
     }, {
       activityContext: { actorType: 'user', actorId: 'user_1', source: 'web' },
     });
@@ -217,9 +207,9 @@ describe('okr period rules', () => {
     expect(recordActivity).toHaveBeenCalledWith(expect.objectContaining({
       action: 'okr.key_result.check_in',
       metadata: expect.objectContaining({
-        changedFields: expect.arrayContaining(['currentValue', 'confidence']),
-        progressValue: 5,
-        confidence: 'high',
+        summary: 'Moved forward',
+        blockers: 'Need review',
+        nextActions: 'Close remaining tasks',
       }),
     }));
   });
@@ -235,7 +225,7 @@ describe('okr period rules', () => {
         title: 'Grow',
         status: 'active',
         objective: { period: { name: '2026 Q2' } },
-        checkIns: [{ confidence: 'medium', createdAt: staleDate }],
+        checkIns: [{ summary: 'On track', blockers: null, nextActions: null, createdAt: staleDate }],
       },
     ]);
     listTaskProgressSnapshotsForKeyResults.mockResolvedValue([
@@ -263,7 +253,7 @@ describe('okr period rules', () => {
         title: 'Grow',
         status: 'at_risk',
         objective: { period: { name: '2026 Q2' } },
-        checkIns: [{ confidence: 'low', createdAt: staleDate, progressValue: 2, summary: 'Blocked', blockers: null, nextActions: null }],
+        checkIns: [{ summary: 'Blocked', blockers: null, nextActions: null, createdAt: staleDate }],
       },
     ]);
     listTaskProgressSnapshotsForKeyResults.mockResolvedValue([
@@ -289,10 +279,74 @@ describe('okr period rules', () => {
       },
       latestCheckIn: {
         hasCheckIn: true,
-        confidence: 'low',
-        progressValue: 2,
         summary: 'Blocked',
       },
     });
+  });
+
+  it('preserves distinct objectives when enriching period progress', async () => {
+    periodsFindMany.mockResolvedValue([
+      {
+        id: 'period_1',
+        name: '2026',
+        type: 'year',
+        status: 'active',
+        startDate: '2026-01-01',
+        endDate: '2026-12-31',
+        objectives: [
+          {
+            id: 'objective_1',
+            title: 'Objective One',
+            description: null,
+            sortOrder: 0,
+            keyResults: [{
+              id: 'kr_1',
+              title: 'KR One',
+              description: 'Result one',
+              status: 'active',
+              checkIns: [],
+            }],
+          },
+          {
+            id: 'objective_2',
+            title: 'Objective Two',
+            description: null,
+            sortOrder: 1,
+            keyResults: [{
+              id: 'kr_2',
+              title: 'KR Two',
+              description: 'Result two',
+              status: 'active',
+              checkIns: [],
+            }],
+          },
+        ],
+      },
+    ]);
+    listTaskProgressSnapshotsForKeyResults.mockResolvedValue([
+      {
+        keyResultId: 'kr_1',
+        committedTaskCount: 0,
+        completedCommittedTaskCount: 0,
+        openCommittedTaskCount: 0,
+        hasCommittedTasks: false,
+        lastTaskProgressAt: null,
+      },
+      {
+        keyResultId: 'kr_2',
+        committedTaskCount: 0,
+        completedCommittedTaskCount: 0,
+        openCommittedTaskCount: 0,
+        hasCommittedTasks: false,
+        lastTaskProgressAt: null,
+      },
+    ]);
+
+    const [period] = await listPeriods();
+
+    expect(period.objectives).toHaveLength(2);
+    expect(period.objectives.map((objective) => objective.id)).toEqual(['objective_1', 'objective_2']);
+    expect(period.objectives[0]?.keyResults[0]?.id).toBe('kr_1');
+    expect(period.objectives[1]?.keyResults[0]?.id).toBe('kr_2');
   });
 });

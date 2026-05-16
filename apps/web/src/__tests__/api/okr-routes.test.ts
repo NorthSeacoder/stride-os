@@ -82,8 +82,10 @@ describe('okr automation api routes', () => {
             },
             latestCheckIn: {
               hasCheckIn: true,
-              confidence: 'medium',
-              progressValue: 0.7,
+              summary: 'On track',
+              blockers: null,
+              nextActions: 'Finish tasks',
+              updatedAt: '2026-05-09T00:00:00.000Z',
             },
           }],
         }],
@@ -147,15 +149,20 @@ describe('okr automation api routes', () => {
       },
       latestCheckIn: {
         hasCheckIn: true,
-        confidence: 'medium',
-        progressValue: 0.7,
+        summary: 'On track',
+        blockers: null,
+        nextActions: 'Finish tasks',
+        updatedAt: '2026-05-09T00:00:00.000Z',
       },
     });
     updateKeyResult.mockResolvedValue({ id: 'kr_1', status: 'at_risk' });
     listKeyResultCheckIns.mockResolvedValue([{ id: 'checkin_1' }]);
     createKrCheckIn.mockResolvedValue({ id: 'checkin_1', keyResultId: 'kr_1' });
 
-    expect((await keyResultsPost(jsonRequest('http://localhost/api/v1/okr/key-results', { auth: 'ok', body: { objectiveId: 'obj_1', title: 'Revenue', type: 'numeric' } }))).status).toBe(201);
+    expect((await keyResultsPost(jsonRequest('http://localhost/api/v1/okr/key-results', {
+      auth: 'ok',
+      body: { objectiveId: 'obj_1', title: 'Revenue', description: 'Reach the result' },
+    }))).status).toBe(201);
     const detailResponse = await keyResultGet(new NextRequest('http://localhost/api/v1/okr/key-results/kr_1', { headers: { authorization: 'Bearer ok' } }), { params: Promise.resolve({ id: 'kr_1' }) });
     expect(detailResponse.status).toBe(200);
     await expect(detailResponse.json()).resolves.toMatchObject({
@@ -165,25 +172,24 @@ describe('okr automation api routes', () => {
       },
       latestCheckIn: {
         hasCheckIn: true,
-        confidence: 'medium',
+        summary: 'On track',
       },
     });
     expect((await keyResultPatch(jsonRequest('http://localhost/api/v1/okr/key-results/kr_1', { auth: 'ok', method: 'PATCH', body: { status: 'at_risk' } }), { params: Promise.resolve({ id: 'kr_1' }) })).status).toBe(200);
     expect((await keyResultArchivePost(jsonRequest('http://localhost/api/v1/okr/key-results/kr_1/archive', { auth: 'ok' }), { params: Promise.resolve({ id: 'kr_1' }) })).status).toBe(200);
     expect((await checkInsGet(new NextRequest('http://localhost/api/v1/okr/key-results/kr_1/check-ins', { headers: { authorization: 'Bearer ok' } }), { params: Promise.resolve({ id: 'kr_1' }) })).status).toBe(200);
-    expect((await checkInsPost(jsonRequest('http://localhost/api/v1/okr/key-results/kr_1/check-ins', { auth: 'ok', body: { confidence: 'medium', progressValue: 0.7 } }), { params: Promise.resolve({ id: 'kr_1' }) })).status).toBe(201);
+    expect((await checkInsPost(jsonRequest('http://localhost/api/v1/okr/key-results/kr_1/check-ins', {
+      auth: 'ok',
+      body: { summary: 'On track', blockers: 'Waiting review', nextActions: 'Finish tasks' },
+    }), { params: Promise.resolve({ id: 'kr_1' }) })).status).toBe(201);
     expect((await legacyCheckInsGet(new NextRequest('http://localhost/api/v1/key-results/kr_1/check-ins', { headers: { authorization: 'Bearer ok' } }), { params: Promise.resolve({ id: 'kr_1' }) })).status).toBe(200);
   });
 
-  it('returns 400 for invalid key result type and missing check-in confidence', async () => {
+  it('returns 400 for missing key result title', async () => {
     await expectJsonError(await keyResultsPost(jsonRequest('http://localhost/api/v1/okr/key-results', {
       auth: 'ok',
-      body: { objectiveId: 'obj_1', title: 'Revenue', type: 'bad' },
-    })), 400, 'type is invalid');
-    await expectJsonError(await checkInsPost(jsonRequest('http://localhost/api/v1/okr/key-results/kr_1/check-ins', {
-      auth: 'ok',
-      body: { summary: 'No confidence' },
-    }), { params: Promise.resolve({ id: 'kr_1' }) }), 400, 'confidence is required');
+      body: { objectiveId: 'obj_1', title: '' },
+    })), 400, 'title is required');
   });
 
   it('keeps current OKR route protected and available', async () => {
