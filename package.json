@@ -1,7 +1,7 @@
 {
   "private": true,
   "name": "stride-os",
-  "version": "0.1.10",
+  "version": "0.1.11",
   "scripts": {
     "prepare": "git rev-parse --git-dir >/dev/null 2>&1 && git config core.hooksPath .githooks 2>/dev/null || true",
     "dev": "turbo run dev",

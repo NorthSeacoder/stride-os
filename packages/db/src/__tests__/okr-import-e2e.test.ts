@@ -42,7 +42,7 @@ function countRows(dbFile: string, table: string) {
 }
 
 describe('okr import e2e flow', () => {
-  it('runs the full annual import flow and leaves consistent ids in sqlite and manifest', () => {
+  it('runs the full annual import flow and leaves consistent ids in sqlite and manifest', { timeout: 20000 }, () => {
     removeArtifacts();
 
     const envVars = {

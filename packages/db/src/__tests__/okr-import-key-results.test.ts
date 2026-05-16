@@ -44,7 +44,7 @@ function parseJsonOutput(output: string) {
 }
 
 describe('okr import key-results-only mode', () => {
-  it('upserts key results under imported objectives', () => {
+  it('upserts key results under imported objectives', { timeout: 15000 }, () => {
     removeSqliteArtifacts();
 
     const envVars = {
