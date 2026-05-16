@@ -1,5 +1,7 @@
 declare module 'better-sqlite3' {
-  type Transaction<T extends (...args: any[]) => any> = T & {
+  type SqliteFunction = (...args: unknown[]) => unknown;
+
+  type Transaction<T extends SqliteFunction> = T & {
     deferred: T;
     immediate: T;
     exclusive: T;
@@ -16,7 +18,7 @@ declare module 'better-sqlite3' {
     pragma(statement: string): unknown;
     exec(sql: string): void;
     prepare<Result = unknown>(sql: string): Statement<Result>;
-    transaction<T extends (...args: any[]) => any>(fn: T): Transaction<T>;
+    transaction<T extends SqliteFunction>(fn: T): Transaction<T>;
     close(): void;
   }
 

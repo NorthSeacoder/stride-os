@@ -11,7 +11,6 @@ import {
   check,
   date,
   integer,
-  doublePrecision,
   boolean,
 } from 'drizzle-orm/pg-core';
 

@@ -46,6 +46,25 @@ function getDatabaseLocation() {
 async function countSqliteRows(sqliteDb: BetterSQLite3Database<typeof sqliteSchema>) {
   const rows: CleanupRow[] = [];
 
+  const sqliteTableExists = (tableName: string) => {
+    const result = sqliteDb.$client
+      .prepare("SELECT 1 AS present FROM sqlite_master WHERE type = 'table' AND name = ? LIMIT 1")
+      .get(tableName) as { present?: number } | undefined;
+
+    return Promise.resolve(result?.present === 1);
+  };
+
+  const countIfTableExists = async (
+    tableName: string,
+    rowCountPromise: Promise<number>,
+  ) => {
+    if (!(await sqliteTableExists(tableName))) {
+      return 0;
+    }
+
+    return rowCountPromise;
+  };
+
   const pushCount = async (table: string, deleteScope: string, retainedScope: string, rowCountPromise: Promise<number>) => {
     rows.push({
       table,
@@ -59,73 +78,109 @@ async function countSqliteRows(sqliteDb: BetterSQLite3Database<typeof sqliteSche
     'review_kr_snapshots',
     'all rows',
     'none',
-    sqliteDb.select({ value: count() }).from(sqliteSchema.reviewKrSnapshots).then((result) => result[0]?.value ?? 0),
+    countIfTableExists(
+      'review_kr_snapshots',
+      sqliteDb.select({ value: count() }).from(sqliteSchema.reviewKrSnapshots).then((result) => result[0]?.value ?? 0),
+    ),
   );
   await pushCount(
     'reviews',
     'all rows',
     'none',
-    sqliteDb.select({ value: count() }).from(sqliteSchema.reviews).then((result) => result[0]?.value ?? 0),
+    countIfTableExists(
+      'reviews',
+      sqliteDb.select({ value: count() }).from(sqliteSchema.reviews).then((result) => result[0]?.value ?? 0),
+    ),
   );
   await pushCount(
     'kr_check_ins',
     'all rows',
     'none',
-    sqliteDb.select({ value: count() }).from(sqliteSchema.krCheckIns).then((result) => result[0]?.value ?? 0),
+    countIfTableExists(
+      'kr_check_ins',
+      sqliteDb.select({ value: count() }).from(sqliteSchema.krCheckIns).then((result) => result[0]?.value ?? 0),
+    ),
   );
   await pushCount(
     'task_kr_links',
     'all rows',
     'none',
-    sqliteDb.select({ value: count() }).from(sqliteSchema.taskKrLinks).then((result) => result[0]?.value ?? 0),
+    countIfTableExists(
+      'task_kr_links',
+      sqliteDb.select({ value: count() }).from(sqliteSchema.taskKrLinks).then((result) => result[0]?.value ?? 0),
+    ),
   );
   await pushCount(
     'task_definition_kr_links',
     'all rows',
     'none',
-    sqliteDb.select({ value: count() }).from(sqliteSchema.taskDefinitionKrLinks).then((result) => result[0]?.value ?? 0),
+    countIfTableExists(
+      'task_definition_kr_links',
+      sqliteDb.select({ value: count() }).from(sqliteSchema.taskDefinitionKrLinks).then((result) => result[0]?.value ?? 0),
+    ),
   );
   await pushCount(
     'tasks',
     'all rows',
     'none',
-    sqliteDb.select({ value: count() }).from(sqliteSchema.tasks).then((result) => result[0]?.value ?? 0),
+    countIfTableExists(
+      'tasks',
+      sqliteDb.select({ value: count() }).from(sqliteSchema.tasks).then((result) => result[0]?.value ?? 0),
+    ),
   );
   await pushCount(
     'task_definitions',
     'all rows',
     'none',
-    sqliteDb.select({ value: count() }).from(sqliteSchema.taskDefinitions).then((result) => result[0]?.value ?? 0),
+    countIfTableExists(
+      'task_definitions',
+      sqliteDb.select({ value: count() }).from(sqliteSchema.taskDefinitions).then((result) => result[0]?.value ?? 0),
+    ),
   );
   await pushCount(
     'key_results',
     'all rows',
     'none',
-    sqliteDb.select({ value: count() }).from(sqliteSchema.keyResults).then((result) => result[0]?.value ?? 0),
+    countIfTableExists(
+      'key_results',
+      sqliteDb.select({ value: count() }).from(sqliteSchema.keyResults).then((result) => result[0]?.value ?? 0),
+    ),
   );
   await pushCount(
     'objectives',
     'all rows',
     'none',
-    sqliteDb.select({ value: count() }).from(sqliteSchema.objectives).then((result) => result[0]?.value ?? 0),
+    countIfTableExists(
+      'objectives',
+      sqliteDb.select({ value: count() }).from(sqliteSchema.objectives).then((result) => result[0]?.value ?? 0),
+    ),
   );
   await pushCount(
     'periods',
     'all rows',
     'none',
-    sqliteDb.select({ value: count() }).from(sqliteSchema.periods).then((result) => result[0]?.value ?? 0),
+    countIfTableExists(
+      'periods',
+      sqliteDb.select({ value: count() }).from(sqliteSchema.periods).then((result) => result[0]?.value ?? 0),
+    ),
   );
   await pushCount(
     'example_items',
     'all rows',
     'none',
-    sqliteDb.select({ value: count() }).from(sqliteSchema.exampleItems).then((result) => result[0]?.value ?? 0),
+    countIfTableExists(
+      'example_items',
+      sqliteDb.select({ value: count() }).from(sqliteSchema.exampleItems).then((result) => result[0]?.value ?? 0),
+    ),
   );
   await pushCount(
     'task_lists',
     "rows where kind != 'system'",
     "rows where kind = 'system' (notably slug = 'inbox')",
-    sqliteDb.select({ value: count() }).from(sqliteSchema.taskLists).where(ne(sqliteSchema.taskLists.kind, 'system')).then((result) => result[0]?.value ?? 0),
+    countIfTableExists(
+      'task_lists',
+      sqliteDb.select({ value: count() }).from(sqliteSchema.taskLists).where(ne(sqliteSchema.taskLists.kind, 'system')).then((result) => result[0]?.value ?? 0),
+    ),
   );
 
   return rows;

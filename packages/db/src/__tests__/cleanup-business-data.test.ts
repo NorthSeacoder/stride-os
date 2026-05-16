@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 
 const packageRoot = path.resolve(process.cwd(), 'packages/db');
 const cleanupDatabasePath = path.join(packageRoot, 'data', 'cleanup-test.sqlite');
+const cleanupDatabaseUrl = 'file:./packages/db/data/cleanup-test.sqlite';
 
 type CleanupReport = {
   mode: string;
@@ -50,10 +51,33 @@ function runCommand(
   });
 }
 
+function createCleanupEnv() {
+  return {
+    ...process.env,
+    DATABASE_DRIVER: 'sqlite',
+    DATABASE_URL: cleanupDatabaseUrl,
+  };
+}
+
+function prepareCleanupDatabase() {
+  removeCleanupArtifacts();
+
+  const envVars = createCleanupEnv();
+  const migrate = runCommand('pnpm', ['--filter', '@stride-os/db', 'db:migrate'], { env: envVars });
+  expect(migrate.status).toBe(0);
+
+  const seed = runCommand('pnpm', ['--filter', '@stride-os/db', 'db:seed'], { env: envVars });
+  expect(seed.status).toBe(0);
+
+  return envVars;
+}
+
 describe('cleanup-business-data dry-run', () => {
   it('reports cleanup and retained scopes without deleting data', () => {
+    const envVars = prepareCleanupDatabase();
     const output = execSync('pnpm --filter @stride-os/db db:cleanup-business-data', {
       cwd: packageRoot,
+      env: envVars,
       encoding: 'utf8',
       stdio: 'pipe',
     });
@@ -88,6 +112,8 @@ describe('cleanup-business-data dry-run', () => {
       systemTaskLists: expect.any(Number),
       inboxList: expect.any(Number),
     }));
+
+    removeCleanupArtifacts();
   });
 
   it('refuses execute mode without explicit confirmation', () => {
@@ -98,19 +124,7 @@ describe('cleanup-business-data dry-run', () => {
   });
 
   it('cleans only business data in a disposable sqlite database when confirmed', () => {
-    removeCleanupArtifacts();
-
-    const envVars = {
-      ...process.env,
-      DATABASE_DRIVER: 'sqlite',
-      DATABASE_URL: 'file:./packages/db/data/cleanup-test.sqlite',
-    };
-
-    const migrate = runCommand('pnpm', ['--filter', '@stride-os/db', 'db:migrate'], { env: envVars });
-    expect(migrate.status).toBe(0);
-
-    const seed = runCommand('pnpm', ['--filter', '@stride-os/db', 'db:seed'], { env: envVars });
-    expect(seed.status).toBe(0);
+    const envVars = prepareCleanupDatabase();
 
     const seedScript = [
       "const Database=require('better-sqlite3');",

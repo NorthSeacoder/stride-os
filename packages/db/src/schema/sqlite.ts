@@ -1,6 +1,6 @@
 import { randomUUID } from 'crypto';
 import { relations, sql } from 'drizzle-orm';
-import { sqliteTable, text, integer, real, index, primaryKey, check } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer, index, primaryKey, check } from 'drizzle-orm/sqlite-core';
 
 const timestampColumn = (name: string) => integer(name, { mode: 'timestamp_ms' });
 

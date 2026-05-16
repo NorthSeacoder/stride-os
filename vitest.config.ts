@@ -10,5 +10,6 @@ export default defineConfig({
   test: {
     globals: true,
     include: ['apps/**/__tests__/**/*.test.ts', 'packages/**/__tests__/**/*.test.ts'],
+    exclude: ['**/node_modules/**', '**/.next/**', '**/dist/**', '**/coverage/**'],
   },
 });
