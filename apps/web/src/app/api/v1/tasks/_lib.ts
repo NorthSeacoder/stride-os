@@ -6,10 +6,16 @@ import {
   QUADRANT_KEYS,
   TASK_ENERGIES,
   TASK_PRIORITIES,
+  TASK_DEFINITION_END_TYPES,
+  TASK_DEFINITION_FREQUENCIES,
   type TaskEnergy,
+  type TaskDefinitionEndType,
+  type TaskDefinitionFrequency,
+  type TaskKeyResultLinkInput,
   type TaskPriority,
   type TaskQuadrantKey,
   type TaskSourceId,
+  type TaskDefinitionWriteInput,
   type TaskWriteInput,
 } from '@/lib/services/task-service';
 
@@ -91,6 +97,95 @@ export function getKeyResultIdsFromBody(body: Record<string, unknown>) {
   return Array.isArray(body.keyResultIds)
     ? body.keyResultIds.map((value) => String(value).trim()).filter(Boolean)
     : undefined;
+}
+
+function enumString<T extends string>(value: unknown, allowed: readonly T[], label: string): T | undefined | NextResponse {
+  if (value === undefined) return undefined;
+  const normalized = getTrimmedString(value);
+  if (!normalized) return badRequest(`${label} is required`);
+  if (!allowed.includes(normalized as T)) {
+    return badRequest(`${label} is invalid`);
+  }
+  return normalized as T;
+}
+
+function parseOptionalPositiveInteger(value: unknown, label: string) {
+  if (value === undefined || value === null || value === '') return undefined;
+  const normalized = Number(value);
+  if (!Number.isInteger(normalized) || normalized <= 0) {
+    return badRequest(`${label} is invalid`);
+  }
+  return normalized;
+}
+
+export function getTaskDefinitionKeyResultLinksFromBody(body: Record<string, unknown>) {
+  if (!Array.isArray(body.keyResultLinks)) {
+    return undefined;
+  }
+
+  const links: TaskKeyResultLinkInput[] = [];
+  for (const item of body.keyResultLinks) {
+    if (!item || typeof item !== 'object') {
+      return badRequest('keyResultLinks is invalid');
+    }
+
+    const keyResultId = getTrimmedString((item as Record<string, unknown>).keyResultId);
+    if (!keyResultId) {
+      return badRequest('keyResultLinks is invalid');
+    }
+
+    links.push({
+      keyResultId,
+      countsTowardCommitment: Boolean((item as Record<string, unknown>).countsTowardCommitment),
+    });
+  }
+
+  return links;
+}
+
+function parseTaskDefinitionInput(body: Record<string, unknown>, mode: 'create' | 'update') {
+  const title = body.title === undefined ? undefined : getTrimmedString(body.title);
+  if (mode === 'create' && !title) return badRequest('Title is required');
+  if (mode === 'update' && body.title !== undefined && !title) return badRequest('Title is required');
+
+  const frequency = enumString<TaskDefinitionFrequency>(body.frequency, TASK_DEFINITION_FREQUENCIES, 'frequency');
+  if (frequency instanceof NextResponse) return frequency;
+
+  const endType = enumString<TaskDefinitionEndType>(body.endType, TASK_DEFINITION_END_TYPES, 'endType');
+  if (endType instanceof NextResponse) return endType;
+
+  const occurrenceCount = parseOptionalPositiveInteger(body.occurrenceCount, 'occurrenceCount');
+  if (occurrenceCount instanceof NextResponse) return occurrenceCount;
+
+  const input: TaskDefinitionWriteInput | Partial<TaskDefinitionWriteInput> = {
+    ...(title !== undefined ? { title } : {}),
+    ...(body.description !== undefined ? { description: stringOrNull(body.description) } : {}),
+    ...(body.listId !== undefined ? { listId: stringOrNull(body.listId) ?? undefined } : {}),
+    ...(frequency !== undefined ? { frequency } : {}),
+    ...(endType !== undefined ? { endType } : {}),
+    ...(body.endDate !== undefined ? { endDate: stringOrNull(body.endDate) } : {}),
+    ...(occurrenceCount !== undefined ? { occurrenceCount } : {}),
+  };
+
+  if (mode === 'create' && !(input as TaskDefinitionWriteInput).listId) {
+    return badRequest('listId is required');
+  }
+
+  if (mode === 'create' && !(input as TaskDefinitionWriteInput).frequency) {
+    return badRequest('frequency is required');
+  }
+
+  if (mode === 'create' && !(input as TaskDefinitionWriteInput).endType) {
+    return badRequest('endType is required');
+  }
+
+  return input;
+}
+
+export async function parseTaskDefinitionWriteRequest(request: NextRequest, mode: 'create' | 'update') {
+  const body = await parseJsonBody(request);
+  if (body instanceof NextResponse) return body;
+  return parseTaskDefinitionInput(body, mode);
 }
 
 export function parseQuadrant(value: unknown): TaskQuadrantKey | NextResponse {

@@ -108,6 +108,8 @@ export type QuadrantSection = {
   completedCount: number;
 };
 
+export type TaskDefinitionDetail = Awaited<ReturnType<typeof getTaskDefinitionDetail>>;
+
 const TASK_GROUP_ORDER: TaskGroupKey[] = ['overdue', 'today', 'tomorrow', 'upcoming', 'no-date', 'completed'];
 const TASK_GROUP_TITLES: Record<TaskGroupKey, string> = {
   overdue: '已过期',
@@ -1373,6 +1375,51 @@ export async function createTaskDefinition(input: TaskDefinitionWriteInput) {
   return definition;
 }
 
+export async function listTaskDefinitions() {
+  return db.query.taskDefinitions.findMany({
+    where: isNull(schema.taskDefinitions.archivedAt),
+    orderBy: [asc(schema.taskDefinitions.createdAt)],
+    with: {
+      list: true,
+      keyResultLinks: {
+        with: {
+          keyResult: true,
+        },
+      },
+      tasks: {
+        where: isNull(schema.tasks.archivedAt),
+        orderBy: [desc(schema.tasks.occurrenceDate), desc(schema.tasks.createdAt)],
+        limit: 5,
+      },
+    },
+  });
+}
+
+export async function getTaskDefinition(definitionId: string, options?: { includeArchived?: boolean }) {
+  return db.query.taskDefinitions.findFirst({
+    where: options?.includeArchived
+      ? eq(schema.taskDefinitions.id, definitionId)
+      : and(eq(schema.taskDefinitions.id, definitionId), isNull(schema.taskDefinitions.archivedAt)),
+    with: {
+      list: true,
+      keyResultLinks: {
+        with: {
+          keyResult: true,
+        },
+      },
+      tasks: {
+        where: isNull(schema.tasks.archivedAt),
+        orderBy: [desc(schema.tasks.occurrenceDate), desc(schema.tasks.createdAt)],
+        limit: 20,
+      },
+    },
+  });
+}
+
+export async function getTaskDefinitionDetail(definitionId: string, options?: { includeArchived?: boolean }) {
+  return getTaskDefinition(definitionId, options);
+}
+
 export async function updateTaskDefinition(definitionId: string, input: Partial<TaskDefinitionWriteInput>) {
   const existing = await db.query.taskDefinitions.findFirst({
     where: eq(schema.taskDefinitions.id, definitionId),
@@ -1404,6 +1451,57 @@ export async function updateTaskDefinition(definitionId: string, input: Partial<
   return definition ?? null;
 }
 
+export async function archiveTaskDefinition(definitionId: string) {
+  const existing = await db.query.taskDefinitions.findFirst({
+    where: eq(schema.taskDefinitions.id, definitionId),
+  });
+
+  if (!existing) {
+    return null;
+  }
+
+  await db.update(schema.taskDefinitions)
+    .set({
+      archivedAt: new Date(),
+      updatedAt: new Date(),
+    })
+    .where(eq(schema.taskDefinitions.id, definitionId));
+
+  await db.update(schema.tasks)
+    .set({
+      archivedAt: new Date(),
+      updatedAt: new Date(),
+    })
+    .where(and(eq(schema.tasks.definitionId, definitionId), isNull(schema.tasks.archivedAt)));
+
+  return getTaskDefinition(definitionId, { includeArchived: true });
+}
+
+export async function restoreTaskDefinition(definitionId: string) {
+  const existing = await db.query.taskDefinitions.findFirst({
+    where: eq(schema.taskDefinitions.id, definitionId),
+  });
+
+  if (!existing) {
+    return null;
+  }
+
+  await db.update(schema.taskDefinitions)
+    .set({
+      archivedAt: null,
+      updatedAt: new Date(),
+    })
+    .where(eq(schema.taskDefinitions.id, definitionId));
+
+  await db.update(schema.tasks)
+    .set({
+      archivedAt: null,
+      updatedAt: new Date(),
+    })
+    .where(eq(schema.tasks.definitionId, definitionId));
+
+  return getTaskDefinition(definitionId, { includeArchived: true });
+}
 export async function replaceTaskDefinitionKeyResultLinks(definitionId: string, keyResultLinks: Array<string | TaskKeyResultLinkInput>) {
   const dedupedLinks = Array.from(new Map(
     keyResultLinks
@@ -1483,6 +1581,7 @@ export async function ensureRecurringTasksForDate(targetDateInput?: string) {
   const targetDate = targetDateInput ? parseDateOnlyInput(targetDateInput) : new Date();
   const occurrenceDate = formatDateOnly(targetDate);
   const definitions = await db.query.taskDefinitions.findMany({
+    where: isNull(schema.taskDefinitions.archivedAt),
     with: {
       keyResultLinks: true,
     },

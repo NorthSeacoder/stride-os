@@ -204,11 +204,13 @@ export const taskDefinitions = sqliteTable('task_definitions', {
   endType: text('end_type').notNull(),
   endDate: text('end_date'),
   occurrenceCount: integer('occurrence_count'),
+  archivedAt: timestampColumn('archived_at'),
   createdAt: timestampColumn('created_at').notNull().$defaultFn(() => new Date()),
   updatedAt: timestampColumn('updated_at').notNull().$defaultFn(() => new Date()),
 }, (table) => [
   index('idx_task_definitions_list_id').on(table.listId),
   index('idx_task_definitions_frequency').on(table.frequency),
+  index('idx_task_definitions_archived_at').on(table.archivedAt),
   check('task_definitions_frequency_check', sql`${table.frequency} in ('daily', 'weekly', 'monthly', 'weekdays', 'weekends')`),
   check('task_definitions_end_type_check', sql`${table.endType} in ('never', 'until_date', 'after_count')`),
 ]);

@@ -11,8 +11,16 @@ describe('v1 openapi contract', () => {
     expect(v1Spec.paths['/tasks/{id}/restore']?.post.operationId).toBe('restoreTask');
     expect(v1Spec.paths['/tasks/{id}/archive']?.post.operationId).toBe('archiveTask');
     expect(v1Spec.paths['/tasks/{id}/quadrant']?.post.operationId).toBe('moveTaskQuadrant');
+    expect(v1Spec.paths['/tasks/definitions']?.get.operationId).toBe('listTaskDefinitions');
+    expect(v1Spec.paths['/tasks/definitions']?.post.operationId).toBe('createTaskDefinition');
+    expect(v1Spec.paths['/tasks/definitions/{id}']?.get.operationId).toBe('getTaskDefinition');
+    expect(v1Spec.paths['/tasks/definitions/{id}']?.patch.operationId).toBe('updateTaskDefinition');
+    expect(v1Spec.paths['/tasks/definitions/{id}/archive']?.post.operationId).toBe('archiveTaskDefinition');
+    expect(v1Spec.paths['/tasks/definitions/{id}/restore']?.post.operationId).toBe('restoreTaskDefinition');
     expect(v1Spec.paths['/tasks/reminders']?.get.operationId).toBe('listTaskReminderCandidates');
     expect(v1Spec.components.schemas.TaskWriteRequest).toBeTruthy();
+    expect(v1Spec.components.schemas.TaskDefinitionWriteRequest).toBeTruthy();
+    expect(v1Spec.components.schemas.TaskDefinitionOccurrenceItem).toBeTruthy();
   });
 
   it('includes core okr automation endpoints', () => {

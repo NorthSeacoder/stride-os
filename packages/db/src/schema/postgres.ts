@@ -234,6 +234,7 @@ const taskDefinitionsColumns = {
   endType: varchar('end_type', { length: 16 }).notNull(),
   endDate: date('end_date'),
   occurrenceCount: integer('occurrence_count'),
+  archivedAt: timestamp('archived_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 };
@@ -241,6 +242,7 @@ const taskDefinitionsColumns = {
 export const taskDefinitions = pgTable('task_definitions', taskDefinitionsColumns, (table) => [
   index('idx_task_definitions_list_id').on(table.listId),
   index('idx_task_definitions_frequency').on(table.frequency),
+  index('idx_task_definitions_archived_at').on(table.archivedAt),
   check('task_definitions_frequency_check', sql`${table.frequency} in ('daily', 'weekly', 'monthly', 'weekdays', 'weekends')`),
   check('task_definitions_end_type_check', sql`${table.endType} in ('never', 'until_date', 'after_count')`),
 ]);

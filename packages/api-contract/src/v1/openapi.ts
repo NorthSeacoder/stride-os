@@ -228,6 +228,80 @@ export const v1Spec = {
         },
       },
     },
+    '/tasks/definitions': {
+      get: {
+        operationId: 'listTaskDefinitions',
+        summary: 'List recurring task definitions',
+        security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+        responses: {
+          '200': { description: 'Recurring task definitions', content: { 'application/json': { schema: { type: 'array', items: { $ref: '#/components/schemas/TaskDefinitionItem' } } } } },
+          '401': { $ref: '#/components/responses/Unauthorized' },
+        },
+      },
+      post: {
+        operationId: 'createTaskDefinition',
+        summary: 'Create recurring task definition',
+        security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+        requestBody: { required: true, content: { 'application/json': { schema: { $ref: '#/components/schemas/TaskDefinitionWriteRequest' } } } },
+        responses: {
+          '201': { description: 'Created recurring task definition', content: { 'application/json': { schema: { $ref: '#/components/schemas/TaskDefinitionItem' } } } },
+          '400': { $ref: '#/components/responses/BadRequest' },
+          '401': { $ref: '#/components/responses/Unauthorized' },
+        },
+      },
+    },
+    '/tasks/definitions/{id}': {
+      get: {
+        operationId: 'getTaskDefinition',
+        summary: 'Get recurring task definition',
+        security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+        parameters: [{ $ref: '#/components/parameters/IdPath' }],
+        responses: {
+          '200': { description: 'Recurring task definition', content: { 'application/json': { schema: { $ref: '#/components/schemas/TaskDefinitionItem' } } } },
+          '401': { $ref: '#/components/responses/Unauthorized' },
+          '404': { $ref: '#/components/responses/NotFound' },
+        },
+      },
+      patch: {
+        operationId: 'updateTaskDefinition',
+        summary: 'Update recurring task definition',
+        security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+        parameters: [{ $ref: '#/components/parameters/IdPath' }],
+        requestBody: { required: true, content: { 'application/json': { schema: { $ref: '#/components/schemas/TaskDefinitionWriteRequest' } } } },
+        responses: {
+          '200': { description: 'Updated recurring task definition', content: { 'application/json': { schema: { $ref: '#/components/schemas/TaskDefinitionItem' } } } },
+          '400': { $ref: '#/components/responses/BadRequest' },
+          '401': { $ref: '#/components/responses/Unauthorized' },
+          '404': { $ref: '#/components/responses/NotFound' },
+        },
+      },
+    },
+    '/tasks/definitions/{id}/archive': {
+      post: {
+        operationId: 'archiveTaskDefinition',
+        summary: 'Archive recurring task definition',
+        security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+        parameters: [{ $ref: '#/components/parameters/IdPath' }],
+        responses: {
+          '200': { description: 'Archived recurring task definition', content: { 'application/json': { schema: { $ref: '#/components/schemas/TaskDefinitionItem' } } } },
+          '401': { $ref: '#/components/responses/Unauthorized' },
+          '404': { $ref: '#/components/responses/NotFound' },
+        },
+      },
+    },
+    '/tasks/definitions/{id}/restore': {
+      post: {
+        operationId: 'restoreTaskDefinition',
+        summary: 'Restore recurring task definition',
+        security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+        parameters: [{ $ref: '#/components/parameters/IdPath' }],
+        responses: {
+          '200': { description: 'Restored recurring task definition', content: { 'application/json': { schema: { $ref: '#/components/schemas/TaskDefinitionItem' } } } },
+          '401': { $ref: '#/components/responses/Unauthorized' },
+          '404': { $ref: '#/components/responses/NotFound' },
+        },
+      },
+    },
     '/key-results/{id}/check-ins': {
       post: {
         operationId: 'createKeyResultCheckIn',
@@ -711,6 +785,71 @@ export const v1Spec = {
           completedAt: { oneOf: [{ type: 'string', format: 'date-time' }, { type: 'boolean' }, { type: 'null' }] },
           keyResultIds: { type: 'array', items: { type: 'string', format: 'uuid' } },
         },
+      },
+      TaskDefinitionKeyResultLink: {
+        type: 'object',
+        properties: {
+          keyResultId: { type: 'string', format: 'uuid' },
+          countsTowardCommitment: { type: 'boolean' },
+          keyResult: { $ref: '#/components/schemas/KeyResultRef' },
+        },
+        required: ['keyResultId'],
+      },
+      TaskDefinitionWriteRequest: {
+        type: 'object',
+        properties: {
+          title: { type: 'string' },
+          description: { type: ['string', 'null'] },
+          listId: { type: 'string', format: 'uuid' },
+          frequency: { type: 'string', enum: ['daily', 'weekly', 'monthly', 'weekdays', 'weekends'] },
+          endType: { type: 'string', enum: ['never', 'until_date', 'after_count'] },
+          endDate: { type: ['string', 'null'], format: 'date' },
+          occurrenceCount: { type: ['integer', 'null'] },
+          targetDate: { type: 'string', format: 'date' },
+          keyResultLinks: { type: 'array', items: { $ref: '#/components/schemas/TaskDefinitionKeyResultLink' } },
+        },
+      },
+      TaskDefinitionItem: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', format: 'uuid' },
+          title: { type: 'string' },
+          description: { type: ['string', 'null'] },
+          listId: { type: 'string', format: 'uuid' },
+          frequency: { type: 'string', enum: ['daily', 'weekly', 'monthly', 'weekdays', 'weekends'] },
+          endType: { type: 'string', enum: ['never', 'until_date', 'after_count'] },
+          endDate: { type: ['string', 'null'], format: 'date' },
+          occurrenceCount: { type: ['integer', 'null'] },
+          createdAt: { type: 'string', format: 'date-time' },
+          updatedAt: { type: 'string', format: 'date-time' },
+          list: {
+            type: ['object', 'null'],
+            properties: {
+              id: { type: 'string', format: 'uuid' },
+              name: { type: 'string' },
+              slug: { type: 'string' },
+            },
+          },
+          keyResultLinks: { type: 'array', items: { $ref: '#/components/schemas/TaskDefinitionKeyResultLink' } },
+          tasks: { type: 'array', items: { $ref: '#/components/schemas/TaskDefinitionOccurrenceItem' } },
+        },
+        required: ['id', 'title', 'listId', 'frequency', 'endType', 'createdAt', 'updatedAt'],
+      },
+      TaskDefinitionOccurrenceItem: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', format: 'uuid' },
+          title: { type: 'string' },
+          description: { type: ['string', 'null'] },
+          status: { type: 'string' },
+          dueDate: { type: ['string', 'null'], format: 'date' },
+          occurrenceDate: { type: ['string', 'null'], format: 'date' },
+          completedAt: { type: ['string', 'null'], format: 'date-time' },
+          archivedAt: { type: ['string', 'null'], format: 'date-time' },
+          createdAt: { type: 'string', format: 'date-time' },
+          updatedAt: { type: 'string', format: 'date-time' },
+        },
+        required: ['id', 'title', 'status', 'createdAt', 'updatedAt'],
       },
       MoveTaskQuadrantRequest: {
         type: 'object',
