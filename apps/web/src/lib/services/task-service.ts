@@ -968,11 +968,11 @@ export async function replaceTaskKeyResultLinks(taskId: string, keyResultLinks: 
     : null;
   const existingIds = new Set<string>(existingLinks.map((link: { keyResultId: string }) => link.keyResultId));
 
-  await db.transaction((tx: TransactionLike) => {
-    tx.delete(schema.taskKrLinks).where(eq(schema.taskKrLinks.taskId, taskId));
+  await db.transaction(async (tx: TransactionLike) => {
+    await tx.delete(schema.taskKrLinks).where(eq(schema.taskKrLinks.taskId, taskId));
 
     if (dedupedLinks.length > 0) {
-      tx.insert(schema.taskKrLinks).values(
+      await tx.insert(schema.taskKrLinks).values(
         dedupedLinks.map((link) => ({
           taskId,
           keyResultId: link.keyResultId,
@@ -1512,11 +1512,11 @@ export async function replaceTaskDefinitionKeyResultLinks(definitionId: string, 
       .map((item) => [item.keyResultId, item]),
   ).values());
 
-  await db.transaction((tx: TransactionLike) => {
-    tx.delete(schema.taskDefinitionKrLinks).where(eq(schema.taskDefinitionKrLinks.definitionId, definitionId));
+  await db.transaction(async (tx: TransactionLike) => {
+    await tx.delete(schema.taskDefinitionKrLinks).where(eq(schema.taskDefinitionKrLinks.definitionId, definitionId));
 
     if (dedupedLinks.length > 0) {
-      tx.insert(schema.taskDefinitionKrLinks).values(
+      await tx.insert(schema.taskDefinitionKrLinks).values(
         dedupedLinks.map((link) => ({
           definitionId,
           keyResultId: link.keyResultId,

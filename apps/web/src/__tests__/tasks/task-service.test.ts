@@ -122,6 +122,8 @@ describe('task service rules', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     recordActivity.mockResolvedValue(undefined);
+    txDeleteWhere.mockResolvedValue(undefined);
+    txInsertValues.mockResolvedValue(undefined);
     txDelete.mockReturnValue({ where: txDeleteWhere });
     txInsert.mockReturnValue({ values: txInsertValues });
     txUpdate.mockReturnValue({ set: txUpdateSet });
@@ -675,6 +677,26 @@ describe('task service rules', () => {
       { definitionId: 'def_1', keyResultId: 'kr_1', countsTowardCommitment: true, committedAt: expect.any(Date) },
       { definitionId: 'def_1', keyResultId: 'kr_2', countsTowardCommitment: false, committedAt: null },
     ]);
+  });
+
+  it('awaits transaction writes before reading recurring definition key result links', async () => {
+    const order: string[] = [];
+    txDeleteWhere.mockImplementationOnce(async () => {
+      order.push('delete');
+    });
+    txInsertValues.mockImplementationOnce(async () => {
+      order.push('insert');
+    });
+    findManyTaskDefinitionKrLinks.mockImplementationOnce(async () => {
+      order.push('read');
+      return [{ definitionId: 'def_1', keyResultId: 'kr_1' }];
+    });
+
+    await replaceTaskDefinitionKeyResultLinks('def_1', [
+      { keyResultId: 'kr_1', countsTowardCommitment: true },
+    ]);
+
+    expect(order).toEqual(['delete', 'insert', 'read']);
   });
 
   it('ensures recurring tasks for the date only once per definition', async () => {
